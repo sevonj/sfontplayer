@@ -12,7 +12,7 @@ enum Channel {
 
 /// Audio source for Rodio. This takes in soundfont and midifile, and generates audio samples from
 /// them. The disposable struct is consumed by audio sink for each song.
-pub struct MidiSource {
+pub struct RealTimeMidiSource {
     /// The actual midi player
     sequencer: MidiFileSequencer,
     /// We need to cache the R channel sample.
@@ -21,7 +21,7 @@ pub struct MidiSource {
     next_ch: Channel,
 }
 
-impl MidiSource {
+impl RealTimeMidiSource {
     /// New MidiSource that immediately starts playing.
     pub fn new(sf: Arc<SoundFont>, midifile: Arc<MidiFile>) -> Self {
         let settings = SynthesizerSettings::new(SAMPLERATE as i32);
@@ -39,7 +39,7 @@ impl MidiSource {
 
 // Rodio requires Iterator implementation.
 // This is where whe generate the next samples.
-impl Iterator for MidiSource {
+impl Iterator for RealTimeMidiSource {
     type Item = f32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -69,7 +69,7 @@ impl Iterator for MidiSource {
     }
 }
 
-impl rodio::Source for MidiSource {
+impl rodio::Source for RealTimeMidiSource {
     fn current_frame_len(&self) -> Option<usize> {
         let len = self.sequencer.get_midi_file().unwrap().get_length();
         let pos = self.sequencer.get_position();

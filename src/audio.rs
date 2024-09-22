@@ -1,10 +1,12 @@
 use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
 
-use midisource::MidiSource;
+use realtimemidisource::RealTimeMidiSource;
+use bufferedmidisource::BufferedMidiSource;
 use rodio::{OutputStream, Sink};
 use rustysynth::{MidiFile, SoundFont};
 
-mod midisource;
+mod bufferedmidisource;
+mod realtimemidisource;
 
 // Load soundfont file.
 fn load_soundfont(path: &PathBuf) -> Result<SoundFont, &str> {
@@ -86,7 +88,7 @@ impl AudioPlayer {
         let midifile = load_midifile(path_mid)?;
         self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
 
-        let source = MidiSource::new(Arc::new(load_soundfont(path_sf)?), Arc::new(midifile));
+        let source = BufferedMidiSource::new(Arc::new(load_soundfont(path_sf)?), Arc::new(midifile));
         self.sink.append(source);
         self.sink.play();
         Ok(())
