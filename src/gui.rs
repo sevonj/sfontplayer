@@ -1,6 +1,6 @@
 use std::fmt::format;
 
-use eframe::egui;
+use eframe::egui::{self, Color32};
 use rfd::FileDialog;
 
 use crate::SfontPlayer;
@@ -130,19 +130,26 @@ fn song_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
 fn playback_panel(ui: &mut egui::Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
         ui.label("Add widgets");
-        let playing = app.is_playing();
 
+        // Shuffle button
+        if ui
+            .add(egui::SelectableLabel::new(app.shuffle, "🔀"))
+            .clicked()
+        {
+            app.shuffle = !app.shuffle
+        }
         // PlayPause button
-        if playing {
+        if app.is_playing() {
             if ui.button("⏸").clicked() {
                 app.pause();
             }
         } else {
-            if ui
-                .add_enabled(app.can_play(), egui::Button::new("▶"))
-                .clicked()
-            {
-                app.play()
+            if ui.button("▶").clicked() {
+                if app.is_empty() {
+                    app.start();
+                } else {
+                    app.play();
+                }
             }
         }
         // Stop button

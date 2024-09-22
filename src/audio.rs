@@ -62,14 +62,20 @@ impl AudioPlayer {
     pub(crate) fn is_playing(&self) -> bool {
         !self.sink.is_paused()
     }
-    pub(crate) fn can_play(&self) -> bool {
-        !self.sink.empty()
+    pub(crate) fn is_empty(&self) -> bool {
+        self.sink.empty()
+    }
+    pub(crate) fn end_reached(&self) -> bool {
+        if let Some(len) = self.get_midi_length() {
+            return self.get_midi_position() >= len;
+        }
+        false
     }
     pub(crate) fn get_midi_length(&self) -> Option<Duration> {
         self.midifile_duration
     }
-    pub(crate) fn get_midi_position(&self) -> Option<Duration> {
-        Some(self.sink.get_pos())
+    pub(crate) fn get_midi_position(&self) -> Duration {
+        self.sink.get_pos()
     }
 
     // Play loaded midi on loaded sf
