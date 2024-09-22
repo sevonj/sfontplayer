@@ -1,10 +1,10 @@
-use std::{default, path::PathBuf};
+use std::path::PathBuf;
 
-use audiosynth::AudioSynth;
+use audio::AudioPlayer;
 use eframe::egui;
 use gui::draw_gui;
 
-mod audiosynth;
+mod audio;
 mod gui;
 mod state;
 
@@ -27,7 +27,7 @@ fn main() {
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 struct SfontPlayer {
     #[serde(skip)]
-    synth: AudioSynth,
+    audioplayer: AudioPlayer,
     pub(crate) soundfonts: Vec<PathBuf>,
     pub(crate) midis: Vec<PathBuf>,
     selected_sf: Option<usize>,
@@ -60,6 +60,7 @@ impl SfontPlayer {
             self.selected_sf = Some(self.selected_sf.unwrap() - 1)
         }
     }
+
     fn remove_midi(&mut self, index: usize) {
         println!("delet: {}", index);
         self.midis.remove(index);
@@ -72,21 +73,19 @@ impl SfontPlayer {
             self.selected_midi = Some(self.selected_midi.unwrap() - 1)
         }
     }
+
     fn play(&mut self) {
+        self.audioplayer.stop();
         if self.selected_midi.is_none() || self.selected_sf.is_none() {
             return;
         }
-        if let Err(e) = self
-            .synth
-            .load_soundfont(&self.soundfonts[self.selected_sf.unwrap()])
-        {
-            println!("{}", e);
-            return;
-        }
-        if let Err(e) = self
-            .synth
-            .play_midi(&self.midis[self.selected_midi.unwrap()])
-        {
+
+        let sf = &self.soundfonts[self.selected_sf.unwrap()];
+        let mid = &self.midis[self.selected_midi.unwrap()];
+        self.audioplayer.set_soundfont(sf.clone());
+        self.audioplayer.set_midifile(mid.clone());
+
+        if let Err(e) = self.audioplayer.play() {
             println!("{}", e);
             return;
         }

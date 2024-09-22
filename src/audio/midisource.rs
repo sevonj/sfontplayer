@@ -1,63 +1,44 @@
-use std::{fs::File, path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
-use rodio::Sink;
 use rustysynth::{MidiFile, MidiFileSequencer, SoundFont, Synthesizer, SynthesizerSettings};
 
 const SAMPLERATE: u32 = 44100;
 
-#[derive(Default)]
-pub(crate) struct AudioSynth {
-    soundfont: Option<Arc<SoundFont>>,
-    midifile: Option<Arc<MidiFile>>,
-    sink: Sink,
-}
-impl AudioSynth {
-    // Load soundfont from file.
-    pub(crate) fn load_soundfont(&mut self, path: &PathBuf) -> Result<(), &str> {
-        if let Ok(mut file) = File::open(path) {
-            self.soundfont = Some(Arc::new(SoundFont::new(&mut file).unwrap()));
-            return Ok(());
-        }
-        return Err("Failed to open the file!");
-    }
-
-    pub(crate) fn play_midi(&mut self, path: &PathBuf) -> Result<(), &str> {
-        if self.soundfont.is_none() {
-            return Err("Can't play file no soundfont!");
-        }
-
-        // Load the MIDI file.
-        let mut mid = File::open(path).unwrap();
-        self.midifile = Some(Arc::new(MidiFile::new(&mut mid).unwrap()));
-        
-
-        Ok(())
-    }
+#[derive(PartialEq)]
+enum Channel {
+    L,
+    R,
 }
 
+/// Audio source for Rodio. This takes in soundfont and midifile, and generates audio samples from
+/// them. The disposable struct is consumed by audio sink for each song.
 pub struct MidiSource {
+    /// The actual midi player
     sequencer: MidiFileSequencer,
-    last_ch_was_r: bool,
+    /// We need to cache the R channel sample.
     cached_sample: f32,
+    /// Which channel was played last
+    next_ch: Channel,
 }
 
 impl MidiSource {
+    /// New MidiSource that immediately starts playing.
     pub fn new(sf: Arc<SoundFont>, midifile: Arc<MidiFile>) -> Self {
         let settings = SynthesizerSettings::new(SAMPLERATE as i32);
         let synthesizer = Synthesizer::new(&sf, &settings).unwrap();
         let mut sequencer = MidiFileSequencer::new(synthesizer);
-
-        // Play the MIDI file.
         sequencer.play(&midifile, false);
 
         Self {
             sequencer,
-            last_ch_was_r: true,
+            next_ch: Channel::L,
             cached_sample: 0.,
         }
     }
 }
 
+// Rodio requires Iterator implementation.
+// This is where whe generate the next samples.
 impl Iterator for MidiSource {
     type Item = f32;
 
@@ -65,15 +46,24 @@ impl Iterator for MidiSource {
         if self.sequencer.end_of_sequence() {
             return None;
         }
-        if self.last_ch_was_r {
-            let mut l = [0.0; 1];
-            let mut r = [0.0; 1];
+
+        // The midi synth generates bot L and R samples simultaneously, but Rodio polls samples
+        // separately for each channel.
+
+        // Left: generate both channels and store R channel sample.
+        if self.next_ch == Channel::L {
+            self.next_ch = Channel::R;
+
+            let mut l = [0.; 1];
+            let mut r = [0.; 1];
             self.sequencer.render(&mut l, &mut r);
             self.cached_sample = r[0];
-            self.last_ch_was_r = false;
             Some(l[0])
-        } else {
-            self.last_ch_was_r = true;
+        }
+        // Right: Generate nothing and return cached R ch. sample.
+        else {
+            self.next_ch = Channel::L;
+
             Some(self.cached_sample)
         }
     }
