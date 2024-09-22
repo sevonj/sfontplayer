@@ -54,6 +54,7 @@ fn soundfont_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                             let highlight = Some(i) == app.selected_sf;
                             if ui.add(egui::Button::new(name).frame(highlight)).clicked() {
                                 app.selected_sf = Some(i);
+                                app.load_song();
                             }
                         });
                     });
