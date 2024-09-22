@@ -33,6 +33,8 @@ struct SfontPlayer {
     selected_sf: Option<usize>,
     #[serde(skip)]
     selected_midi: Option<usize>,
+    queue: Vec<usize>,
+    queue_idx: usize,
 }
 
 impl SfontPlayer {
@@ -75,11 +77,14 @@ impl SfontPlayer {
     }
 
     fn start(&mut self) {
+        self.rebuild_queue();
+        self.load_song();
+    }
+    fn load_song(&mut self) {
         self.audioplayer.stop_playback();
         if self.selected_midi.is_none() || self.selected_sf.is_none() {
             return;
         }
-
         let sf = &self.soundfonts[self.selected_sf.unwrap()];
         let mid = &self.midis[self.selected_midi.unwrap()];
         self.audioplayer.set_soundfont(sf.clone());
@@ -121,6 +126,16 @@ impl SfontPlayer {
         }
         return 0.;
     }
+    fn rebuild_queue(&mut self) {
+        self.queue.clear();
+        self.queue_idx = 0;
+
+        // Sequential queue starting from currently selected song
+        let start = self.selected_midi.unwrap_or(0);
+        for i in start..self.midis.len() {
+            self.queue.push(i);
+        }
+    }
 }
 
 impl eframe::App for SfontPlayer {
@@ -129,6 +144,18 @@ impl eframe::App for SfontPlayer {
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        // Advance queue or stop.
+        if self.audioplayer.is_playing() && !self.audioplayer.can_play() {
+            self.queue_idx += 1;
+            if self.queue_idx < self.queue.len() {
+                self.selected_midi = Some(self.queue[self.queue_idx]);
+                self.start();
+            } else {
+                self.selected_midi = None;
+                self.stop();
+            }
+        }
+
         draw_gui(ctx, self);
         if self.is_playing() {
             ctx.request_repaint();
