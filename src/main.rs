@@ -74,8 +74,8 @@ impl SfontPlayer {
         }
     }
 
-    fn play(&mut self) {
-        self.audioplayer.stop();
+    fn start(&mut self) {
+        self.audioplayer.stop_playback();
         if self.selected_midi.is_none() || self.selected_sf.is_none() {
             return;
         }
@@ -85,10 +85,29 @@ impl SfontPlayer {
         self.audioplayer.set_soundfont(sf.clone());
         self.audioplayer.set_midifile(mid.clone());
 
-        if let Err(e) = self.audioplayer.play() {
+        if let Err(e) = self.audioplayer.start_playback() {
             println!("{}", e);
             return;
         }
+    }
+    fn stop(&mut self) {
+        self.audioplayer.stop_playback();
+        self.selected_midi = None;
+    }
+    fn play(&mut self) {
+        self.audioplayer.play();
+    }
+    fn pause(&mut self) {
+        self.audioplayer.pause()
+    }
+    fn is_playing(&self) -> bool {
+        self.audioplayer.is_playing()
+    }
+    fn can_play(&self) -> bool {
+        if self.selected_sf.is_none() || self.selected_midi.is_none() {
+            return false;
+        }
+        self.audioplayer.can_play()
     }
 }
 

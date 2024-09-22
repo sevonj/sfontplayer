@@ -34,6 +34,7 @@ impl Default for AudioPlayer {
     fn default() -> Self {
         let (stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
+        sink.pause();
         Self {
             path_soundfont: None,
             path_midifile: None,
@@ -47,13 +48,24 @@ impl AudioPlayer {
     pub(crate) fn set_soundfont(&mut self, path: PathBuf) {
         self.path_soundfont = Some(path);
     }
-
     pub(crate) fn set_midifile(&mut self, path: PathBuf) {
         self.path_midifile = Some(path);
     }
+    pub(crate) fn play(&mut self) {
+        self.sink.play();
+    }
+    pub(crate) fn pause(&mut self) {
+        self.sink.pause();
+    }
+    pub(crate) fn is_playing(&self) -> bool {
+        !self.sink.is_paused()
+    }
+    pub(crate) fn can_play(&self) -> bool{
+        !return self.sink.empty();
+    }
 
     // Play loaded midi on loaded sf
-    pub(crate) fn play(&mut self) -> Result<(), &str> {
+    pub(crate) fn start_playback(&mut self) -> Result<(), &str> {
         if self.path_soundfont.is_none() {
             return Err("Can't play, no soundfont!");
         }
@@ -72,7 +84,7 @@ impl AudioPlayer {
         Ok(())
     }
 
-    pub(crate) fn stop(&mut self) {
+    pub(crate) fn stop_playback(&mut self) {
         self.sink.clear();
     }
 }

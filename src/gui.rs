@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use eframe::egui;
 use rfd::FileDialog;
 
@@ -29,7 +31,11 @@ pub(crate) fn draw_gui(ctx: &egui::Context, app: &mut SfontPlayer) {
                 }
             });
         });
-    egui::TopBottomPanel::bottom("playback_panel").show(ctx, |ui| {});
+
+    egui::TopBottomPanel::bottom("playback_panel").show(ctx, |ui| {
+        playback_panel(ui, app);
+    });
+
     egui::CentralPanel::default().show(ctx, |ui| {
         song_table(ui, app);
         if ui.button("⊞ Add songs").clicked() {
@@ -98,10 +104,32 @@ fn song_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                         let highlight = Some(i) == app.selected_midi;
                         if ui.add(egui::Button::new(name).frame(highlight)).clicked() {
                             app.selected_midi = Some(i);
-                            app.play();
+                            app.start();
                         }
                     });
                 });
             }
         });
+}
+
+fn playback_panel(ui: &mut egui::Ui, app: &mut SfontPlayer) {
+    ui.horizontal(|ui| {
+        ui.label("Add widgets");
+        let playing = app.is_playing();
+
+        // PlayPause button
+        if playing {
+            if ui.button("⏸").clicked() {
+                app.pause();
+            }
+        } else {
+            if ui.add_enabled(app.can_play(), egui::Button::new("▶")).clicked() {
+                app.play()
+            }
+        }
+        // Stop button
+        if ui.add_enabled(app.is_playing(), egui::Button::new("⏹")).clicked() {
+            app.stop()
+        }
+    });
 }
