@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 extern crate rand;
 
 use audio::AudioPlayer;
@@ -124,14 +124,14 @@ impl SfontPlayer {
     fn is_empty(&self) -> bool {
         self.audioplayer.is_empty()
     }
-    fn get_midi_length(&self) -> f64 {
+    fn get_midi_length(&self) -> Duration {
         if let Some(len) = self.audioplayer.get_midi_length() {
-            return len.as_secs_f64();
+            return len;
         }
-        return 0.;
+        Duration::ZERO
     }
-    fn get_midi_position(&self) -> f64 {
-        self.audioplayer.get_midi_position().as_secs_f64()
+    fn get_midi_position(&self) -> Duration {
+        self.audioplayer.get_midi_position()
     }
     fn rebuild_queue(&mut self) {
         self.queue.clear();

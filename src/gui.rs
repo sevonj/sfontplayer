@@ -1,6 +1,4 @@
-use std::fmt::format;
-
-use eframe::egui::{self, Color32};
+use eframe::egui;
 use rfd::FileDialog;
 
 use crate::SfontPlayer;
@@ -129,7 +127,7 @@ fn song_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
 
 fn playback_panel(ui: &mut egui::Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
-        ui.label("Add widgets");
+        ui.label("🎵");
 
         // Shuffle button
         if ui
@@ -189,16 +187,22 @@ fn playback_panel(ui: &mut egui::Ui, app: &mut SfontPlayer) {
         }
         // Slider
         let len = app.get_midi_length();
-        let mut pos = app.get_midi_position();
+        let pos = app.get_midi_position();
         ui.horizontal(|ui| {
             ui.spacing_mut().slider_width = 300.0;
             ui.add(
-                egui::Slider::new(&mut pos, 0.0..=len)
+                egui::Slider::new(&mut pos.as_secs_f64(), 0.0..=len.as_secs_f64())
                     .show_value(false)
                     .trailing_fill(true),
             );
         });
 
-        ui.label(format!("{:.0}/{:.0}", pos, len));
+        ui.label(format!(
+            "{:02}:{:02}/{:02}:{:02}",
+            pos.as_secs() / 60,
+            pos.as_secs() % 60,
+            len.as_secs() / 60,
+            len.as_secs() % 60,
+        ));
     });
 }
