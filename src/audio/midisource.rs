@@ -71,7 +71,11 @@ impl Iterator for MidiSource {
 
 impl rodio::Source for MidiSource {
     fn current_frame_len(&self) -> Option<usize> {
-        None
+        let len = self.sequencer.get_midi_file().unwrap().get_length();
+        let pos = self.sequencer.get_position();
+        let remaining = len - pos;
+        let remaining_samples = remaining * SAMPLERATE as f64;
+        Some(remaining_samples as usize)
     }
 
     fn channels(&self) -> u16 {
