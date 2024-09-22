@@ -16,15 +16,18 @@ pub(crate) fn draw_gui(ctx: &egui::Context, app: &mut SfontPlayer) {
     egui::TopBottomPanel::top("sf_table")
         .resizable(true)
         .show(ctx, |ui| {
-            soundfont_table(ui, app);
-            if ui.button("⊞ Add soundfonts").clicked() {
-                if let Some(mut paths) = FileDialog::new()
-                    .add_filter("Soundfonts", &["sf2"])
-                    .pick_files()
-                {
-                    app.soundfonts.append(&mut paths);
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                soundfont_table(ui, app);
+
+                if ui.button("⊞ Add soundfonts").clicked() {
+                    if let Some(mut paths) = FileDialog::new()
+                        .add_filter("Soundfonts", &["sf2"])
+                        .pick_files()
+                    {
+                        app.soundfonts.append(&mut paths);
+                    }
                 }
-            }
+            });
         });
     egui::TopBottomPanel::bottom("playback_panel").show(ctx, |ui| {});
     egui::CentralPanel::default().show(ctx, |ui| {
