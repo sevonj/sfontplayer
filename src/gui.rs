@@ -35,7 +35,7 @@ fn soundfont_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
         TableBuilder::new(ui)
             .striped(true)
             .vscroll(false)
-            .column(Column::exact(32.))
+            .column(Column::exact(16.))
             .column(Column::remainder())
             .header(20.0, |mut header| {
                 header.col(|_| {});
@@ -47,7 +47,7 @@ fn soundfont_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                 for (i, sf) in app.soundfonts.clone().iter().enumerate() {
                     body.row(TBL_ROW_H, |mut row| {
                         row.col(|ui| {
-                            if ui.button("❎").clicked() {
+                            if ui.add(egui::Button::new("❎").frame(false)).clicked() {
                                 app.remove_sf(i)
                             }
                         });
@@ -83,7 +83,7 @@ fn song_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
         TableBuilder::new(ui)
             .striped(true)
             .vscroll(false)
-            .column(Column::exact(32.))
+            .column(Column::exact(16.))
             .column(Column::remainder())
             .header(20.0, |mut header| {
                 header.col(|_| {});
@@ -95,7 +95,7 @@ fn song_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                 for (i, mid) in app.midis.clone().iter().enumerate() {
                     body.row(TBL_ROW_H, |mut row| {
                         row.col(|ui| {
-                            if ui.button("❎").clicked() {
+                            if ui.add(egui::Button::new("❎").frame(false)).clicked() {
                                 app.remove_midi(i)
                             }
                         });
@@ -136,7 +136,27 @@ fn playback_panel(ui: &mut egui::Ui, app: &mut SfontPlayer) {
             .add(egui::SelectableLabel::new(app.shuffle, "🔀"))
             .clicked()
         {
-            app.shuffle = !app.shuffle
+            app.shuffle = !app.shuffle;
+            app.rebuild_queue();
+        }
+
+        let prev_enabled = if let Some(idx) = app.queue_idx {
+            idx > 0
+        } else {
+            false
+        };
+        let next_enabled = if let Some(idx) = app.queue_idx {
+            idx < app.queue.len() - 1
+        } else {
+            false
+        };
+        // Prev button
+        if ui
+            .add_enabled(prev_enabled, egui::Button::new("⏪"))
+            .clicked()
+        {
+            app.queue_idx = Some(app.queue_idx.unwrap() - 1);
+            app.load_song();
         }
         // PlayPause button
         if app.is_playing() {
@@ -151,6 +171,14 @@ fn playback_panel(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                     app.play();
                 }
             }
+        }
+        // Next button
+        if ui
+            .add_enabled(next_enabled, egui::Button::new("⏩"))
+            .clicked()
+        {
+            app.queue_idx = Some(app.queue_idx.unwrap() + 1);
+            app.load_song();
         }
         // Stop button
         if ui

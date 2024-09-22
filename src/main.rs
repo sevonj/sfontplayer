@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 extern crate rand;
 
-use rand::seq::SliceRandom;
 use audio::AudioPlayer;
 use eframe::egui;
 use gui::draw_gui;
+use rand::seq::SliceRandom;
 
 mod audio;
 mod gui;
@@ -90,13 +90,11 @@ impl SfontPlayer {
             println!("load_song: no sf");
             return;
         }
-        if self.selected_midi.is_none() {
-            if let Some(idx) = self.queue_idx {
-                self.selected_midi = Some(self.queue[idx]);
-            } else {
-                println!("load_song: no queue idx");
-                return;
-            }
+        if let Some(idx) = self.queue_idx {
+            self.selected_midi = Some(self.queue[idx]);
+        } else {
+            println!("load_song: no queue idx");
+            return;
         }
         let sf = &self.soundfonts[self.selected_sf.unwrap()];
         let mid = &self.midis[self.selected_midi.unwrap()];
