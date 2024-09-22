@@ -8,7 +8,6 @@ use rand::seq::SliceRandom;
 
 mod audio;
 mod gui;
-mod state;
 
 fn main() {
     let native_options = eframe::NativeOptions {
