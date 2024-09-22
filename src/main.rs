@@ -144,6 +144,7 @@ impl SfontPlayer {
         }
 
         if self.shuffle {
+            self.queue_idx = Some(0);
             self.queue.retain(|&x| x != start); // Remove first song
             self.queue.shuffle(&mut rand::thread_rng());
             self.queue.insert(0, start); // Reinsert first to the beginning.
