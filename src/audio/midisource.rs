@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use rustysynth::{MidiFile, MidiFileSequencer, SoundFont, Synthesizer, SynthesizerSettings};
 
@@ -82,7 +82,9 @@ impl rodio::Source for MidiSource {
         SAMPLERATE
     }
 
-    fn total_duration(&self) -> Option<std::time::Duration> {
-        None
+    fn total_duration(&self) -> Option<Duration> {
+        Some(Duration::from_secs_f64(
+            self.sequencer.get_midi_file().unwrap().get_length(),
+        ))
     }
 }

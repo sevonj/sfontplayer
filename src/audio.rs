@@ -1,4 +1,4 @@
-use std::{fs::File, path::PathBuf, sync::Arc};
+use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
 
 use midisource::MidiSource;
 use rodio::{OutputStream, Sink};
@@ -15,7 +15,7 @@ fn load_soundfont(path: &PathBuf) -> Result<SoundFont, &str> {
 }
 
 // Load midi file.
-fn load_mididile(path: &PathBuf) -> Result<MidiFile, &str> {
+fn load_midifile(path: &PathBuf) -> Result<MidiFile, &str> {
     if let Ok(mut file) = File::open(path) {
         return Ok(MidiFile::new(&mut file).unwrap());
     }
@@ -26,6 +26,7 @@ fn load_mididile(path: &PathBuf) -> Result<MidiFile, &str> {
 pub(crate) struct AudioPlayer {
     path_soundfont: Option<PathBuf>,
     path_midifile: Option<PathBuf>,
+    midifile_duration: Option<Duration>,
     stream: OutputStream,
     sink: Sink,
 }
@@ -38,6 +39,7 @@ impl Default for AudioPlayer {
         Self {
             path_soundfont: None,
             path_midifile: None,
+            midifile_duration: None,
             stream,
             sink,
         }
@@ -60,8 +62,14 @@ impl AudioPlayer {
     pub(crate) fn is_playing(&self) -> bool {
         !self.sink.is_paused()
     }
-    pub(crate) fn can_play(&self) -> bool{
-        !return self.sink.empty();
+    pub(crate) fn can_play(&self) -> bool {
+        !self.sink.empty()
+    }
+    pub(crate) fn get_midi_length(&self) -> Option<Duration> {
+        self.midifile_duration
+    }
+    pub(crate) fn get_midi_position(&self) -> Option<Duration> {
+        Some(self.sink.get_pos())
     }
 
     // Play loaded midi on loaded sf
@@ -75,16 +83,17 @@ impl AudioPlayer {
 
         let path_sf = self.path_soundfont.as_ref().unwrap();
         let path_mid = self.path_midifile.as_ref().unwrap();
-        let source = MidiSource::new(
-            Arc::new(load_soundfont(path_sf)?),
-            Arc::new(load_mididile(path_mid)?),
-        );
+        let midifile = load_midifile(path_mid)?;
+        self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
+
+        let source = MidiSource::new(Arc::new(load_soundfont(path_sf)?), Arc::new(midifile));
         self.sink.append(source);
         self.sink.play();
         Ok(())
     }
 
     pub(crate) fn stop_playback(&mut self) {
+        self.midifile_duration = None;
         self.sink.clear();
     }
 }

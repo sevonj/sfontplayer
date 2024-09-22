@@ -109,6 +109,18 @@ impl SfontPlayer {
         }
         self.audioplayer.can_play()
     }
+    fn get_midi_length(&self) -> f64 {
+        if let Some(len) = self.audioplayer.get_midi_length() {
+            return len.as_secs_f64();
+        }
+        return 0.;
+    }
+    fn get_midi_position(&self) -> f64 {
+        if let Some(len) = self.audioplayer.get_midi_position() {
+            return len.as_secs_f64();
+        }
+        return 0.;
+    }
 }
 
 impl eframe::App for SfontPlayer {
@@ -118,5 +130,8 @@ impl eframe::App for SfontPlayer {
 
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         draw_gui(ctx, self);
+        if self.is_playing() {
+            ctx.request_repaint();
+        }
     }
 }

@@ -131,5 +131,15 @@ fn playback_panel(ui: &mut egui::Ui, app: &mut SfontPlayer) {
         if ui.add_enabled(app.is_playing(), egui::Button::new("⏹")).clicked() {
             app.stop()
         }
+        // Slider
+        let len = app.get_midi_length();
+        let mut pos = app.get_midi_position();
+        ui.horizontal(|ui| {
+            ui.spacing_mut().slider_width = 300.0;
+            ui.add(egui::Slider::new(&mut pos, 0.0..=len).show_value(false).trailing_fill(true));
+        });
+        
+        ui.label(format!("{:.0}/{:.0}", pos, len));
+
     });
 }
