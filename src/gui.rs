@@ -1,4 +1,4 @@
-use eframe::egui;
+use eframe::{egui, epaint::tessellator::path};
 use rfd::FileDialog;
 
 use crate::SfontPlayer;
@@ -53,8 +53,7 @@ fn soundfont_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                             let name = sf.file_name().unwrap().to_str().unwrap().to_owned();
                             let highlight = Some(i) == app.selected_sf;
                             if ui.add(egui::Button::new(name).frame(highlight)).clicked() {
-                                app.selected_sf = Some(i);
-                                app.load_song();
+                                app.select_sf(i);
                             }
                         });
                     });
@@ -62,16 +61,17 @@ fn soundfont_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
             });
         ui.horizontal(|ui| {
             if ui.button("⊞ Add soundfonts").clicked() {
-                if let Some(mut paths) = FileDialog::new()
+                if let Some(paths) = FileDialog::new()
                     .add_filter("Soundfonts", &["sf2"])
                     .pick_files()
                 {
-                    app.soundfonts.append(&mut paths);
+                    for path in paths {
+                        app.add_sf(path);
+                    }
                 }
             }
             if ui.button("Clear").clicked() {
-                app.soundfonts.clear();
-                app.selected_sf = None;
+                app.clear_sfs();
             }
         });
     });
@@ -111,16 +111,17 @@ fn song_table(ui: &mut egui::Ui, app: &mut SfontPlayer) {
             });
         ui.horizontal(|ui| {
             if ui.button("⊞ Add songs").clicked() {
-                if let Some(mut paths) = FileDialog::new()
+                if let Some(paths) = FileDialog::new()
                     .add_filter("Midi files", &["mid"])
                     .pick_files()
                 {
-                    app.midis.append(&mut paths);
+                    for path in paths {
+                        app.add_midi(path)
+                    }
                 }
             }
             if ui.button("Clear").clicked() {
-                app.midis.clear();
-                app.selected_midi = None;
+                app.clear_midis();
             }
         });
     });

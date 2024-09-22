@@ -29,8 +29,8 @@ fn main() {
 struct SfontPlayer {
     #[serde(skip)]
     audioplayer: AudioPlayer,
-    pub(crate) soundfonts: Vec<PathBuf>,
-    pub(crate) midis: Vec<PathBuf>,
+    soundfonts: Vec<PathBuf>,
+    midis: Vec<PathBuf>,
     selected_sf: Option<usize>,
     selected_midi: Option<usize>,
     queue: Vec<usize>,
@@ -52,32 +52,55 @@ impl SfontPlayer {
 
         Self::default()
     }
-
+    fn select_sf(&mut self, index: usize) {
+        self.selected_sf = Some(index);
+        self.load_song();
+    }
+    fn add_sf(&mut self, path: PathBuf) {
+        if !self.soundfonts.contains(&path) {
+            self.soundfonts.push(path);
+        }
+    }
     fn remove_sf(&mut self, index: usize) {
         self.soundfonts.remove(index);
         // We deleted currently selected
         if Some(index) == self.selected_sf {
             self.selected_sf = None;
+            self.stop();
         }
         // Deletion affected index
         else if Some(index) < self.selected_sf {
             self.selected_sf = Some(self.selected_sf.unwrap() - 1)
         }
     }
-
+    fn clear_sfs(&mut self) {
+        self.soundfonts.clear();
+        self.selected_sf = None;
+        self.stop();
+    }
+    fn add_midi(&mut self, path: PathBuf) {
+        if !self.midis.contains(&path) {
+            self.midis.push(path);
+        }
+    }
     fn remove_midi(&mut self, index: usize) {
         println!("delet: {}", index);
         self.midis.remove(index);
         // We deleted currently selected
         if Some(index) == self.selected_midi {
             self.selected_midi = None;
+            self.stop();
         }
         // Deletion affected index
         else if Some(index) < self.selected_midi {
             self.selected_midi = Some(self.selected_midi.unwrap() - 1)
         }
     }
-
+    fn clear_midis(&mut self) {
+        self.midis.clear();
+        self.selected_midi = None;
+        self.stop();
+    }
     fn start(&mut self) {
         println!("Start");
         self.rebuild_queue();
