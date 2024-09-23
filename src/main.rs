@@ -309,7 +309,7 @@ impl eframe::App for SfontPlayer {
 
         draw_gui(ctx, self);
 
-        if self.is_paused() {
+        if !self.is_paused() {
             ctx.request_repaint();
         }
 
