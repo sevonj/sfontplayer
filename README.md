@@ -1,5 +1,5 @@
 # SfontPlayer
-![image](https://github.com/user-attachments/assets/c8833b0f-6ec0-4319-872c-a1da598a16ed)
+![image](https://github.com/user-attachments/assets/e8a97024-355a-48f1-b7a8-cccafeb42afc)
 
 A simple midi player that makes soundfont comparison easy.
 
