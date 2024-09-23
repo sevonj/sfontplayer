@@ -14,20 +14,6 @@ pub(crate) fn workspace_tabs(ui: &mut egui::Ui, app: &mut SfontPlayer) {
     });
 }
 
-pub(crate) fn workspace_options(ui: &mut egui::Ui, app: &mut SfontPlayer) {
-    ui.menu_button("Rename Workspace", |ui| {
-        if ui
-            .text_edit_singleline(&mut app.get_workspace_mut().name)
-            .lost_focus()
-        {
-            ui.close_menu();
-        }
-        if ui.add(Button::new("ok")).clicked() {
-            ui.close_menu();
-        }
-    });
-}
-
 fn workspace_tab(ui: &mut egui::Ui, app: &mut SfontPlayer, index: usize) {
     let mut workspace_title = app.workspaces[index].name.clone();
     if app.is_playing() && app.playing_workspace_idx == index {

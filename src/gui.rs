@@ -12,7 +12,7 @@ use eframe::egui::{
 };
 use egui_extras::{Column, TableBuilder};
 use rfd::FileDialog;
-use workspace_select::{workspace_options, workspace_tabs};
+use workspace_select::workspace_tabs;
 
 const TBL_ROW_H: f32 = 16.;
 
@@ -33,7 +33,6 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
         .resizable(false)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
-                workspace_options(ui, app);
                 soundfont_controls(ui, app);
             });
         });
@@ -54,7 +53,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                             .pick_files()
                         {
                             for path in paths {
-                                app.add_sf(path);
+                                app.add_font(path);
                             }
                         }
                     }
@@ -122,7 +121,7 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 });
             })
             .body(|mut body| {
-                for (i, sf) in app.get_soundfonts().iter().enumerate() {
+                for (i, sf) in app.get_fonts().iter().enumerate() {
                     body.row(TBL_ROW_H, |mut row| {
                         row.col(|ui| {
                             if ui
@@ -130,14 +129,14 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                                 .on_hover_text("Remove")
                                 .clicked()
                             {
-                                app.remove_sf(i)
+                                app.remove_font(i)
                             }
                         });
                         row.col(|ui| {
                             let name = sf.file_name().unwrap().to_str().unwrap().to_owned();
-                            let highlight = Some(i) == app.get_sf_idx();
+                            let highlight = Some(i) == app.get_font_idx();
                             if ui.add(Button::new(name).frame(highlight)).clicked() {
-                                app.set_sf_idx(i);
+                                app.set_font_idx(i);
                             }
                         });
                     });

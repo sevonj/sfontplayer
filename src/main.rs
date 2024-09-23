@@ -59,49 +59,43 @@ impl SfontPlayer {
 
         Self::default()
     }
-    fn set_sf_idx(&mut self, index: usize) {
-        self.get_workspace_mut().selected_sf = Some(index);
+    fn set_font_idx(&mut self, index: usize) {
+        self.get_workspace_mut().font_idx = Some(index);
         self.load_song();
     }
-    fn get_soundfonts(&mut self) -> Vec<PathBuf> {
-        self.get_workspace().soundfonts.clone()
+    fn get_fonts(&mut self) -> Vec<PathBuf> {
+        self.get_workspace().fonts.clone()
     }
-    fn get_sf_idx(&mut self) -> Option<usize> {
-        self.get_workspace().selected_sf
+    fn get_font_idx(&mut self) -> Option<usize> {
+        self.get_workspace().font_idx
     }
-    fn add_sf(&mut self, path: PathBuf) {
+    fn add_font(&mut self, path: PathBuf) {
         let workspace = self.get_workspace_mut();
-        if !workspace.soundfonts.contains(&path) {
-            workspace.soundfonts.push(path);
+        if !workspace.fonts.contains(&path) {
+            workspace.fonts.push(path);
         }
     }
-    fn remove_sf(&mut self, index: usize) {
+    fn remove_font(&mut self, index: usize) {
         let workspace = self.get_workspace_mut();
-        workspace.soundfonts.remove(index);
-        // We deleted currently selected
-        if Some(index) == workspace.selected_sf {
-            workspace.selected_sf = None;
+        workspace.remove_font(index);
+        if Some(index) == workspace.font_idx {
             self.stop();
         }
-        // Deletion affected index
-        else if Some(index) < workspace.selected_sf {
-            workspace.selected_sf = Some(workspace.selected_sf.unwrap() - 1)
-        }
     }
-    fn clear_sfs(&mut self) {
+    fn clear_fonts(&mut self) {
         let workspace = self.get_workspace_mut();
-        workspace.soundfonts.clear();
-        workspace.selected_sf = None;
+        workspace.fonts.clear();
+        workspace.font_idx = None;
         self.stop();
     }
     fn get_midis(&self) -> &Vec<MidiMeta> {
         &self.get_workspace().midis
     }
     fn get_midi_idx(&mut self) -> Option<usize> {
-        self.get_workspace().selected_midi
+        self.get_workspace().midi_idx
     }
     fn set_midi_idx(&mut self, index: usize) {
-        self.get_workspace_mut().selected_midi = Some(index);
+        self.get_workspace_mut().midi_idx = Some(index);
     }
     fn add_midi(&mut self, filepath: PathBuf) {
         if self.get_workspace().contains_midi(&filepath) {
@@ -111,21 +105,15 @@ impl SfontPlayer {
     }
     fn remove_midi(&mut self, index: usize) {
         let workspace = self.get_workspace_mut();
-        workspace.midis.remove(index);
-        // We deleted currently selected
-        if Some(index) == workspace.selected_midi {
-            workspace.selected_midi = None;
+        workspace.remove_midi(index);
+        if Some(index) == workspace.midi_idx {
             self.stop();
-        }
-        // Deletion affected index
-        else if Some(index) < workspace.selected_midi {
-            workspace.selected_midi = Some(workspace.selected_midi.unwrap() - 1)
         }
     }
     fn clear_midis(&mut self) {
         let workspace = self.get_workspace_mut();
         workspace.midis.clear();
-        workspace.selected_midi = None;
+        workspace.midi_idx = None;
         self.stop();
     }
     fn start(&mut self) {
@@ -136,18 +124,18 @@ impl SfontPlayer {
     fn load_song(&mut self) {
         self.audioplayer.stop_playback();
         let workspace = self.get_workspace_mut();
-        if workspace.selected_sf.is_none() {
+        if workspace.font_idx.is_none() {
             println!("load_song: no sf");
             return;
         }
         if let Some(idx) = workspace.queue_idx {
-            workspace.selected_midi = Some(workspace.queue[idx]);
+            workspace.midi_idx = Some(workspace.queue[idx]);
         } else {
             println!("load_song: no queue idx");
             return;
         }
-        let sf = workspace.soundfonts[workspace.selected_sf.unwrap()].clone();
-        let mid = workspace.midis[workspace.selected_midi.unwrap()].get_path();
+        let sf = workspace.fonts[workspace.font_idx.unwrap()].clone();
+        let mid = workspace.midis[workspace.midi_idx.unwrap()].get_path();
         self.audioplayer.set_soundfont(sf);
         self.audioplayer.set_midifile(mid);
 
@@ -158,7 +146,7 @@ impl SfontPlayer {
     }
     fn stop(&mut self) {
         self.audioplayer.stop_playback();
-        self.get_workspace_mut().selected_midi = None;
+        self.get_workspace_mut().midi_idx = None;
         self.get_workspace_mut().queue_idx = None;
     }
     fn play(&mut self) {
@@ -189,7 +177,7 @@ impl SfontPlayer {
         workspace.queue.clear();
 
         // Sequential queue starting from currently selected song
-        let start = workspace.selected_midi.unwrap_or(0);
+        let start = workspace.midi_idx.unwrap_or(0);
         workspace.queue_idx = Some(start);
         for i in 0..workspace.midis.len() {
             workspace.queue.push(i);
@@ -246,14 +234,14 @@ impl eframe::App for SfontPlayer {
                 workspace.queue_idx = Some(idx);
                 if idx < workspace.queue.len() {
                     // Next song.
-                    workspace.selected_midi = Some(workspace.queue[idx]);
+                    workspace.midi_idx = Some(workspace.queue[idx]);
                     self.start();
                 } else {
                     // Reached the end.
                     workspace.queue_idx = None;
                 }
             } else {
-                workspace.selected_midi = None;
+                workspace.midi_idx = None;
                 self.stop();
             }
         }
@@ -264,7 +252,8 @@ impl eframe::App for SfontPlayer {
             ctx.request_repaint();
         }
 
-        // Delete workspaces
+        // Deletion queues
+        self.get_workspace_mut().delete_queued();
         for index in self.workspace_delet_queue.clone() {
             self.workspaces.remove(index);
 

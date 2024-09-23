@@ -43,13 +43,18 @@ impl MidiMeta {
 #[serde(default)]
 pub(crate) struct Workspace {
     pub name: String,
-    pub soundfonts: Vec<PathBuf>,
+    pub fonts: Vec<PathBuf>,
     pub midis: Vec<MidiMeta>,
-    pub selected_sf: Option<usize>,
-    pub selected_midi: Option<usize>,
+    pub font_idx: Option<usize>,
+    pub midi_idx: Option<usize>,
     pub queue: Vec<usize>,
     #[serde(skip)]
     pub queue_idx: Option<usize>,
+
+    #[serde(skip)]
+    midi_delete_queue: Vec<usize>,
+    #[serde(skip)]
+    font_delete_queue: Vec<usize>,
 }
 impl Workspace {
     pub fn contains_midi(&self, filepath: &PathBuf) -> bool {
@@ -60,18 +65,49 @@ impl Workspace {
         }
         false
     }
+    pub fn remove_midi(&mut self, index: usize) {
+        self.midi_delete_queue.push(index);
+    }
+    pub fn remove_font(&mut self, index: usize) {
+        self.font_delete_queue.push(index);
+    }
+    /// Delete fonts and midis queued for removal.
+    pub fn delete_queued(&mut self) {
+        for index in self.midi_delete_queue.clone() {
+            self.midis.remove(index);
+            // Deletion affected index
+            if Some(index) == self.midi_idx {
+                self.midi_idx = None;
+            } else if Some(index) < self.midi_idx {
+                self.midi_idx = Some(self.midi_idx.unwrap() - 1)
+            }
+        }
+        self.midi_delete_queue.clear();
+        for index in self.font_delete_queue.clone() {
+            self.fonts.remove(index);
+            // Deletion affected index
+            if Some(index) == self.font_idx {
+                self.font_idx = None;
+            } else if Some(index) < self.font_idx {
+                self.font_idx = Some(self.font_idx.unwrap() - 1)
+            }
+        }
+        self.font_delete_queue.clear();
+    }
 }
 
 impl Default for Workspace {
     fn default() -> Self {
         Self {
             name: "Workspace".to_owned(),
-            soundfonts: vec![],
+            fonts: vec![],
             midis: vec![],
-            selected_sf: None,
-            selected_midi: None,
+            font_idx: None,
+            midi_idx: None,
             queue: vec![],
             queue_idx: None,
+            midi_delete_queue: vec![],
+            font_delete_queue: vec![],
         }
     }
 }
