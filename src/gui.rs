@@ -252,11 +252,14 @@ fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
         }
         // Slider
         let len = app.get_midi_length();
+        // This stops the slider from showing halfway if len is zero.
+        let slider_len = if len.is_zero() { 1. } else { len.as_secs_f64() };
         let pos = app.get_midi_position();
         ui.horizontal(|ui| {
-            ui.spacing_mut().slider_width = 300.0;
-            ui.add(
-                Slider::new(&mut pos.as_secs_f64(), 0.0..=len.as_secs_f64())
+            ui.spacing_mut().slider_width = f32::max(ui.available_width() - 128., 64.);
+            ui.add_enabled(
+                !len.is_zero(),
+                Slider::new(&mut pos.as_secs_f64(), 0.0..=slider_len)
                     .show_value(false)
                     .trailing_fill(true),
             );
