@@ -2,11 +2,13 @@ use std::{path::PathBuf, time::Duration};
 extern crate rand;
 
 use audio::AudioPlayer;
+use data::Workspace;
 use eframe::egui;
 use gui::draw_gui;
 use rand::seq::SliceRandom;
 
 mod audio;
+mod data;
 mod gui;
 
 fn main() {
@@ -27,16 +29,19 @@ fn main() {
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 struct SfontPlayer {
+    // -- Audio
     #[serde(skip)]
     audioplayer: AudioPlayer,
-    soundfonts: Vec<PathBuf>,
-    midis: Vec<PathBuf>,
-    selected_sf: Option<usize>,
-    selected_midi: Option<usize>,
-    queue: Vec<usize>,
-    #[serde(skip)]
-    queue_idx: Option<usize>,
+
+    // -- Data
+    workspaces: Vec<Workspace>,
+    workspace_idx: usize,
+    /// Queued, because deletion will be requested in a loop.
+    workspace_delet_queue: Vec<usize>,
+
+    // -- Settings
     shuffle: bool,
+    show_soundfonts: bool,
 }
 
 impl SfontPlayer {
@@ -52,53 +57,74 @@ impl SfontPlayer {
 
         Self::default()
     }
-    fn select_sf(&mut self, index: usize) {
-        self.selected_sf = Some(index);
+    fn set_sf_idx(&mut self, index: usize) {
+        self.get_workspace_mut().selected_sf = Some(index);
         self.load_song();
     }
+    fn get_soundfonts(&mut self) -> Vec<PathBuf> {
+        self.get_workspace().soundfonts.clone()
+    }
+    fn get_sf_idx(&mut self) -> Option<usize> {
+        self.get_workspace().selected_sf
+    }
     fn add_sf(&mut self, path: PathBuf) {
-        if !self.soundfonts.contains(&path) {
-            self.soundfonts.push(path);
+        let workspace = self.get_workspace_mut();
+        if !workspace.soundfonts.contains(&path) {
+            workspace.soundfonts.push(path);
         }
     }
     fn remove_sf(&mut self, index: usize) {
-        self.soundfonts.remove(index);
+        let workspace = self.get_workspace_mut();
+        workspace.soundfonts.remove(index);
         // We deleted currently selected
-        if Some(index) == self.selected_sf {
-            self.selected_sf = None;
+        if Some(index) == workspace.selected_sf {
+            workspace.selected_sf = None;
             self.stop();
         }
         // Deletion affected index
-        else if Some(index) < self.selected_sf {
-            self.selected_sf = Some(self.selected_sf.unwrap() - 1)
+        else if Some(index) < workspace.selected_sf {
+            workspace.selected_sf = Some(workspace.selected_sf.unwrap() - 1)
         }
     }
     fn clear_sfs(&mut self) {
-        self.soundfonts.clear();
-        self.selected_sf = None;
+        let workspace = self.get_workspace_mut();
+        workspace.soundfonts.clear();
+        workspace.selected_sf = None;
         self.stop();
     }
+    fn get_midis(&mut self) -> Vec<PathBuf> {
+        self.get_workspace().midis.clone()
+    }
+    fn get_midi_idx(&mut self) -> Option<usize> {
+        self.get_workspace().selected_midi
+    }
+    fn set_midi_idx(&mut self, index: usize) {
+        self.get_workspace_mut().selected_midi = Some(index);
+    }
     fn add_midi(&mut self, path: PathBuf) {
-        if !self.midis.contains(&path) {
-            self.midis.push(path);
+        let workspace = self.get_workspace_mut();
+        if !workspace.midis.contains(&path) {
+            workspace.midis.push(path);
         }
     }
     fn remove_midi(&mut self, index: usize) {
-        println!("delet: {}", index);
-        self.midis.remove(index);
+        let workspace = self.get_workspace_mut();
+        workspace.midis.remove(index);
         // We deleted currently selected
-        if Some(index) == self.selected_midi {
-            self.selected_midi = None;
+        if Some(index) == workspace.selected_midi {
+            workspace.selected_midi = None;
             self.stop();
         }
         // Deletion affected index
-        else if Some(index) < self.selected_midi {
-            self.selected_midi = Some(self.selected_midi.unwrap() - 1)
+        else if Some(index) < workspace.selected_midi {
+            workspace.selected_midi =
+                Some(workspace.selected_midi.unwrap() - 1)
         }
     }
     fn clear_midis(&mut self) {
-        self.midis.clear();
-        self.selected_midi = None;
+        let workspace = self.get_workspace_mut();
+        workspace.midis.clear();
+        workspace.selected_midi = None;
         self.stop();
     }
     fn start(&mut self) {
@@ -108,20 +134,21 @@ impl SfontPlayer {
     }
     fn load_song(&mut self) {
         self.audioplayer.stop_playback();
-        if self.selected_sf.is_none() {
+        let workspace = self.get_workspace_mut();
+        if workspace.selected_sf.is_none() {
             println!("load_song: no sf");
             return;
         }
-        if let Some(idx) = self.queue_idx {
-            self.selected_midi = Some(self.queue[idx]);
+        if let Some(idx) = workspace.queue_idx {
+            workspace.selected_midi = Some(workspace.queue[idx]);
         } else {
             println!("load_song: no queue idx");
             return;
         }
-        let sf = &self.soundfonts[self.selected_sf.unwrap()];
-        let mid = &self.midis[self.selected_midi.unwrap()];
-        self.audioplayer.set_soundfont(sf.clone());
-        self.audioplayer.set_midifile(mid.clone());
+        let sf = workspace.soundfonts[workspace.selected_sf.unwrap()].clone();
+        let mid = workspace.midis[workspace.selected_midi.unwrap()].clone();
+        self.audioplayer.set_soundfont(sf);
+        self.audioplayer.set_midifile(mid);
 
         if let Err(e) = self.audioplayer.start_playback() {
             println!("{}", e);
@@ -130,8 +157,8 @@ impl SfontPlayer {
     }
     fn stop(&mut self) {
         self.audioplayer.stop_playback();
-        self.selected_midi = None;
-        self.queue_idx = None;
+        self.get_workspace_mut().selected_midi = None;
+        self.get_workspace_mut().queue_idx = None;
     }
     fn play(&mut self) {
         println!("Play");
@@ -156,23 +183,49 @@ impl SfontPlayer {
         self.audioplayer.get_midi_position()
     }
     fn rebuild_queue(&mut self) {
-        self.queue.clear();
+        let shuffle = self.shuffle;
+        let workspace = self.get_workspace_mut();
+        workspace.queue.clear();
 
         // Sequential queue starting from currently selected song
-        let start = self.selected_midi.unwrap_or(0);
-        self.queue_idx = Some(start);
-        for i in 0..self.midis.len() {
-            self.queue.push(i);
+        let start = workspace.selected_midi.unwrap_or(0);
+        workspace.queue_idx = Some(start);
+        for i in 0..workspace.midis.len() {
+            workspace.queue.push(i);
         }
 
-        if self.shuffle {
-            self.queue_idx = Some(0);
-            self.queue.retain(|&x| x != start); // Remove first song
-            self.queue.shuffle(&mut rand::thread_rng());
-            self.queue.insert(0, start); // Reinsert first to the beginning.
+        if shuffle {
+            workspace.queue_idx = Some(0);
+            workspace.queue.retain(|&x| x != start); // Remove first song
+            workspace.queue.shuffle(&mut rand::thread_rng());
+            workspace.queue.insert(0, start); // Reinsert first to the beginning.
         }
 
-        println!("queue rebuilt: {:?}", self.queue);
+        println!("queue rebuilt: {:?}", self.get_workspace().queue);
+    }
+    fn get_workspace(&self) -> &Workspace {
+        &self.workspaces[self.workspace_idx]
+    }
+    fn get_workspace_mut(&mut self) -> &mut Workspace {
+        &mut self.workspaces[self.workspace_idx]
+    }
+    fn new_workspace(&mut self) {
+        self.workspaces.push(Workspace::default());
+    }
+    fn remove_workspace(&mut self, index: usize) {
+        self.workspace_delet_queue.push(index);
+    }
+    fn rename_workspace(&mut self, name: String){
+        self.get_workspace_mut().name = name
+    }
+    fn get_queue(&self) -> Vec<usize> {
+        self.get_workspace().queue.clone()
+    }
+    fn get_queue_idx(&self) -> Option<usize> {
+        self.get_workspace().queue_idx.clone()
+    }
+    fn set_queue_idx(&mut self, queue_idx: Option<usize>) {
+        self.get_workspace_mut().queue_idx = queue_idx;
     }
 }
 
@@ -181,22 +234,28 @@ impl eframe::App for SfontPlayer {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Make sure at least one workspace exists!
+        if self.workspaces.is_empty() {
+            self.new_workspace();
+        }
+
         // When previous song has ended, advance queue or stop.
         if self.audioplayer.is_playing() && self.audioplayer.is_empty() {
-            if let Some(mut idx) = self.queue_idx {
+            let workspace = self.get_workspace_mut();
+            if let Some(mut idx) = workspace.queue_idx {
                 idx += 1;
-                self.queue_idx = Some(idx);
-                if idx < self.queue.len() {
+                workspace.queue_idx = Some(idx);
+                if idx < workspace.queue.len() {
                     // Next song.
-                    self.selected_midi = Some(self.queue[idx]);
+                    workspace.selected_midi = Some(workspace.queue[idx]);
                     self.start();
                 } else {
                     // Reached the end.
-                    self.queue_idx = None;
+                    workspace.queue_idx = None;
                 }
             } else {
-                self.selected_midi = None;
+                workspace.selected_midi = None;
                 self.stop();
             }
         }
@@ -206,5 +265,16 @@ impl eframe::App for SfontPlayer {
         if self.is_playing() {
             ctx.request_repaint();
         }
+
+        // Delete workspaces
+        for index in self.workspace_delet_queue.clone() {
+            self.workspaces.remove(index);
+
+            // Deletion affected index. Note that we don't go below zero.
+            if index <= self.workspace_idx && self.workspace_idx > 0 {
+                self.workspace_idx -= 1;
+            }
+        }
+        self.workspace_delet_queue.clear();
     }
 }

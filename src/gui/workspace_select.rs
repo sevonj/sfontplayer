@@ -1,0 +1,56 @@
+use eframe::egui::{self, Button, Stroke};
+
+use crate::SfontPlayer;
+
+pub(crate) fn workspace_tabs(ui: &mut egui::Ui, app: &mut SfontPlayer) {
+    ui.horizontal(|ui| {
+        for i in 0..app.workspaces.len() {
+            workspace_tab(ui, app, i);
+        }
+        if ui.add(Button::new("➕").frame(false)).clicked() {
+            app.new_workspace();
+            app.workspace_idx = app.workspaces.len() - 1;
+        }
+    });
+}
+
+pub(crate) fn workspace_options(ui: &mut egui::Ui, app: &mut SfontPlayer) {
+    ui.menu_button("Rename Workspace", |ui| {
+        if ui
+            .text_edit_singleline(&mut app.get_workspace_mut().name)
+            .lost_focus()
+        {
+            ui.close_menu();
+        }
+        if ui.add(Button::new("ok")).clicked() {
+            ui.close_menu();
+        }
+    });
+}
+
+fn workspace_tab(ui: &mut egui::Ui, app: &mut SfontPlayer, index: usize) {
+    let name = &app.workspaces[index].name.clone();
+    let current_tab = app.workspace_idx == index;
+
+    let style = (*ui.ctx().style()).clone();
+    let fill = if current_tab {
+        style.visuals.code_bg_color
+    } else {
+        style.visuals.faint_bg_color
+    };
+
+    egui::Frame::group(&style)
+        .inner_margin(4.)
+        .outer_margin(0.)
+        .rounding(0.)
+        .stroke(Stroke::NONE)
+        .fill(fill)
+        .show(ui, |ui| {
+            if ui.add(Button::new(name).frame(false)).clicked() {
+                app.workspace_idx = index;
+            }
+            if ui.add(Button::new("❌").frame(false)).clicked() {
+                app.remove_workspace(index);
+            }
+        });
+}
