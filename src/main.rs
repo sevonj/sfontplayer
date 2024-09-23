@@ -59,73 +59,21 @@ impl SfontPlayer {
 
         Self::default()
     }
-    fn set_font_idx(&mut self, index: usize) {
-        self.get_workspace_mut().font_idx = Some(index);
-        self.load_song();
-    }
-    fn get_fonts(&mut self) -> Vec<PathBuf> {
-        self.get_workspace().fonts.clone()
-    }
-    fn get_font_idx(&mut self) -> Option<usize> {
-        self.get_workspace().font_idx
-    }
-    fn add_font(&mut self, path: PathBuf) {
-        let workspace = self.get_workspace_mut();
-        if !workspace.fonts.contains(&path) {
-            workspace.fonts.push(path);
-        }
-    }
-    fn remove_font(&mut self, index: usize) {
-        let workspace = self.get_workspace_mut();
-        workspace.remove_font(index);
-        if Some(index) == workspace.font_idx {
-            self.stop();
-        }
-    }
-    fn clear_fonts(&mut self) {
-        let workspace = self.get_workspace_mut();
-        workspace.fonts.clear();
-        workspace.font_idx = None;
-        self.stop();
-    }
-    fn get_midis(&self) -> &Vec<MidiMeta> {
-        &self.get_workspace().midis
-    }
-    fn get_midi_idx(&mut self) -> Option<usize> {
-        self.get_workspace().midi_idx
-    }
-    fn set_midi_idx(&mut self, index: usize) {
-        self.get_workspace_mut().midi_idx = Some(index);
-    }
-    fn add_midi(&mut self, filepath: PathBuf) {
-        if self.get_workspace().contains_midi(&filepath) {
-            return;
-        }
-        self.get_workspace_mut().midis.push(MidiMeta::new(filepath));
-    }
-    fn remove_midi(&mut self, index: usize) {
-        let workspace = self.get_workspace_mut();
-        workspace.remove_midi(index);
-        if Some(index) == workspace.midi_idx {
-            self.stop();
-        }
-    }
-    fn clear_midis(&mut self) {
-        let workspace = self.get_workspace_mut();
-        workspace.midis.clear();
-        workspace.midi_idx = None;
-        self.stop();
-    }
+
+    // --- Playback Control
+
+    /// Start playing (from a fully stopped state)
     fn start(&mut self) {
         self.playing_workspace_idx = self.workspace_idx;
         self.rebuild_queue();
-        self.load_song();
+        self.play_selected_song();
     }
-    fn load_song(&mut self) {
+    /// Load currently selected song & font from workspace and start playing
+    fn play_selected_song(&mut self) {
         self.audioplayer.stop_playback();
         let workspace = self.get_workspace_mut();
         if workspace.font_idx.is_none() {
-            println!("load_song: no sf");
+            println!("load_song: no soundfont");
             return;
         }
         if let Some(idx) = workspace.queue_idx {
@@ -144,33 +92,161 @@ impl SfontPlayer {
             return;
         }
     }
+    /// Stop playback
     fn stop(&mut self) {
         self.audioplayer.stop_playback();
         self.get_workspace_mut().midi_idx = None;
         self.get_workspace_mut().queue_idx = None;
     }
+    /// Unpause
     fn play(&mut self) {
-        println!("Play");
         self.audioplayer.play();
     }
+    /// Pause
     fn pause(&mut self) {
         self.audioplayer.pause()
     }
-    fn is_playing(&self) -> bool {
-        self.audioplayer.is_playing()
+
+    // --- Playback Status
+
+    /// Pause status.
+    fn is_paused(&self) -> bool {
+        self.audioplayer.is_paused()
     }
+    /// Finished playing, no current song.
     fn is_empty(&self) -> bool {
         self.audioplayer.is_empty()
     }
+    /// Get total length of currently playing file
     fn get_midi_length(&self) -> Duration {
         if let Some(len) = self.audioplayer.get_midi_length() {
             return len;
         }
         Duration::ZERO
     }
+    /// Current playback position
     fn get_midi_position(&self) -> Duration {
         self.audioplayer.get_midi_position()
     }
+
+    // --- Manage Workspaces
+
+    /// Get a reference to the workspace list
+    fn get_workspaces(&self) -> &Vec<Workspace> {
+        &self.workspaces
+    }
+    /// Get a reference to the currently open workspace
+    fn get_workspace(&self) -> &Workspace {
+        &self.workspaces[self.workspace_idx]
+    }
+    /// Get a mutable reference to the currently open workspace
+    fn get_workspace_mut(&mut self) -> &mut Workspace {
+        &mut self.workspaces[self.workspace_idx]
+    }
+    /// Switch to another workspace
+    fn switch_workspace(&mut self, index: usize) {
+        self.workspace_idx = index
+    }
+    /// Create a new workspace
+    fn new_workspace(&mut self) {
+        self.workspaces.push(Workspace::default());
+    }
+    /// Remove a workspace by index
+    fn remove_workspace(&mut self, index: usize) {
+        self.workspace_delet_queue.push(index);
+    }
+
+    // --- Manage Workspace Soundfonts
+
+    /// Get selected soundfont from currently open workspace
+    fn get_font_idx(&mut self) -> Option<usize> {
+        self.get_workspace().font_idx
+    }
+    /// Set selected soundfont in currently open workspace
+    fn set_font_idx(&mut self, index: usize) {
+        self.get_workspace_mut().font_idx = Some(index);
+        self.play_selected_song();
+    }
+    /// Get a reference to the soundfont list of currently open workspace
+    fn get_fonts(&mut self) -> &Vec<PathBuf> {
+        &self.get_workspace().fonts
+    }
+    /// Add a soundfont to currently open workspace
+    fn add_font(&mut self, path: PathBuf) {
+        let workspace = self.get_workspace_mut();
+        if !workspace.fonts.contains(&path) {
+            workspace.fonts.push(path);
+        }
+    }
+    /// Remove a soundfont from currently open workspace
+    fn remove_font(&mut self, index: usize) {
+        let workspace = self.get_workspace_mut();
+        workspace.remove_font(index);
+        if Some(index) == workspace.font_idx {
+            self.stop();
+        }
+    }
+    /// Remove all soundfonts from currently open workspace
+    fn clear_fonts(&mut self) {
+        let workspace = self.get_workspace_mut();
+        workspace.fonts.clear();
+        workspace.font_idx = None;
+        self.stop();
+    }
+
+    // --- Manage Workspace Songs
+
+    /// Get selected song from currently open workspace
+    fn get_midi_idx(&mut self) -> Option<usize> {
+        self.get_workspace().midi_idx
+    }
+    /// Set selected song in currently open workspace
+    fn set_midi_idx(&mut self, index: usize) {
+        self.get_workspace_mut().midi_idx = Some(index);
+    }
+    /// Get a reference to the song list of currently open workspace
+    fn get_midis(&self) -> &Vec<MidiMeta> {
+        &self.get_workspace().midis
+    }
+    /// Add a song to currently open workspace
+    fn add_midi(&mut self, filepath: PathBuf) {
+        if self.get_workspace().contains_midi(&filepath) {
+            return;
+        }
+        self.get_workspace_mut().midis.push(MidiMeta::new(filepath));
+    }
+    /// Remove a song from currently open workspace
+    fn remove_midi(&mut self, index: usize) {
+        let workspace = self.get_workspace_mut();
+        workspace.remove_midi(index);
+        if Some(index) == workspace.midi_idx {
+            self.stop();
+        }
+    }
+    /// Remove all songs from currently open workspace
+    fn clear_midis(&mut self) {
+        let workspace = self.get_workspace_mut();
+        workspace.midis.clear();
+        workspace.midi_idx = None;
+        self.stop();
+    }
+
+    // --- Playback queue
+
+    /// Get a reference to the playback queue
+    fn get_queue(&self) -> &Vec<usize> {
+        &self.get_workspace().queue
+    }
+    /// Get the current index in queue
+    fn get_queue_idx(&self) -> Option<usize> {
+        self.get_workspace().queue_idx.clone()
+    }
+    /// Set the current index in queue
+    fn set_queue_idx(&mut self, queue_idx: Option<usize>) {
+        self.get_workspace_mut().queue_idx = queue_idx;
+    }
+    /// Create a new queue from currently available songs.
+    /// To be called when song list changes, or shuffle is toggled
     fn rebuild_queue(&mut self) {
         let shuffle = self.shuffle;
         let workspace = self.get_workspace_mut();
@@ -189,29 +265,6 @@ impl SfontPlayer {
             workspace.queue.shuffle(&mut rand::thread_rng());
             workspace.queue.insert(0, start); // Reinsert first to the beginning.
         }
-
-        println!("queue rebuilt: {:?}", self.get_workspace().queue);
-    }
-    fn get_workspace(&self) -> &Workspace {
-        &self.workspaces[self.workspace_idx]
-    }
-    fn get_workspace_mut(&mut self) -> &mut Workspace {
-        &mut self.workspaces[self.workspace_idx]
-    }
-    fn new_workspace(&mut self) {
-        self.workspaces.push(Workspace::default());
-    }
-    fn remove_workspace(&mut self, index: usize) {
-        self.workspace_delet_queue.push(index);
-    }
-    fn get_queue(&self) -> Vec<usize> {
-        self.get_workspace().queue.clone()
-    }
-    fn get_queue_idx(&self) -> Option<usize> {
-        self.get_workspace().queue_idx.clone()
-    }
-    fn set_queue_idx(&mut self, queue_idx: Option<usize>) {
-        self.get_workspace_mut().queue_idx = queue_idx;
     }
 }
 
@@ -227,7 +280,7 @@ impl eframe::App for SfontPlayer {
         }
 
         // When previous song has ended, advance queue or stop.
-        if self.audioplayer.is_playing() && self.audioplayer.is_empty() {
+        if self.audioplayer.is_paused() && self.audioplayer.is_empty() {
             let workspace = self.get_workspace_mut();
             if let Some(mut idx) = workspace.queue_idx {
                 idx += 1;
@@ -248,7 +301,7 @@ impl eframe::App for SfontPlayer {
 
         draw_gui(ctx, self);
 
-        if self.is_playing() {
+        if self.is_paused() {
             ctx.request_repaint();
         }
 

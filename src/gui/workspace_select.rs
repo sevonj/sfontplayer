@@ -4,19 +4,19 @@ use crate::SfontPlayer;
 
 pub(crate) fn workspace_tabs(ui: &mut egui::Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
-        for i in 0..app.workspaces.len() {
+        for i in 0..app.get_workspaces().len() {
             workspace_tab(ui, app, i);
         }
         if ui.add(Button::new("➕").frame(false)).clicked() {
             app.new_workspace();
-            app.workspace_idx = app.workspaces.len() - 1;
+            app.switch_workspace(app.get_workspaces().len() - 1);
         }
     });
 }
 
 fn workspace_tab(ui: &mut egui::Ui, app: &mut SfontPlayer, index: usize) {
-    let mut workspace_title = app.workspaces[index].name.clone();
-    if app.is_playing() && app.playing_workspace_idx == index {
+    let mut workspace_title = app.get_workspaces()[index].name.clone();
+    if !app.is_paused() && app.playing_workspace_idx == index {
         workspace_title = "▶ ".to_owned() + &workspace_title;
     }
     let current_tab = app.workspace_idx == index;

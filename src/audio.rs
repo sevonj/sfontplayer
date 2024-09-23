@@ -59,8 +59,8 @@ impl AudioPlayer {
     pub(crate) fn pause(&mut self) {
         self.sink.pause();
     }
-    pub(crate) fn is_playing(&self) -> bool {
-        !self.sink.is_paused()
+    pub(crate) fn is_paused(&self) -> bool {
+        self.sink.is_paused()
     }
     pub(crate) fn is_empty(&self) -> bool {
         self.sink.empty()

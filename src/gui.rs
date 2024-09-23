@@ -121,7 +121,7 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 });
             })
             .body(|mut body| {
-                for (i, sf) in app.get_fonts().iter().enumerate() {
+                for (i, sf) in app.get_fonts().clone().iter().enumerate() {
                     body.row(TBL_ROW_H, |mut row| {
                         row.col(|ui| {
                             if ui
@@ -225,10 +225,10 @@ fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
         // Prev button
         if ui.add_enabled(prev_enabled, Button::new("⏪")).clicked() {
             app.set_queue_idx(Some(app.get_queue_idx().unwrap() - 1));
-            app.load_song();
+            app.play_selected_song();
         }
         // PlayPause button
-        if app.is_playing() {
+        if app.is_paused() {
             if ui.button("⏸").clicked() {
                 app.pause();
             }
@@ -244,10 +244,10 @@ fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
         // Next button
         if ui.add_enabled(next_enabled, Button::new("⏩")).clicked() {
             app.set_queue_idx(Some(app.get_queue_idx().unwrap() + 1));
-            app.load_song();
+            app.play_selected_song();
         }
         // Stop button
-        if ui.add_enabled(app.is_playing(), Button::new("⏹")).clicked() {
+        if ui.add_enabled(app.is_paused(), Button::new("⏹")).clicked() {
             app.stop()
         }
         // Slider
