@@ -212,16 +212,16 @@ fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
         }
         // PlayPause button
         if app.is_paused() {
-            if ui.button("⏸").clicked() {
-                app.pause();
-            }
-        } else {
             if ui.button("▶").clicked() {
                 if app.is_empty() {
                     app.start();
                 } else {
                     app.play();
                 }
+            }
+        } else {
+            if ui.button("⏸").clicked() {
+                app.pause();
             }
         }
         // Next button
