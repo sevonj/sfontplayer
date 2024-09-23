@@ -3,6 +3,10 @@
 
 A simple midi player that makes soundfont comparison easy.
 
+## Main features:
+- Changing between soundfonts takes one click
+- Multiple workspaces
+
 ## Building
 - Clone the repo
 - Install [Rust](https://www.rust-lang.org/) if you don't have it already.
