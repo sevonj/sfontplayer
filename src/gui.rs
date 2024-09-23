@@ -29,14 +29,6 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
             workspace_tabs(ui, app);
         });
 
-    TopBottomPanel::top("workspace_toolbar")
-        .resizable(false)
-        .show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                soundfont_controls(ui, app);
-            });
-        });
-
     if app.show_soundfonts {
         TopBottomPanel::top("sf_toolbar")
             .show_separator_line(false)
@@ -96,15 +88,6 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
     CentralPanel::default().show(ctx, |ui| {
         song_table(ui, app);
     });
-}
-
-fn soundfont_controls(ui: &mut Ui, app: &mut SfontPlayer) {
-    if ui
-        .selectable_label(app.show_soundfonts, "Soundfonts")
-        .clicked()
-    {
-        app.show_soundfonts = !app.show_soundfonts
-    }
 }
 
 fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {

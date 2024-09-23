@@ -47,5 +47,12 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                 ui.close_menu();
             }
         });
+
+        if ui
+            .selectable_label(app.show_soundfonts, "Soundfonts")
+            .clicked()
+        {
+            app.show_soundfonts = !app.show_soundfonts
+        }
     });
 }
