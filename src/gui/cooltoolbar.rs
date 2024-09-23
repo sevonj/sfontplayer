@@ -14,6 +14,7 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                 for path in paths {
                     app.add_sf(path);
                 }
+                ui.close_menu();
             }
         }
         if ui.button("Add songs").clicked() {
@@ -24,13 +25,16 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut SfontPlayer) {
                 for path in paths {
                     app.add_midi(path);
                 }
+                ui.close_menu();
             }
         }
         if ui.button("Clear soundfonts").clicked() {
             app.clear_sfs();
+            ui.close_menu();
         }
         if ui.button("Clear songs").clicked() {
             app.clear_midis();
+            ui.close_menu();
         }
     });
 }

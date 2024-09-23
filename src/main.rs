@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 extern crate rand;
 
 use audio::AudioPlayer;
-use data::Workspace;
+use data::{MidiMeta, Workspace};
 use eframe::egui;
 use gui::draw_gui;
 use rand::seq::SliceRandom;
@@ -94,8 +94,8 @@ impl SfontPlayer {
         workspace.selected_sf = None;
         self.stop();
     }
-    fn get_midis(&mut self) -> Vec<PathBuf> {
-        self.get_workspace().midis.clone()
+    fn get_midis(&self) -> &Vec<MidiMeta> {
+        &self.get_workspace().midis
     }
     fn get_midi_idx(&mut self) -> Option<usize> {
         self.get_workspace().selected_midi
@@ -103,11 +103,11 @@ impl SfontPlayer {
     fn set_midi_idx(&mut self, index: usize) {
         self.get_workspace_mut().selected_midi = Some(index);
     }
-    fn add_midi(&mut self, path: PathBuf) {
-        let workspace = self.get_workspace_mut();
-        if !workspace.midis.contains(&path) {
-            workspace.midis.push(path);
+    fn add_midi(&mut self, filepath: PathBuf) {
+        if self.get_workspace().contains_midi(&filepath) {
+            return;
         }
+        self.get_workspace_mut().midis.push(MidiMeta::new(filepath));
     }
     fn remove_midi(&mut self, index: usize) {
         let workspace = self.get_workspace_mut();
@@ -147,7 +147,7 @@ impl SfontPlayer {
             return;
         }
         let sf = workspace.soundfonts[workspace.selected_sf.unwrap()].clone();
-        let mid = workspace.midis[workspace.selected_midi.unwrap()].clone();
+        let mid = workspace.midis[workspace.selected_midi.unwrap()].get_path();
         self.audioplayer.set_soundfont(sf);
         self.audioplayer.set_midifile(mid);
 
@@ -215,9 +215,6 @@ impl SfontPlayer {
     }
     fn remove_workspace(&mut self, index: usize) {
         self.workspace_delet_queue.push(index);
-    }
-    fn rename_workspace(&mut self, name: String) {
-        self.get_workspace_mut().name = name
     }
     fn get_queue(&self) -> Vec<usize> {
         self.get_workspace().queue.clone()
