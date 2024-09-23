@@ -230,7 +230,7 @@ fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
             app.play_selected_song();
         }
         // Stop button
-        if ui.add_enabled(app.is_paused(), Button::new("⏹")).clicked() {
+        if ui.add_enabled(!app.is_paused(), Button::new("⏹")).clicked() {
             app.stop()
         }
         // Slider
