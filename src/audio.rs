@@ -77,6 +77,9 @@ impl AudioPlayer {
     pub(crate) fn get_midi_position(&self) -> Duration {
         self.sink.get_pos()
     }
+    pub(crate) fn set_volume(&mut self, volume: f32) {
+        self.sink.set_volume(volume);
+    }
 
     // Play loaded midi on loaded sf
     pub(crate) fn start_playback(&mut self) -> Result<(), &str> {

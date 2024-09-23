@@ -249,5 +249,32 @@ fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
         });
 
         ui.label(format!("{}/{}", format_duration(pos), format_duration(len)));
+
+        volume_control(ui, app);
     });
+}
+
+fn volume_control(ui: &mut Ui, app: &mut SfontPlayer) {
+    let speaker_icon_str = match app.volume {
+        x if x == 0.0 => "🔇",
+        x if (0.0..33.0).contains(&x) => "🔈",
+        x if (33.0..66.0).contains(&x) => "🔉",
+        _ => "🔊",
+    };
+
+    ui.menu_button(speaker_icon_str, |ui| {
+        if ui
+            .add(
+                Slider::new(&mut app.volume, 0.0..=100.)
+                    .vertical()
+                    .show_value(false)
+                    .trailing_fill(true),
+            )
+            .changed()
+        {
+            app.update_volume();
+        }
+    });
+
+    ui.label(format!("{:00}", app.volume));
 }

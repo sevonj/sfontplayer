@@ -32,6 +32,8 @@ struct SfontPlayer {
     // -- Audio
     #[serde(skip)]
     audioplayer: AudioPlayer,
+    /// Ranges 0.0..=100.0 as in percentage.
+    volume: f32,
 
     // -- Data
     workspaces: Vec<Workspace>,
@@ -87,6 +89,7 @@ impl SfontPlayer {
         self.audioplayer.set_soundfont(sf);
         self.audioplayer.set_midifile(mid);
 
+        self.update_volume();
         if let Err(e) = self.audioplayer.start_playback() {
             println!("{}", e);
             return;
@@ -105,6 +108,11 @@ impl SfontPlayer {
     /// Pause
     fn pause(&mut self) {
         self.audioplayer.pause()
+    }
+    /// Sends current volume setting to backend
+    fn update_volume(&mut self) {
+        // Not dividing the volume by 100 is a mistake you only make once.
+        self.audioplayer.set_volume(self.volume * 0.001)
     }
 
     // --- Playback Status
