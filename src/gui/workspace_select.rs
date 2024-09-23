@@ -29,7 +29,10 @@ pub(crate) fn workspace_options(ui: &mut egui::Ui, app: &mut SfontPlayer) {
 }
 
 fn workspace_tab(ui: &mut egui::Ui, app: &mut SfontPlayer, index: usize) {
-    let name = &app.workspaces[index].name.clone();
+    let mut workspace_title = app.workspaces[index].name.clone();
+    if app.is_playing() && app.playing_workspace_idx == index {
+        workspace_title = "▶ ".to_owned() + &workspace_title;
+    }
     let current_tab = app.workspace_idx == index;
 
     let style = (*ui.ctx().style()).clone();
@@ -46,7 +49,7 @@ fn workspace_tab(ui: &mut egui::Ui, app: &mut SfontPlayer, index: usize) {
         .stroke(Stroke::NONE)
         .fill(fill)
         .show(ui, |ui| {
-            if ui.add(Button::new(name).frame(false)).clicked() {
+            if ui.add(Button::new(workspace_title).frame(false)).clicked() {
                 app.workspace_idx = index;
             }
             if ui.add(Button::new("❌").frame(false)).clicked() {

@@ -38,6 +38,8 @@ struct SfontPlayer {
     workspace_idx: usize,
     /// Queued, because deletion will be requested in a loop.
     workspace_delet_queue: Vec<usize>,
+    /// Which workspace was last playing music
+    playing_workspace_idx: usize,
 
     // -- Settings
     shuffle: bool,
@@ -117,8 +119,7 @@ impl SfontPlayer {
         }
         // Deletion affected index
         else if Some(index) < workspace.selected_midi {
-            workspace.selected_midi =
-                Some(workspace.selected_midi.unwrap() - 1)
+            workspace.selected_midi = Some(workspace.selected_midi.unwrap() - 1)
         }
     }
     fn clear_midis(&mut self) {
@@ -128,7 +129,7 @@ impl SfontPlayer {
         self.stop();
     }
     fn start(&mut self) {
-        println!("Start");
+        self.playing_workspace_idx = self.workspace_idx;
         self.rebuild_queue();
         self.load_song();
     }
@@ -215,7 +216,7 @@ impl SfontPlayer {
     fn remove_workspace(&mut self, index: usize) {
         self.workspace_delet_queue.push(index);
     }
-    fn rename_workspace(&mut self, name: String){
+    fn rename_workspace(&mut self, name: String) {
         self.get_workspace_mut().name = name
     }
     fn get_queue(&self) -> Vec<usize> {
@@ -273,6 +274,9 @@ impl eframe::App for SfontPlayer {
             // Deletion affected index. Note that we don't go below zero.
             if index <= self.workspace_idx && self.workspace_idx > 0 {
                 self.workspace_idx -= 1;
+            }
+            if index <= self.playing_workspace_idx && self.playing_workspace_idx > 0 {
+                self.playing_workspace_idx -= 1;
             }
         }
         self.workspace_delet_queue.clear();
