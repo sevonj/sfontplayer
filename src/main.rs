@@ -46,6 +46,8 @@ struct SfontPlayer {
     // -- Settings
     shuffle: bool,
     show_soundfonts: bool,
+    #[serde(skip)]
+    show_about_window: bool
 }
 
 impl SfontPlayer {

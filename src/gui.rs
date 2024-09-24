@@ -1,10 +1,12 @@
-pub mod conversions;
+mod about;
+pub(crate) mod conversions;
 mod cooltoolbar;
 mod workspace_select;
 
 use std::time::Duration;
 
 use crate::SfontPlayer;
+use about::about_window;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
 use eframe::egui::{
@@ -17,6 +19,8 @@ use workspace_select::workspace_tabs;
 const TBL_ROW_H: f32 = 16.;
 
 pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
+    about_window(ctx, app);
+
     ctx.input(|i| {
         for file in i.raw.dropped_files.clone() {
             println!("{:?}", file)
@@ -30,10 +34,11 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
         });
 
     if app.show_soundfonts {
-        TopBottomPanel::top("sf_toolbar")
+        TopBottomPanel::top("font_titlebar")
             .show_separator_line(false)
             .resizable(false)
             .show(ctx, |ui| {
+                check_disabled(ui, app);
                 ui.horizontal(|ui| {
                     if ui
                         .add(Button::new("➕").frame(false))
@@ -52,9 +57,10 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                     ui.heading("Soundfonts");
                 });
             });
-        TopBottomPanel::top("sf_table")
+        TopBottomPanel::top("font_table")
             .resizable(true)
             .show(ctx, |ui| {
+                check_disabled(ui, app);
                 soundfont_table(ui, app);
             });
     }
@@ -63,11 +69,12 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
         playback_panel(ui, app);
     });
 
-    TopBottomPanel::top("song_toolbar")
+    TopBottomPanel::top("midi_titlebar")
         .show_separator_line(false)
         .resizable(false)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
+                check_disabled(ui, app);
                 if ui
                     .add(Button::new("➕").frame(false))
                     .on_hover_text("Add")
@@ -86,6 +93,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
             });
         });
     CentralPanel::default().show(ctx, |ui| {
+        check_disabled(ui, app);
         song_table(ui, app);
     });
 }
@@ -277,4 +285,11 @@ fn volume_control(ui: &mut Ui, app: &mut SfontPlayer) {
     });
 
     ui.label(format!("{:00}", app.volume));
+}
+
+/// This will disable the UI if
+fn check_disabled(ui: &mut Ui, app: &SfontPlayer) {
+    if app.show_about_window {
+        ui.disable();
+    }
 }
