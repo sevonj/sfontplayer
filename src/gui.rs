@@ -287,7 +287,7 @@ fn volume_control(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.label(format!("{:00}", app.volume));
 }
 
-/// This will disable the UI if
+/// This will disable the UI if modals are open
 fn check_disabled(ui: &mut Ui, app: &SfontPlayer) {
     if app.show_about_window {
         ui.disable();
