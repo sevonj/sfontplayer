@@ -284,6 +284,9 @@ impl eframe::App for SfontPlayer {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Make sure umage loader exists!
+        egui_extras::install_image_loaders(ctx);
+
         // Make sure at least one workspace exists!
         if self.workspaces.is_empty() {
             self.new_workspace();
