@@ -24,6 +24,8 @@ fn workspace_tab(ui: &mut Ui, app: &mut SfontPlayer, index: usize) {
     let mut workspace_title = app.get_workspaces()[index].name.clone();
     if !app.is_paused() && app.playing_workspace_idx == index {
         workspace_title = "▶ ".to_owned() + &workspace_title;
+    } else if !app.is_empty() && app.playing_workspace_idx == index {
+        workspace_title = "⏸ ".to_owned() + &workspace_title;
     }
     let current_tab = app.workspace_idx == index;
 
