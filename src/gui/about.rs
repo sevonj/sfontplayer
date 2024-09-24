@@ -4,12 +4,14 @@ use eframe::egui::{
 };
 
 use crate::SfontPlayer;
-pub(crate) fn about_window(ctx: &Context, app: &mut SfontPlayer) {
+
+/// Modal window that shows "About"
+pub(crate) fn about_modal(ctx: &Context, app: &mut SfontPlayer) {
     Window::new("About")
         .collapsible(false)
         .resizable(false)
         .anchor(Align2::CENTER_CENTER, vec2(0., 0.))
-        .open(&mut app.show_about_window)
+        .open(&mut app.show_about_modal)
         .show(ctx, |ui| {
             ui.set_width(300.);
             ScrollArea::vertical().max_height(500.).show(ui, |ui| {

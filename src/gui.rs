@@ -3,15 +3,17 @@ pub(crate) mod conversions;
 mod cooltoolbar;
 mod playback_controls;
 mod workspace_select;
+mod hotkeys;
 
 use std::time::Duration;
 
 use crate::SfontPlayer;
-use about::about_window;
+use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
 use eframe::egui::{Button, CentralPanel, Context, ScrollArea, TextWrapMode, TopBottomPanel, Ui};
 use egui_extras::{Column, TableBuilder};
+use hotkeys::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
 use rfd::FileDialog;
 use workspace_select::workspace_tabs;
@@ -19,7 +21,12 @@ use workspace_select::workspace_tabs;
 const TBL_ROW_H: f32 = 16.;
 
 pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
-    about_window(ctx, app);
+    // Show modals
+    about_modal(ctx, app);
+    shortcut_modal(ctx, app);
+
+    // Hotkeys
+    consume_shortcuts(ctx, app);
 
     ctx.input(|i| {
         for file in i.raw.dropped_files.clone() {
@@ -38,7 +45,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
             .show_separator_line(false)
             .resizable(false)
             .show(ctx, |ui| {
-                check_disabled(ui, app);
+                disable_if_modal(ui, app);
                 ui.horizontal(|ui| {
                     if ui
                         .add(Button::new("➕").frame(false))
@@ -60,7 +67,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
         TopBottomPanel::top("font_table")
             .resizable(true)
             .show(ctx, |ui| {
-                check_disabled(ui, app);
+                disable_if_modal(ui, app);
                 soundfont_table(ui, app);
             });
     }
@@ -74,7 +81,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
         .resizable(false)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
-                check_disabled(ui, app);
+                disable_if_modal(ui, app);
                 if ui
                     .add(Button::new("➕").frame(false))
                     .on_hover_text("Add")
@@ -93,7 +100,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
             });
         });
     CentralPanel::default().show(ctx, |ui| {
-        check_disabled(ui, app);
+        disable_if_modal(ui, app);
         song_table(ui, app);
     });
 }
@@ -207,9 +214,11 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     });
 }
 
-/// This will disable the UI if modals are open
-fn check_disabled(ui: &mut Ui, app: &SfontPlayer) {
-    if app.show_about_window {
+/// This will disable the UI if a modal window is open
+fn disable_if_modal(ui: &mut Ui, app: &SfontPlayer) {
+    if app.show_about_modal {
+        ui.disable();
+    }if app.show_shortcut_modal {
         ui.disable();
     }
 }

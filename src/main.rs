@@ -47,7 +47,9 @@ struct SfontPlayer {
     shuffle: bool,
     show_soundfonts: bool,
     #[serde(skip)]
-    show_about_window: bool
+    show_about_modal: bool,
+    #[serde(skip)]
+    show_shortcut_modal: bool,
 }
 
 impl SfontPlayer {
@@ -110,6 +112,43 @@ impl SfontPlayer {
     /// Pause
     fn pause(&mut self) {
         self.audioplayer.pause()
+    }
+    /// Play previous song
+    fn skip_back(&mut self) -> Result<(), ()> {
+        if let Some(mut index) = self.get_queue_idx() {
+            if index == 0 {
+                return Ok(());
+            }
+            index -= 1;
+            self.set_queue_idx(Some(index));
+            self.play_selected_song();
+            return Ok(());
+        }
+        // Ignore for now.
+        Ok(())
+    }
+    /// Play next song
+    fn skip(&mut self) -> Result<(), ()> {
+        if let Some(mut index) = self.get_queue_idx() {
+            index += 1;
+            if index >= self.get_queue().len() {
+                return Ok(());
+            }
+            self.set_queue_idx(Some(index));
+            self.play_selected_song();
+            return Ok(());
+        }
+        // Ignore for now.
+        Ok(())
+    }
+    /// Toggles shuffle and rebuilds queue
+    fn toggle_shuffle(&mut self) {
+        self.shuffle = !self.shuffle;
+        self.rebuild_queue();
+    }
+    /// Set volume (safe)
+    fn set_volume(&mut self, volume: f32) {
+        self.volume = f32::clamp(volume, 0., 100.)
     }
     /// Sends current volume setting to backend
     fn update_volume(&mut self) {

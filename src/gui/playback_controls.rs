@@ -26,14 +26,12 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
 
     // Shuffle button
     if ui.add(SelectableLabel::new(app.shuffle, "🔀")).clicked() {
-        app.shuffle = !app.shuffle;
-        app.rebuild_queue();
+        app.toggle_shuffle();
     };
 
     // Prev button
     if ui.add_enabled(prev_enabled, Button::new("⏪")).clicked() {
-        app.set_queue_idx(Some(app.get_queue_idx().unwrap() - 1));
-        app.play_selected_song();
+        let _ = app.skip_back();
     }
     // PlayPause button
     if app.is_paused() {
@@ -51,8 +49,7 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
     }
     // Next button
     if ui.add_enabled(next_enabled, Button::new("⏩")).clicked() {
-        app.set_queue_idx(Some(app.get_queue_idx().unwrap() + 1));
-        app.play_selected_song();
+        let _ = app.skip();
     }
     // Stop button
     if ui.add_enabled(!app.is_paused(), Button::new("⏹")).clicked() {

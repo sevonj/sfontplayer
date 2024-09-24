@@ -1,7 +1,7 @@
 use eframe::egui::{TextEdit, Ui};
 use rfd::FileDialog;
 
-use super::about::about_window;
+use super::about::about_modal;
 use crate::SfontPlayer;
 
 /// The topmost toolbar with File Menu
@@ -66,7 +66,11 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
 fn help_menu(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.menu_button("Help", |ui| {
         if ui.button("About").clicked() {
-            app.show_about_window = true;
+            app.show_about_modal = true;
+            ui.close_menu();
+        }
+        if ui.button("Hotkeys").clicked() {
+            app.show_shortcut_modal = true;
             ui.close_menu();
         }
     });
