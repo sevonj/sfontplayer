@@ -126,7 +126,14 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                         row.col(|ui| {
                             let name = sf.file_name().unwrap().to_str().unwrap().to_owned();
                             let highlight = Some(i) == app.get_font_idx();
-                            if ui.add(Button::new(name).frame(highlight)).clicked() {
+                            if ui
+                                .add(
+                                    Button::new(name)
+                                        .frame(highlight)
+                                        .wrap_mode(TextWrapMode::Truncate),
+                                )
+                                .clicked()
+                            {
                                 app.set_font_idx(i);
                             }
                         });
@@ -178,7 +185,14 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                         });
                         // Filename
                         row.col(|ui| {
-                            if ui.add(Button::new(filename).frame(is_selected)).clicked() {
+                            if ui
+                                .add(
+                                    Button::new(filename)
+                                        .frame(is_selected)
+                                        .wrap_mode(TextWrapMode::Truncate),
+                                )
+                                .clicked()
+                            {
                                 app.set_midi_idx(i);
                                 app.start();
                             }
