@@ -1,3 +1,5 @@
+//! Audio backend module
+
 use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
 
 use midisource::MidiSource;
@@ -6,28 +8,16 @@ use rustysynth::{MidiFile, SoundFont};
 
 mod midisource;
 
-// Load soundfont file.
-fn load_soundfont(path: &PathBuf) -> Result<SoundFont, &str> {
-    if let Ok(mut file) = File::open(path) {
-        return Ok(SoundFont::new(&mut file).unwrap());
-    }
-    return Err("Failed to open the file!");
-}
-
-// Load midi file.
-fn load_midifile(path: &PathBuf) -> Result<MidiFile, &str> {
-    if let Ok(mut file) = File::open(path) {
-        return Ok(MidiFile::new(&mut file).unwrap());
-    }
-    return Err("Failed to open the file!");
-}
-
-///
+/// Audio backend struct
 pub(crate) struct AudioPlayer {
     path_soundfont: Option<PathBuf>,
     path_midifile: Option<PathBuf>,
     midifile_duration: Option<Duration>,
+
+    // We need to keep this alive or the sink goes silent.
+    #[allow(dead_code)]
     stream: OutputStream,
+    /// Audio sink, controls the output
     sink: Sink,
 }
 
@@ -47,41 +37,31 @@ impl Default for AudioPlayer {
 }
 
 impl AudioPlayer {
+    // --- File Management
+    /// Choose new soundfont
     pub(crate) fn set_soundfont(&mut self, path: PathBuf) {
         self.path_soundfont = Some(path);
     }
+    /// Choose new midi file
     pub(crate) fn set_midifile(&mut self, path: PathBuf) {
         self.path_midifile = Some(path);
     }
+
+    // --- Playback Control
+
+    /// Unpause
     pub(crate) fn play(&mut self) {
         self.sink.play();
     }
+    /// Pause
     pub(crate) fn pause(&mut self) {
         self.sink.pause();
     }
-    pub(crate) fn is_paused(&self) -> bool {
-        self.sink.is_paused()
-    }
-    pub(crate) fn is_empty(&self) -> bool {
-        self.sink.empty()
-    }
-    pub(crate) fn end_reached(&self) -> bool {
-        if let Some(len) = self.get_midi_length() {
-            return self.get_midi_position() >= len;
-        }
-        false
-    }
-    pub(crate) fn get_midi_length(&self) -> Option<Duration> {
-        self.midifile_duration
-    }
-    pub(crate) fn get_midi_position(&self) -> Duration {
-        self.sink.get_pos()
-    }
+    /// Standard volume range is 0.0..=1.0
     pub(crate) fn set_volume(&mut self, volume: f32) {
         self.sink.set_volume(volume);
     }
-
-    // Play loaded midi on loaded sf
+    /// Load currently selected midi & font and start playing
     pub(crate) fn start_playback(&mut self) -> Result<(), &str> {
         if self.path_soundfont.is_none() {
             return Err("Can't play, no soundfont!");
@@ -100,9 +80,47 @@ impl AudioPlayer {
         self.sink.play();
         Ok(())
     }
-
+    /// Full stop.
     pub(crate) fn stop_playback(&mut self) {
         self.midifile_duration = None;
         self.sink.clear();
+        self.sink.pause();
     }
+
+    // --- Playback State
+
+    /// Pause status
+    pub(crate) fn is_paused(&self) -> bool {
+        self.sink.is_paused()
+    }
+    /// Finished; nothing more to play.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.sink.empty()
+    }
+    /// Current midi file duration, if midi file exists
+    pub(crate) fn get_midi_length(&self) -> Option<Duration> {
+        self.midifile_duration
+    }
+    /// Playback position. Zero if player is empty.
+    pub(crate) fn get_midi_position(&self) -> Duration {
+        self.sink.get_pos()
+    }
+}
+
+// --- Private --- //
+
+/// Private: Load soundfont file.
+fn load_soundfont(path: &PathBuf) -> Result<SoundFont, &str> {
+    if let Ok(mut file) = File::open(path) {
+        return Ok(SoundFont::new(&mut file).unwrap());
+    }
+    return Err("Failed to open the file!");
+}
+
+/// Private: Load midi file.
+fn load_midifile(path: &PathBuf) -> Result<MidiFile, &str> {
+    if let Ok(mut file) = File::open(path) {
+        return Ok(MidiFile::new(&mut file).unwrap());
+    }
+    return Err("Failed to open the file!");
 }
