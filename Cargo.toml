@@ -9,9 +9,9 @@ repository = "https://github.com/sevonj/sfontplayer"
 [dependencies]
 
 # -- GUI
-eframe = { version = "0.28", features = ["persistence"] }   # Framework, gui
-egui_extras = "0.28"                                        # Extra gui components
-rfd = "0.15"                                                # File dialog
+eframe = { version = "0.28", features = ["persistence"] }       # Framework, gui
+egui_extras = { version = "0.28", features = ["all_loaders"]}   # Extra gui components
+rfd = "0.15"                                                    # File dialog
 
 # -- Persistence
 serde = { version = "1", features = ["derive"] }    # Remember app state
