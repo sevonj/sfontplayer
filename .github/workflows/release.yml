@@ -25,7 +25,7 @@ jobs:
     - name: Build Linux
       run: cargo build --verbose --release --target=x86_64-unknown-linux-gnu
     - name: Build Windows
-      run: cargo build --verbose --release --target=x86_64-pc-windows
+      run: cargo build --verbose --release --target=x86_64-pc-windows-gnu
 
     - uses: ncipollo/release-action@v1
       with:
