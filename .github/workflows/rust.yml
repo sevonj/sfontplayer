@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  code-quality:
+  static-checks:
   
     runs-on: ubuntu-latest
 
@@ -18,8 +18,6 @@ jobs:
     - uses: actions/checkout@v4
     - name: Format check
       run: cargo fmt -v --check
-    - name: Lint
-      run: cargo clippy --no-deps --  --deny warnings
       
   build:
 
@@ -33,3 +31,5 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Clippy
+      run: cargo clippy --no-deps --  --deny warnings
