@@ -13,7 +13,6 @@ const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTR
 const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
 const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
 const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
-const PLAYBACK_MUTE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::M);
 
 /// Modal window that shows Hotkeys
 pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
@@ -96,15 +95,7 @@ pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&PLAYBACK_VOLDN));
                             });
-                        }); /*
-                            body.row(16., |mut row| {
-                                row.col(|ui| {
-                                   add_shortcut_title(ui, "Mute");
-                                });
-                                row.col(|ui| {
-                                    ui.label(ctx.format_shortcut(&PLAYBACK_MUTE));
-                                });
-                            });*/
+                        });
                     });
             });
         });

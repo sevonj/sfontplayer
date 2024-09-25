@@ -1,6 +1,4 @@
-use eframe::egui::{
-    include_image, Button, Image, ImageButton, RichText, SelectableLabel, Slider, Ui,
-};
+use eframe::egui::{Button, RichText, SelectableLabel, Slider, Ui};
 
 use crate::SfontPlayer;
 

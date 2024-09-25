@@ -1,7 +1,6 @@
 use eframe::egui::{TextEdit, Ui};
 use rfd::FileDialog;
 
-use super::about::about_modal;
 use crate::SfontPlayer;
 
 /// The topmost toolbar with File Menu
