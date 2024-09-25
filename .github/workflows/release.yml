@@ -2,9 +2,10 @@ name: Release
 
 on:
   push:
+    branches: [ "master" ]
     tags:
     - "v[0-9]+.[0-9]+.[0-9]+"
-    branches: [ "master" ]
+    
 
 env:
   CARGO_TERM_COLOR: always
@@ -30,3 +31,4 @@ jobs:
     - uses: ncipollo/release-action@v1
       with:
         artifacts: "target/x86_64-unknown-linux-gnu/release/sfontplayer,target/x86_64-pc-windows-gnu/release/sfontplayer.exe"
+        token: ${{ secrets.GITHUB_TOKEN }}
