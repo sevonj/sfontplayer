@@ -40,11 +40,10 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
                 app.play();
             }
         }
-    } else {
-        if ui.button("⏸").clicked() {
-            app.pause();
-        }
+    } else if ui.button("⏸").clicked() {
+        app.pause();
     }
+
     // Next button
     if ui.add_enabled(next_enabled, Button::new("⏩")).clicked() {
         let _ = app.skip();

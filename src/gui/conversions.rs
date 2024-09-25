@@ -7,8 +7,8 @@ pub(crate) fn format_duration(dur: Duration) -> String {
     let h = dur.as_secs() / 60 / 60;
 
     if h == 0 {
-        return format!("{:02}:{:02}", min, sec);
+        format!("{:02}:{:02}", min, sec)
     } else {
-        return format!("{:0}:{:02}:{:02}", h, min, sec);
+        format!("{:0}:{:02}:{:02}", h, min, sec)
     }
 }

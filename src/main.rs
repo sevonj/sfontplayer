@@ -97,7 +97,6 @@ impl SfontPlayer {
         self.update_volume();
         if let Err(e) = self.audioplayer.start_playback() {
             println!("{}", e);
-            return;
         }
     }
     /// Stop playback
@@ -289,7 +288,7 @@ impl SfontPlayer {
     }
     /// Get the current index in queue
     fn get_queue_idx(&self) -> Option<usize> {
-        self.get_workspace().queue_idx.clone()
+        self.get_workspace().queue_idx
     }
     /// Set the current index in queue
     fn set_queue_idx(&mut self, queue_idx: Option<usize>) {

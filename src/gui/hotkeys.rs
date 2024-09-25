@@ -138,10 +138,10 @@ pub(crate) fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
             app.toggle_shuffle();
         }
         if input.consume_shortcut(&PLAYBACK_VOLUP) {
-            let _ = app.set_volume(app.volume + 5.);
+            app.set_volume(app.volume + 5.);
         }
         if input.consume_shortcut(&PLAYBACK_VOLDN) {
-            let _ = app.set_volume(app.volume - 5.);
+            app.set_volume(app.volume - 5.);
         }
     });
 }

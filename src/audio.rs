@@ -114,7 +114,7 @@ fn load_soundfont(path: &PathBuf) -> Result<SoundFont, &str> {
     if let Ok(mut file) = File::open(path) {
         return Ok(SoundFont::new(&mut file).unwrap());
     }
-    return Err("Failed to open the file!");
+    Err("Failed to open the file!")
 }
 
 /// Private: Load midi file.
@@ -122,5 +122,5 @@ fn load_midifile(path: &PathBuf) -> Result<MidiFile, &str> {
     if let Ok(mut file) = File::open(path) {
         return Ok(MidiFile::new(&mut file).unwrap());
     }
-    return Err("Failed to open the file!");
+    Err("Failed to open the file!")
 }

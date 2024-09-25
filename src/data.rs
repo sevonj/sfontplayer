@@ -35,7 +35,7 @@ impl MidiMeta {
         self.filepath.clone()
     }
     pub fn get_duration(&self) -> Option<Duration> {
-        self.duration.clone()
+        self.duration
     }
 }
 
@@ -59,7 +59,7 @@ pub(crate) struct Workspace {
 impl Workspace {
     pub fn contains_midi(&self, filepath: &PathBuf) -> bool {
         for i in 0..self.midis.len() {
-            if self.midis[i].get_path() == filepath.to_owned() {
+            if self.midis[i].get_path() == *filepath {
                 return true;
             }
         }
@@ -73,23 +73,29 @@ impl Workspace {
     }
     /// Delete fonts and midis queued for removal.
     pub fn delete_queued(&mut self) {
-        for index in self.midi_delete_queue.clone() {
-            self.midis.remove(index);
-            // Deletion affected index
-            if Some(index) == self.midi_idx {
-                self.midi_idx = None;
-            } else if Some(index) < self.midi_idx {
-                self.midi_idx = Some(self.midi_idx.unwrap() - 1)
+        for deleted_idx in self.midi_delete_queue.clone() {
+            self.midis.remove(deleted_idx);
+
+            // Check if deletion affected index
+            if let Some(current) = self.midi_idx {
+                match deleted_idx {
+                    deleted if deleted == current => self.midi_idx = None,
+                    deleted if deleted < current => self.midi_idx = Some(current - 1),
+                    _ => (),
+                }
             }
         }
         self.midi_delete_queue.clear();
-        for index in self.font_delete_queue.clone() {
-            self.fonts.remove(index);
-            // Deletion affected index
-            if Some(index) == self.font_idx {
-                self.font_idx = None;
-            } else if Some(index) < self.font_idx {
-                self.font_idx = Some(self.font_idx.unwrap() - 1)
+        for deleted_idx in self.font_delete_queue.clone() {
+            self.fonts.remove(deleted_idx);
+
+            // Check if deletion affected index
+            if let Some(current) = self.font_idx {
+                match deleted_idx {
+                    deleted if deleted == current => self.font_idx = None,
+                    deleted if deleted < current => self.font_idx = Some(current - 1),
+                    _ => (),
+                }
             }
         }
         self.font_delete_queue.clear();
