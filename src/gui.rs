@@ -1,9 +1,9 @@
 mod about;
 pub(crate) mod conversions;
 mod cooltoolbar;
+mod hotkeys;
 mod playback_controls;
 mod workspace_select;
-mod hotkeys;
 
 use std::time::Duration;
 
@@ -218,7 +218,8 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
 fn disable_if_modal(ui: &mut Ui, app: &SfontPlayer) {
     if app.show_about_modal {
         ui.disable();
-    }if app.show_shortcut_modal {
+    }
+    if app.show_shortcut_modal {
         ui.disable();
     }
 }
