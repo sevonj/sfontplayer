@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags:
+    - "v[0-9]+.[0-9]+.[0-9]+"
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    - name: Add targets
+      run: rustup target add x86_64-unknown-linux-gnu && rustup target add x86_64-pc-windows-gnu
+    
+    - name: Build Linux
+      run: cargo build --verbose --release --target=x86_64-unknown-linux-gnu
+    - name: Build Windows
+      run: cargo build --verbose --release --target=x86_64-pc-windows
+
+    - uses: ncipollo/release-action@v1
+      with:
+        artifacts: "target/x86_64-unknown-linux-gnu/release/sfontplayer,target/x86_64-pc-windows-gnu/release/sfontplayer.exe"
