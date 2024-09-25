@@ -17,6 +17,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Check if prerelase  
+      run: |
+        if [[ v0.0.0-alpha.3 =~ -(alpha|beta|rc) ]]
+        then
+          echo "PRERELEASE=true" >> $GITHUB_ENV
+        else
+          echo "PRERELEASE=false"# >> $GITHUB_ENV
+        fi
+
     - name: Install dependencies
       run: sudo apt install -y libasound2-dev gcc-mingw-w64-x86-64
     - name: Add targets
@@ -31,3 +40,5 @@ jobs:
       with:
         artifacts: "target/x86_64-unknown-linux-gnu/release/sfontplayer,target/x86_64-pc-windows-gnu/release/sfontplayer.exe"
         token: ${{ secrets.GITHUB_TOKEN }}
+        prerelease: ${{ env.PRERELEASE }}
+          
