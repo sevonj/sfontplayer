@@ -72,6 +72,7 @@ impl SfontPlayer {
     fn start(&mut self) {
         self.playing_workspace_idx = self.workspace_idx;
         self.rebuild_queue();
+        self.set_queue_idx(Some(0));
         self.play_selected_song();
     }
     /// Load currently selected song & font from workspace and start playing
@@ -302,17 +303,19 @@ impl SfontPlayer {
         workspace.queue.clear();
 
         // Sequential queue starting from currently selected song
-        let start = workspace.midi_idx.unwrap_or(0);
-        workspace.queue_idx = Some(start);
+        let first_song_idx = workspace.midi_idx;
         for i in 0..workspace.midis.len() {
             workspace.queue.push(i);
         }
 
         if shuffle {
-            workspace.queue_idx = Some(0);
-            workspace.queue.retain(|&x| x != start); // Remove first song
             workspace.queue.shuffle(&mut rand::thread_rng());
-            workspace.queue.insert(0, start); // Reinsert first to the beginning.
+            // Put current selected song to the beginnning.
+            // If it doesn't exist, the first song is random result of the shuffle.
+            if let Some(song_idx) = first_song_idx {
+                workspace.queue.retain(|&x| x != song_idx); // Remove song from queue
+                workspace.queue.insert(0, song_idx); // Insert it to the beginning.
+            }
         }
     }
 }
@@ -332,7 +335,7 @@ impl eframe::App for SfontPlayer {
         }
 
         // When previous song has ended, advance queue or stop.
-        if self.audioplayer.is_paused() && self.audioplayer.is_empty() {
+        if !self.audioplayer.is_paused() && self.audioplayer.is_empty() {
             let workspace = self.get_workspace_mut();
             if let Some(mut idx) = workspace.queue_idx {
                 idx += 1;
