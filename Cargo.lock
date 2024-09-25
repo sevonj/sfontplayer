@@ -2185,22 +2185,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jyls_sfont_tool"
-version = "0.1.0"
-dependencies = [
- "build-info",
- "build-info-build",
- "eframe",
- "egui",
- "egui_extras",
- "rand",
- "rfd",
- "rodio",
- "rustysynth",
- "serde",
-]
-
-[[package]]
 name = "khronos-egl"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3441,6 +3425,22 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.77",
+]
+
+[[package]]
+name = "sfontplayer"
+version = "0.1.0"
+dependencies = [
+ "build-info",
+ "build-info-build",
+ "eframe",
+ "egui",
+ "egui_extras",
+ "rand",
+ "rfd",
+ "rodio",
+ "rustysynth",
+ "serde",
 ]
 
 [[package]]
