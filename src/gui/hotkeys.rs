@@ -6,13 +6,24 @@ use egui_extras::{Column, TableBuilder};
 
 use crate::SfontPlayer;
 
-const PLAYBACK_PLAYPAUSE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Space);
-const PLAYBACK_STARTSTOP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Space);
-const PLAYBACK_SKIP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Period);
-const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Comma);
-const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
-const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
-const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
+const CTRL_SHIFT: Modifiers = Modifiers::CTRL.plus(Modifiers::SHIFT);
+const CTRL_ALT: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
+
+pub const PLAYBACK_PLAYPAUSE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Space);
+pub const PLAYBACK_STARTSTOP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Space);
+pub const PLAYBACK_SKIP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Period);
+pub const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Comma);
+pub const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
+pub const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
+pub const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
+pub const WORKSPACE_SWITCHLEFT: KeyboardShortcut =
+    KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowLeft);
+pub const WORKSPACE_SWITCHRIGHT: KeyboardShortcut =
+    KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowRight);
+pub const WORKSPACE_MOVELEFT: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::ArrowLeft);
+pub const WORKSPACE_MOVERIGHT: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::ArrowRight);
+pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
+pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
 
 /// Modal window that shows Hotkeys
 pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
@@ -96,6 +107,54 @@ pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
                                 ui.label(ctx.format_shortcut(&PLAYBACK_VOLDN));
                             });
                         });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Switch to previous workspace (left)");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_SWITCHLEFT));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Switch to next workspace (right)");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_SWITCHRIGHT));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Move current workspace left");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_MOVELEFT));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Move current workspace right");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_MOVERIGHT));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Create new workspace");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_CREATE));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Remove current workspace");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_REMOVE));
+                            });
+                        });
                     });
             });
         });
@@ -114,6 +173,8 @@ pub(crate) fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
     }
 
     ctx.input_mut(|input| {
+        // --- Playback
+
         if input.consume_shortcut(&PLAYBACK_PLAYPAUSE) {
             if !app.is_paused() {
                 app.pause();
@@ -142,6 +203,27 @@ pub(crate) fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
         }
         if input.consume_shortcut(&PLAYBACK_VOLDN) {
             app.set_volume(app.volume - 5.);
+        }
+
+        // --- Workspaces
+
+        if input.consume_shortcut(&WORKSPACE_SWITCHLEFT) {
+            app.switch_workspace_left();
+        }
+        if input.consume_shortcut(&WORKSPACE_SWITCHRIGHT) {
+            app.switch_workspace_right();
+        }
+        if input.consume_shortcut(&WORKSPACE_MOVELEFT) {
+            app.move_workspace_left();
+        }
+        if input.consume_shortcut(&WORKSPACE_MOVERIGHT) {
+            app.move_workspace_right();
+        }
+        if input.consume_shortcut(&WORKSPACE_CREATE) {
+            app.new_workspace();
+        }
+        if input.consume_shortcut(&WORKSPACE_REMOVE) {
+            app.remove_workspace(app.workspace_idx);
         }
     });
 }

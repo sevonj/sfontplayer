@@ -1,7 +1,13 @@
 use eframe::egui::{TextEdit, Ui};
+use egui::Button;
 use rfd::FileDialog;
 
 use crate::SfontPlayer;
+
+use super::hotkeys::{
+    WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REMOVE,
+    WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+};
 
 /// The topmost toolbar with File Menu
 pub(crate) fn toolbar(ui: &mut Ui, app: &mut SfontPlayer) {
@@ -57,6 +63,72 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
         let rename_response =
             ui.add(TextEdit::singleline(&mut app.get_workspace_mut().name).desired_width(128.));
         if rename_response.lost_focus() {
+            ui.close_menu();
+        }
+        if ui
+            .add_enabled(
+                app.workspace_idx > 0,
+                Button::new("Switch one left")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SWITCHLEFT)),
+            )
+            .clicked()
+        {
+            app.switch_workspace_left();
+            ui.close_menu();
+        }
+        if ui
+            .add_enabled(
+                app.workspace_idx < app.workspaces.len() - 1,
+                Button::new("Switch one right")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SWITCHRIGHT)),
+            )
+            .clicked()
+        {
+            app.switch_workspace_right();
+            ui.close_menu();
+        }
+        if ui
+            .add_enabled(
+                app.workspace_idx > 0,
+                Button::new("Move left")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_MOVELEFT)),
+            )
+            .clicked()
+        {
+            app.move_workspace_left();
+            ui.close_menu();
+        }
+        if ui
+            .add_enabled(
+                app.workspace_idx < app.workspaces.len() - 1,
+                Button::new("Move right")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_MOVERIGHT)),
+            )
+            .clicked()
+        {
+            app.move_workspace_right();
+            ui.close_menu();
+        }
+        if ui
+            .add_enabled(
+                app.workspace_idx < app.workspaces.len() - 1,
+                Button::new("Create a new workspace")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_CREATE)),
+            )
+            .clicked()
+        {
+            app.remove_workspace(app.workspace_idx);
+            ui.close_menu();
+        }
+        if ui
+            .add_enabled(
+                app.workspace_idx < app.workspaces.len() - 1,
+                Button::new("Remove workspace")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_REMOVE)),
+            )
+            .clicked()
+        {
+            app.remove_workspace(app.workspace_idx);
             ui.close_menu();
         }
     });

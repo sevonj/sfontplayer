@@ -196,13 +196,50 @@ impl SfontPlayer {
     fn switch_workspace(&mut self, index: usize) {
         self.workspace_idx = index
     }
+    fn switch_workspace_left(&mut self) {
+        if self.workspace_idx > 0 {
+            self.workspace_idx -= 1
+        }
+    }
+    fn switch_workspace_right(&mut self) {
+        if self.workspace_idx < self.workspaces.len() - 1 {
+            self.workspace_idx += 1
+        }
+    }
     /// Create a new workspace
     fn new_workspace(&mut self) {
         self.workspaces.push(Workspace::default());
+        self.workspace_idx = self.workspaces.len() - 1;
     }
     /// Remove a workspace by index
     fn remove_workspace(&mut self, index: usize) {
         self.workspace_delet_queue.push(index);
+    }
+    /// Rearrange workspaces
+    fn move_workspace(&mut self, old_index: usize, new_index: usize) {
+        let workspace = self.workspaces.remove(old_index); // Remove at old index
+        self.workspaces.insert(new_index, workspace); // Reinsert at new index
+
+        // Update current workspace index if it was affected by the move
+        if old_index == self.workspace_idx {
+            self.workspace_idx = new_index;
+        } else if old_index > self.workspace_idx && self.workspace_idx <= new_index {
+            self.playing_workspace_idx -= 1;
+        } else if new_index > self.workspace_idx && self.workspace_idx <= old_index {
+            self.playing_workspace_idx += 1;
+        }
+    }
+    /// Move current workspace left
+    fn move_workspace_left(&mut self) {
+        if self.workspace_idx > 0 {
+            self.move_workspace(self.workspace_idx, self.workspace_idx - 1);
+        }
+    }
+    /// Move current workspace right
+    fn move_workspace_right(&mut self) {
+        if self.workspace_idx < self.workspaces.len() - 1 {
+            self.move_workspace(self.workspace_idx, self.workspace_idx + 1);
+        }
     }
 
     // --- Manage Workspace Soundfonts
