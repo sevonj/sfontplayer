@@ -41,4 +41,5 @@ jobs:
         artifacts: "target/x86_64-unknown-linux-gnu/release/sfontplayer,target/x86_64-pc-windows-gnu/release/sfontplayer.exe"
         token: ${{ secrets.GITHUB_TOKEN }}
         prerelease: ${{ env.PRERELEASE }}
+        generateReleaseNotes: true
           
