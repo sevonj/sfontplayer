@@ -1,5 +1,5 @@
 # SfontPlayer
-![ci badge](https://github.com/sevonj/sfontplayer/actions/workflows/ci.yml/badge.svg)
+![ci badge](https://github.com/sevonj/sfontplayer/actions/workflows/rust.yml/badge.svg)
 
 ![image](https://github.com/user-attachments/assets/e8a97024-355a-48f1-b7a8-cccafeb42afc)
 
