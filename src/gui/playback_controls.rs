@@ -25,7 +25,7 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
     };
 
     ui.add(Label::new(RichText::new("🎵").size(ICON_SIZE)).selectable(false));
-    
+
     // Shuffle button
     if ui
         .add(SelectableLabel::new(
