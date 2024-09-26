@@ -1,114 +1,87 @@
-use eframe::egui::{Button, RichText, SelectableLabel, Slider, Ui};
+use eframe::egui::{RichText, Slider, Ui};
+use egui::{include_image, Image, ImageSource, Label, SelectableLabel, Sense, UiBuilder};
 
 use crate::SfontPlayer;
+
+const ICON_SIZE: f32 = 20.;
 
 use super::conversions::format_duration;
 pub(crate) fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
         playback_controls(ui, app);
 
-        position_control(ui, app);
+        let slider_width = f32::max(ui.available_width() - 144., 64.);
+        position_control(ui, app, slider_width);
 
         volume_control(ui, app);
     });
 }
 
 fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
-    let (prev_enabled, next_enabled) = if let Some(idx) = app.get_queue_idx() {
+    let (back_enabled, skip_enabled) = if let Some(idx) = app.get_queue_idx() {
         (idx > 0, idx < app.get_queue().len() - 1)
     } else {
         (false, false)
     };
 
-    ui.label(RichText::new("🎵"));
+    ui.add(Label::new(RichText::new("🎵").size(ICON_SIZE)).selectable(false));
 
     // Shuffle button
-    if ui.add(SelectableLabel::new(app.shuffle, "🔀")).clicked() {
+    if ui
+        .add(SelectableLabel::new(
+            app.shuffle,
+            RichText::new("🔀").size(ICON_SIZE),
+        ))
+        .clicked()
+    {
         app.toggle_shuffle();
     };
 
-    // Prev button
-    if ui.add_enabled(prev_enabled, Button::new("⏪")).clicked() {
-        let _ = app.skip_back();
-    }
-    // PlayPause button
+    // Skip back
+    ui.add_enabled_ui(back_enabled, |ui| {
+        if icon_button(ui, include_image!("../assets/icon_prev.svg"), "back").clicked() {
+            let _ = app.skip_back();
+        }
+    });
+    // Playpause
     if app.is_paused() {
-        if ui.button("▶").clicked() {
+        if icon_button(ui, include_image!("../assets/icon_play.svg"), "play").clicked() {
             if app.is_empty() {
                 app.start();
             } else {
                 app.play();
             }
-        }
-    } else if ui.button("⏸").clicked() {
+        };
+    } else if icon_button(ui, include_image!("../assets/icon_pause.svg"), "pause").clicked() {
         app.pause();
     }
-
-    // Next button
-    if ui.add_enabled(next_enabled, Button::new("⏩")).clicked() {
-        let _ = app.skip();
-    }
-    // Stop button
-    if ui.add_enabled(!app.is_paused(), Button::new("⏹")).clicked() {
-        app.stop()
-    }
-
-    /*
-
-    // Image based buttons
-    // Disabled until hover color change is figured out.
-
-    let tint = ui.style().visuals.text_color();
-    let img_play = Image::new(if app.is_paused() {
-        include_image!("../../icon_play.svg")
-    } else {
-        include_image!("../../icon_pause.svg")
-    })
-    .tint(tint);
-    let img_stop = Image::new(include_image!("../../icon_stop.svg")).tint(tint);
-    let img_prev = Image::new(include_image!("../../icon_prev.svg")).tint(tint);
-    let img_next = Image::new(include_image!("../../icon_next.svg")).tint(tint);
-
-    // Prev button
-    if ui
-        .add_enabled(prev_enabled, ImageButton::new(img_prev).frame(true))
-        .clicked()
-    {
-        app.set_queue_idx(Some(app.get_queue_idx().unwrap() - 1));
-        app.play_selected_song();
-    }
-    // PlayPause button
-    if ui.add(ImageButton::new(img_play).frame(true)).clicked() {
-        if app.is_paused() {
-            if app.is_empty() {
-                app.start();
-            } else {
-                app.play();
-            }
-        } else {
-            app.pause();
+    // Skip
+    ui.add_enabled_ui(skip_enabled, |ui| {
+        if icon_button(ui, include_image!("../assets/icon_next.svg"), "skip").clicked() {
+            let _ = app.skip();
         }
-    }
-    // Next button
-    if ui
-        .add_enabled(next_enabled, ImageButton::new(img_next).frame(true))
-        .clicked()
-    {
-        app.set_queue_idx(Some(app.get_queue_idx().unwrap() + 1));
-        app.play_selected_song();
-    }
-    // Stop button
-    if ui
-        .add_enabled(!app.is_paused(), ImageButton::new(img_stop).frame(true))
-        .clicked()
-    {
-        app.stop()
-    }
-    */ // Image based buttons
+    });
+    // Skip
+    ui.add_enabled_ui(!app.is_empty(), |ui| {
+        if icon_button(ui, include_image!("../assets/icon_stop.svg"), "stop").clicked() {
+            app.stop();
+        }
+    });
+}
+
+/// Icon Button that reacts to hovering.
+/// Image should be monochromatic (white) as it'll be tinted to intended color.
+fn icon_button(ui: &mut Ui, source: ImageSource, id: &str) -> egui::Response {
+    // Doesn't work properly without using is_salt()?
+    ui.scope_builder(UiBuilder::new().id_salt(id).sense(Sense::click()), |ui| {
+        let color = ui.style().interact(&ui.response()).text_color();
+        ui.add(Image::new(source).tint(color));
+    })
+    .response
 }
 
 /// Song position slider
-fn position_control(ui: &mut Ui, app: &mut SfontPlayer) {
+fn position_control(ui: &mut Ui, app: &mut SfontPlayer, width: f32) {
     let len = app.get_midi_length();
     let pos = app.get_midi_position();
 
@@ -116,7 +89,7 @@ fn position_control(ui: &mut Ui, app: &mut SfontPlayer) {
     let slider_len = if len.is_zero() { 1. } else { len.as_secs_f64() };
 
     ui.horizontal(|ui| {
-        ui.spacing_mut().slider_width = f32::max(ui.available_width() - 128., 64.);
+        ui.spacing_mut().slider_width = width;
         ui.add_enabled(
             !len.is_zero(),
             Slider::new(&mut pos.as_secs_f64(), 0.0..=slider_len)
@@ -136,7 +109,7 @@ fn volume_control(ui: &mut Ui, app: &mut SfontPlayer) {
         _ => "🔊",
     };
 
-    ui.menu_button(speaker_icon_str, |ui| {
+    ui.menu_button(RichText::new(speaker_icon_str).size(ICON_SIZE), |ui| {
         if ui
             .add(
                 Slider::new(&mut app.volume, 0.0..=100.)
