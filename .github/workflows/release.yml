@@ -42,4 +42,6 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         prerelease: ${{ env.PRERELEASE }}
         generateReleaseNotes: true
+        artifactErrorsFailBuild: true
+        
           
