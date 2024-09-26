@@ -10,9 +10,9 @@ license = "MIT"
 [dependencies]
 
 # -- GUI
-egui = "0.28"                                                   # GUI
-eframe = { version = "0.28", features = ["persistence"] }       # Framework
-egui_extras = { version = "0.28", features = ["all_loaders"]}   # Extra gui components
+egui = "0.29"                                                   # GUI
+eframe = { version = "0.29", features = ["persistence"] }       # Framework
+egui_extras = { version = "0.29", features = ["all_loaders"]}   # Extra gui components
 rfd = "0.15"                                                    # File dialog
 
 # -- Persistence
