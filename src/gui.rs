@@ -28,11 +28,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
     // Hotkeys
     consume_shortcuts(ctx, app);
 
-    ctx.input(|i| {
-        for file in i.raw.dropped_files.clone() {
-            println!("{:?}", file)
-        }
-    });
+    handle_dropped_files(ctx);
     TopBottomPanel::top("top_bar")
         .resizable(false)
         .show(ctx, |ui| {
@@ -102,6 +98,16 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
     CentralPanel::default().show(ctx, |ui| {
         disable_if_modal(ui, app);
         song_table(ui, app);
+    });
+}
+
+/// TODO: Drag files into the window to add them
+/// https://github.com/sevonj/sfontplayer/issues/7
+fn handle_dropped_files(ctx: &Context) {
+    ctx.input(|i| {
+        for file in i.raw.dropped_files.clone() {
+            println!("{:?}", file)
+        }
     });
 }
 
