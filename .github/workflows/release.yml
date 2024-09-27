@@ -19,7 +19,7 @@ jobs:
 
     - name: Check if prerelase  
       run: |
-        if [[ v0.0.0-alpha.3 =~ -(alpha|beta|rc) ]]
+        if [[ ${{ github.ref_name }} =~ -(alpha|beta|rc) ]]
         then
           echo "PRERELEASE=true" >> $GITHUB_ENV
         else
