@@ -1,5 +1,6 @@
 use std::{fs::File, path::PathBuf, time::Duration, vec};
 
+use rand::seq::SliceRandom;
 use rustysynth::MidiFile;
 
 /// Reference to a midi file with metadata
@@ -73,13 +74,64 @@ impl Workspace {
         }
         false
     }
-    pub fn remove_midi(&mut self, index: usize) {
-        self.midi_delete_queue.push(index);
+
+    // --- Soundfonts
+
+    pub fn add_font(&mut self, path: PathBuf) {
+        if !self.fonts.contains(&path) {
+            self.fonts.push(path);
+        }
     }
     pub fn remove_font(&mut self, index: usize) {
         self.font_delete_queue.push(index);
     }
+    pub fn clear_fonts(&mut self) {
+        self.midis.clear();
+        self.midi_idx = None;
+    }
+    // --- Midi files
+
+    pub fn add_midi(&mut self, path: PathBuf) {
+        if !self.contains_midi(&path) {
+            self.midis.push(MidiMeta::new(path));
+        }
+    }
+    pub fn remove_midi(&mut self, index: usize) {
+        self.midi_delete_queue.push(index);
+    }
+    pub fn clear_midis(&mut self) {
+        self.midis.clear();
+        self.midi_idx = None;
+    }
+
+    // --- Playback Queue
+
+    /// Create a new song queue from currently available songs.
+    /// To be called when song list changes, or shuffle is toggled
+    pub fn rebuild_queue(&mut self, shuffle: bool) {
+        self.queue.clear();
+
+        // Sequential queue starting from currently selected song
+        let first_song_idx = self.midi_idx;
+        for i in 0..self.midis.len() {
+            self.queue.push(i);
+        }
+
+        if shuffle {
+            self.queue.shuffle(&mut rand::thread_rng());
+            // Put current selected song to the beginnning.
+            // If it doesn't exist, the first song is random result of the shuffle.
+            if let Some(song_idx) = first_song_idx {
+                self.queue.retain(|&x| x != song_idx); // Remove song from queue
+                self.queue.insert(0, song_idx); // Insert it to the beginning.
+            }
+        }
+    }
+
+    // --- Misc.
+
     /// Delete fonts and midis queued for removal.
+    /// Call this at the end of the frame.
     pub fn delete_queued(&mut self) {
         for deleted_idx in self.midi_delete_queue.clone() {
             self.midis.remove(deleted_idx);

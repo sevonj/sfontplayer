@@ -30,7 +30,7 @@ fn file_menu(ui: &mut Ui, app: &mut SfontPlayer) {
                 .pick_files()
             {
                 for path in paths {
-                    app.add_font(path);
+                    app.get_workspace_mut().add_font(path);
                 }
                 ui.close_menu();
             }
@@ -41,17 +41,17 @@ fn file_menu(ui: &mut Ui, app: &mut SfontPlayer) {
                 .pick_files()
             {
                 for path in paths {
-                    app.add_midi(path);
+                    app.get_workspace_mut().add_midi(path);
                 }
                 ui.close_menu();
             }
         }
         if ui.button("Clear soundfonts").clicked() {
-            app.clear_fonts();
+            app.get_workspace_mut().clear_fonts();
             ui.close_menu();
         }
         if ui.button("Clear songs").clicked() {
-            app.clear_midis();
+            app.get_workspace_mut().clear_midis();
             ui.close_menu();
         }
     });

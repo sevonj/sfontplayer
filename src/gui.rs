@@ -53,7 +53,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                             .pick_files()
                         {
                             for path in paths {
-                                app.add_font(path);
+                                app.get_workspace_mut().add_font(path);
                             }
                         }
                     }
@@ -88,7 +88,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                         .pick_files()
                     {
                         for path in paths {
-                            app.add_midi(path);
+                            app.get_workspace_mut().add_midi(path);
                         }
                     }
                 }
@@ -126,9 +126,9 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
     });
 
     table.body(|body| {
-        body.rows(TBL_ROW_H, app.get_fonts().len(), |mut row| {
+        body.rows(TBL_ROW_H, app.get_workspace().fonts.len(), |mut row| {
             let index = row.index();
-            row.set_selected(Some(index) == app.get_font_idx());
+            row.set_selected(Some(index) == app.get_workspace().font_idx);
 
             row.col(|ui| {
                 if ui
@@ -136,11 +136,11 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     .on_hover_text("Remove")
                     .clicked()
                 {
-                    app.remove_font(index)
+                    app.get_workspace_mut().remove_font(index)
                 }
             });
             row.col(|ui| {
-                let name = app.get_fonts()[index]
+                let name = app.get_workspace().fonts[index]
                     .file_name()
                     .unwrap()
                     .to_str()
@@ -154,14 +154,14 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     )
                     .clicked()
                 {
-                    app.set_font_idx(index);
+                    app.get_workspace_mut().font_idx = Some(index);
                 }
             });
 
             // TODO: Find out why this doesn't work
             if row.response().clicked() {
                 println!("CLICK");
-                app.set_font_idx(index);
+                app.get_workspace_mut().font_idx = Some(index);
             }
         });
     });
@@ -178,7 +178,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
         .sense(Sense::click());
 
     if app.update_flags.scroll_to_song {
-        if let Some(index) = app.get_midi_idx() {
+        if let Some(index) = app.get_workspace().midi_idx {
             tablebuilder = tablebuilder.scroll_to_row(index, Some(egui::Align::Center))
         }
     }
@@ -194,14 +194,14 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     });
 
     table.body(|body| {
-        body.rows(TBL_ROW_H, app.get_midis().len(), |mut row| {
+        body.rows(TBL_ROW_H, app.get_workspace().midis.len(), |mut row| {
             let index = row.index();
-            let filename = app.get_midis()[index].get_name();
-            let time = app.get_midis()[index]
+            let filename = app.get_workspace().midis[index].get_name();
+            let time = app.get_workspace().midis[index]
                 .get_duration()
                 .unwrap_or(Duration::ZERO);
 
-            row.set_selected(Some(index) == app.get_midi_idx());
+            row.set_selected(Some(index) == app.get_workspace().midi_idx);
 
             // Remove button
             row.col(|ui| {
@@ -210,7 +210,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     .on_hover_text("Remove")
                     .clicked()
                 {
-                    app.remove_midi(index)
+                    app.get_workspace_mut().remove_midi(index)
                 }
             });
             // Filename
@@ -223,7 +223,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     )
                     .clicked()
                 {
-                    app.set_midi_idx(index);
+                    app.get_workspace_mut().midi_idx = Some(index);
                     app.start();
                 }
             });
@@ -235,7 +235,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             // TODO: Find out why this doesn't work
             if row.response().clicked() {
                 println!("CLICK");
-                app.set_midi_idx(index);
+                app.get_workspace_mut().midi_idx = Some(index);
                 app.start();
             }
         });
