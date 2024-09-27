@@ -20,7 +20,7 @@ Prebuilt binaries are available for Linux and Windows.
 - Get your executable from `target/<yourtarget>/`
 
 ## Continuous Integration
-Pull requests are gatekept by [this action.](https://github.com/sevonj/sfontplayer/blob/master/.github/workflows/rust.yml) It will check if the code
+Pull requests are gatekept by [this workflow.](https://github.com/sevonj/sfontplayer/blob/master/.github/workflows/rust.yml) It will check if the code
 - builds
 - is formatted (run `cargo fmt`)
 - has linter errors (run `cargo clippy`)
