@@ -1,5 +1,5 @@
 use eframe::egui::{RichText, Slider, Ui};
-use egui::{include_image, Image, ImageSource, Label, SelectableLabel, Sense, UiBuilder};
+use egui::{include_image, Image, ImageSource, SelectableLabel, Sense, UiBuilder};
 
 use crate::SfontPlayer;
 
@@ -24,7 +24,30 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
         (false, false)
     };
 
-    ui.add(Label::new(RichText::new("🎵").size(ICON_SIZE)).selectable(false));
+    // Current song info
+    let current_hover_text = format!(
+        "Currently {}: {}",
+        if app.is_empty() {
+            "selected"
+        } else {
+            "playing"
+        },
+        if let Some(index) = app.get_midi_idx() {
+            app.get_midis()[index].get_name()
+        } else {
+            "Nothing".into()
+        }
+    );
+    if ui
+        .add_enabled(
+            app.get_midi_idx().is_some(),
+            egui::Button::new(RichText::new("🎵").size(ICON_SIZE)).frame(false),
+        )
+        .on_hover_text(current_hover_text)
+        .clicked()
+    {
+        app.update_flags.scroll_to_song = true;
+    }
 
     // Shuffle button
     if ui

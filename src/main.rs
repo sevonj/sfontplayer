@@ -26,6 +26,17 @@ fn main() {
     );
 }
 
+/// GUI update flags. Cleared at the end of frame update.
+#[derive(Default)]
+struct UpdateFlags {
+    scroll_to_song: bool,
+}
+impl UpdateFlags {
+    fn clear(&mut self) {
+        self.scroll_to_song = false;
+    }
+}
+
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 struct SfontPlayer {
@@ -50,6 +61,9 @@ struct SfontPlayer {
     show_about_modal: bool,
     #[serde(skip)]
     show_shortcut_modal: bool,
+
+    #[serde(skip)]
+    update_flags: UpdateFlags,
 }
 
 impl SfontPlayer {
@@ -102,7 +116,6 @@ impl SfontPlayer {
     /// Stop playback
     fn stop(&mut self) {
         self.audioplayer.stop_playback();
-        self.get_workspace_mut().midi_idx = None;
         self.get_workspace_mut().queue_idx = None;
     }
     /// Unpause
@@ -410,5 +423,7 @@ impl eframe::App for SfontPlayer {
             }
         }
         self.workspace_delet_queue.clear();
+
+        self.update_flags.clear();
     }
 }
