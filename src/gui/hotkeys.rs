@@ -2,6 +2,7 @@ use eframe::egui::{
     vec2, Align2, Context, Key, KeyboardShortcut, Label, Modifiers, RichText, ScrollArea, Ui,
     Window,
 };
+use egui::TextWrapMode;
 use egui_extras::{Column, TableBuilder};
 
 use crate::SfontPlayer;
@@ -35,22 +36,21 @@ pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
         .show(ctx, |ui| {
             ui.set_width(300.);
             ScrollArea::vertical().max_height(500.).show(ui, |ui| {
-                let col_width = ui.available_width();
+                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
 
                 TableBuilder::new(ui)
                     .vscroll(false)
-                    .striped(true)
-                    .column(Column::exact(col_width * 0.5))
+                    .column(Column::auto())
                     .column(Column::remainder())
-                    .header(20.0, |mut header| {
-                        header.col(|ui| {
-                            ui.label("Name");
-                        });
-                        header.col(|ui| {
-                            ui.label("Shortcut");
-                        });
-                    })
                     .body(|mut body| {
+                        // --- Playback
+
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                ui.label("Playback control");
+                            });
+                            row.col(|_| {});
+                        });
                         body.row(16., |mut row| {
                             row.col(|ui| {
                                 add_shortcut_title(ui, "Play / Pause");
@@ -69,7 +69,7 @@ pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Skip (next song)");
+                                add_shortcut_title(ui, "Skip");
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&PLAYBACK_SKIP));
@@ -77,7 +77,7 @@ pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Skip back (previous song))");
+                                add_shortcut_title(ui, "Skip back");
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&PLAYBACK_SKIPBACK));
@@ -106,6 +106,15 @@ pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&PLAYBACK_VOLDN));
                             });
+                        });
+
+                        // --- Workspaces
+
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                ui.label("Workspaces");
+                            });
+                            row.col(|_| {});
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {

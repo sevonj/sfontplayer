@@ -68,11 +68,7 @@ fn info_self(ui: &mut Ui) {
             .open_url(OpenUrl::new_tab(env!("CARGO_PKG_REPOSITORY")));
     }
 
-    license_collapse(
-        ui,
-        env!("CARGO_PKG_LICENSE"),
-        include_str!("../../LICENSE.txt"),
-    );
+    license_collapse(ui, "View license", include_str!("../../LICENSE.txt"));
 }
 
 /// List of all dependencies
