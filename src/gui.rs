@@ -170,12 +170,18 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
 fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     let width = ui.available_width() - 192.;
 
-    let tablebuilder = TableBuilder::new(ui)
+    let mut tablebuilder = TableBuilder::new(ui)
         .striped(true)
         .column(Column::exact(16.))
         .column(Column::auto_with_initial_suggestion(width).resizable(true))
         .column(Column::remainder())
         .sense(Sense::click());
+
+    if app.update_flags.scroll_to_song {
+        if let Some(index) = app.get_midi_idx() {
+            tablebuilder = tablebuilder.scroll_to_row(index, Some(egui::Align::Center))
+        }
+    }
 
     let table = tablebuilder.header(20.0, |mut header| {
         header.col(|_| {});
@@ -190,13 +196,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     table.body(|body| {
         body.rows(TBL_ROW_H, app.get_midis().len(), |mut row| {
             let index = row.index();
-            let filename = app.get_midis()[index]
-                .get_path()
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_owned();
+            let filename = app.get_midis()[index].get_name();
             let time = app.get_midis()[index]
                 .get_duration()
                 .unwrap_or(Duration::ZERO);

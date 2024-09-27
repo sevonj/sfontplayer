@@ -34,6 +34,14 @@ impl MidiMeta {
     pub fn get_path(&self) -> PathBuf {
         self.filepath.clone()
     }
+    pub fn get_name(&self) -> String {
+        self.filepath
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_owned()
+    }
     pub fn get_duration(&self) -> Option<Duration> {
         self.duration
     }
