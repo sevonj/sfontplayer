@@ -85,14 +85,14 @@ impl SfontPlayer {
     fn start(&mut self) {
         self.playing_workspace_idx = self.workspace_idx;
         let shuffle = self.shuffle;
-        self.get_workspace_mut().rebuild_queue(shuffle);
-        self.get_workspace_mut().queue_idx = Some(0);
+        self.get_playing_workspace_mut().rebuild_queue(shuffle);
+        self.get_playing_workspace_mut().queue_idx = Some(0);
         self.play_selected_song();
     }
     /// Load currently selected song & font from workspace and start playing
     fn play_selected_song(&mut self) {
         self.audioplayer.stop_playback();
-        let workspace = self.get_workspace_mut();
+        let workspace = self.get_playing_workspace_mut();
         if workspace.font_idx.is_none() {
             println!("load_song: no soundfont");
             return;
@@ -116,7 +116,7 @@ impl SfontPlayer {
     /// Stop playback
     fn stop(&mut self) {
         self.audioplayer.stop_playback();
-        self.get_workspace_mut().queue_idx = None;
+        self.get_playing_workspace_mut().queue_idx = None;
     }
     /// Unpause
     fn play(&mut self) {
@@ -128,12 +128,12 @@ impl SfontPlayer {
     }
     /// Play previous song
     fn skip_back(&mut self) -> Result<(), ()> {
-        if let Some(mut index) = self.get_workspace().queue_idx {
+        if let Some(mut index) = self.get_playing_workspace().queue_idx {
             if index == 0 {
                 return Ok(());
             }
             index -= 1;
-            self.get_workspace_mut().queue_idx = Some(index);
+            self.get_playing_workspace_mut().queue_idx = Some(index);
             self.play_selected_song();
             return Ok(());
         }
@@ -142,12 +142,12 @@ impl SfontPlayer {
     }
     /// Play next song
     fn skip(&mut self) -> Result<(), ()> {
-        if let Some(mut index) = self.get_workspace().queue_idx {
+        if let Some(mut index) = self.get_playing_workspace().queue_idx {
             index += 1;
-            if index >= self.get_workspace().queue.len() {
+            if index >= self.get_playing_workspace().queue.len() {
                 return Ok(());
             }
-            self.get_workspace_mut().queue_idx = Some(index);
+            self.get_playing_workspace_mut().queue_idx = Some(index);
             self.play_selected_song();
             return Ok(());
         }
@@ -158,7 +158,7 @@ impl SfontPlayer {
     fn toggle_shuffle(&mut self) {
         let shuffle = !self.shuffle;
         self.shuffle = shuffle;
-        self.get_workspace_mut().rebuild_queue(shuffle);
+        self.get_playing_workspace_mut().rebuild_queue(shuffle);
     }
     /// Set volume (safe)
     fn set_volume(&mut self, volume: f32) {
@@ -205,6 +205,22 @@ impl SfontPlayer {
     /// Get a mutable reference to the currently open workspace
     fn get_workspace_mut(&mut self) -> &mut Workspace {
         &mut self.workspaces[self.workspace_idx]
+    }
+    /// Get a reference to the currently playing workspace.
+    /// If nothing's playing, it gives the currently open workspace instead.
+    fn get_playing_workspace(&self) -> &Workspace {
+        if self.is_empty() {
+            return &self.workspaces[self.workspace_idx];
+        }
+        &self.workspaces[self.playing_workspace_idx]
+    }
+    /// Get a mutable reference to the currently playing workspace.
+    /// If nothing's playing, it gives the currently open workspace instead.
+    fn get_playing_workspace_mut(&mut self) -> &mut Workspace {
+        if self.is_empty() {
+            return &mut self.workspaces[self.workspace_idx];
+        }
+        &mut self.workspaces[self.playing_workspace_idx]
     }
     /// Switch to another workspace
     fn switch_workspace(&mut self, index: usize) {
@@ -273,7 +289,7 @@ impl eframe::App for SfontPlayer {
 
         // When previous song has ended, advance queue or stop.
         if !self.audioplayer.is_paused() && self.audioplayer.is_empty() {
-            let workspace = self.get_workspace_mut();
+            let workspace = self.get_playing_workspace_mut();
             if let Some(mut idx) = workspace.queue_idx {
                 idx += 1;
                 workspace.queue_idx = Some(idx);
