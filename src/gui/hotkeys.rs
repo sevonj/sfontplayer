@@ -7,7 +7,6 @@ use egui_extras::{Column, TableBuilder};
 use crate::SfontPlayer;
 
 const CTRL_SHIFT: Modifiers = Modifiers::CTRL.plus(Modifiers::SHIFT);
-const CTRL_ALT: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
 
 pub const PLAYBACK_PLAYPAUSE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Space);
 pub const PLAYBACK_STARTSTOP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Space);
@@ -16,12 +15,14 @@ pub const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers:
 pub const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
 pub const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
 pub const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
+
 pub const WORKSPACE_SWITCHLEFT: KeyboardShortcut =
-    KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowLeft);
+    KeyboardShortcut::new(Modifiers::ALT, Key::ArrowLeft);
 pub const WORKSPACE_SWITCHRIGHT: KeyboardShortcut =
+    KeyboardShortcut::new(Modifiers::ALT, Key::ArrowRight);
+pub const WORKSPACE_MOVELEFT: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowLeft);
+pub const WORKSPACE_MOVERIGHT: KeyboardShortcut =
     KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowRight);
-pub const WORKSPACE_MOVELEFT: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::ArrowLeft);
-pub const WORKSPACE_MOVERIGHT: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::ArrowRight);
 pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
 pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
 
