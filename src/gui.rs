@@ -128,41 +128,45 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 });
             });
 
-        table.body(|mut body| {
-            for (i, sf) in app.get_fonts().clone().iter().enumerate() {
-                body.row(TBL_ROW_H, |mut row| {
-                    row.set_selected(Some(i) == app.get_font_idx());
+        table.body(|body| {
+            body.rows(TBL_ROW_H, app.get_fonts().len(), |mut row| {
+                let index = row.index();
+                row.set_selected(Some(index) == app.get_font_idx());
 
-                    row.col(|ui| {
-                        if ui
-                            .add(Button::new("❎").frame(false))
-                            .on_hover_text("Remove")
-                            .clicked()
-                        {
-                            app.remove_font(i)
-                        }
-                    });
-                    row.col(|ui| {
-                        let name = sf.file_name().unwrap().to_str().unwrap().to_owned();
-                        if ui
-                            .add(
-                                Button::new(name)
-                                    .frame(false)
-                                    .wrap_mode(TextWrapMode::Truncate),
-                            )
-                            .clicked()
-                        {
-                            app.set_font_idx(i);
-                        }
-                    });
-
-                    // TODO: Find out why this doesn't work
-                    if row.response().clicked() {
-                        println!("CLICK");
-                        app.set_font_idx(i);
+                row.col(|ui| {
+                    if ui
+                        .add(Button::new("❎").frame(false))
+                        .on_hover_text("Remove")
+                        .clicked()
+                    {
+                        app.remove_font(index)
                     }
                 });
-            }
+                row.col(|ui| {
+                    let name = app.get_fonts()[index]
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_owned();
+                    if ui
+                        .add(
+                            Button::new(name)
+                                .frame(false)
+                                .wrap_mode(TextWrapMode::Truncate),
+                        )
+                        .clicked()
+                    {
+                        app.set_font_idx(index);
+                    }
+                });
+
+                // TODO: Find out why this doesn't work
+                if row.response().clicked() {
+                    println!("CLICK");
+                    app.set_font_idx(index);
+                }
+            });
         });
     });
 }
@@ -188,57 +192,58 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     ui.label("Time");
                 });
             })
-            .body(|mut body| {
-                for i in 0..app.get_midis().len() {
-                    let filename = app.get_midis()[i]
+            .body(|body| {
+                body.rows(TBL_ROW_H, app.get_midis().len(), |mut row| {
+                    let index = row.index();
+                    let filename = app.get_midis()[index]
                         .get_path()
                         .file_name()
                         .unwrap()
                         .to_str()
                         .unwrap()
                         .to_owned();
-                    let time = app.get_midis()[i].get_duration().unwrap_or(Duration::ZERO);
+                    let time = app.get_midis()[index]
+                        .get_duration()
+                        .unwrap_or(Duration::ZERO);
 
-                    body.row(TBL_ROW_H, |mut row| {
-                        row.set_selected(Some(i) == app.get_midi_idx());
+                    row.set_selected(Some(index) == app.get_midi_idx());
 
-                        // Remove button
-                        row.col(|ui| {
-                            if ui
-                                .add(Button::new("❎").frame(false))
-                                .on_hover_text("Remove")
-                                .clicked()
-                            {
-                                app.remove_midi(i)
-                            }
-                        });
-                        // Filename
-                        row.col(|ui| {
-                            if ui
-                                .add(
-                                    Button::new(filename)
-                                        .frame(false)
-                                        .wrap_mode(TextWrapMode::Truncate),
-                                )
-                                .clicked()
-                            {
-                                app.set_midi_idx(i);
-                                app.start();
-                            }
-                        });
-                        // Duration
-                        row.col(|ui| {
-                            ui.label(format_duration(time));
-                        });
-
-                        // TODO: Find out why this doesn't work
-                        if row.response().clicked() {
-                            println!("CLICK");
-                            app.set_midi_idx(i);
+                    // Remove button
+                    row.col(|ui| {
+                        if ui
+                            .add(Button::new("❎").frame(false))
+                            .on_hover_text("Remove")
+                            .clicked()
+                        {
+                            app.remove_midi(index)
+                        }
+                    });
+                    // Filename
+                    row.col(|ui| {
+                        if ui
+                            .add(
+                                Button::new(filename)
+                                    .frame(false)
+                                    .wrap_mode(TextWrapMode::Truncate),
+                            )
+                            .clicked()
+                        {
+                            app.set_midi_idx(index);
                             app.start();
                         }
                     });
-                }
+                    // Duration
+                    row.col(|ui| {
+                        ui.label(format_duration(time));
+                    });
+
+                    // TODO: Find out why this doesn't work
+                    if row.response().clicked() {
+                        println!("CLICK");
+                        app.set_midi_idx(index);
+                        app.start();
+                    }
+                });
             });
     });
 }
