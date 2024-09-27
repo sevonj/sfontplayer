@@ -23,7 +23,7 @@ jobs:
         then
           echo "PRERELEASE=true" >> $GITHUB_ENV
         else
-          echo "PRERELEASE=false"# >> $GITHUB_ENV
+          echo "PRERELEASE=false" >> $GITHUB_ENV
         fi
 
     - name: Install dependencies
