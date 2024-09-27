@@ -11,7 +11,9 @@ use crate::SfontPlayer;
 use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
-use eframe::egui::{Button, CentralPanel, Context, ScrollArea, TextWrapMode, TopBottomPanel, Ui};
+use eframe::egui::{
+    Button, CentralPanel, Context, ScrollArea, Sense, TextWrapMode, TopBottomPanel, Ui,
+};
 use egui_extras::{Column, TableBuilder};
 use hotkeys::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
@@ -113,9 +115,10 @@ fn handle_dropped_files(ctx: &Context) {
 
 fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
     ScrollArea::vertical().show(ui, |ui| {
-        TableBuilder::new(ui)
+        let table = TableBuilder::new(ui)
             .striped(true)
             .vscroll(false)
+            .sense(Sense::click())
             .column(Column::exact(16.))
             .column(Column::remainder())
             .header(20.0, |mut header| {
@@ -123,47 +126,59 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 header.col(|ui| {
                     ui.label("Name");
                 });
-            })
-            .body(|mut body| {
-                for (i, sf) in app.get_fonts().clone().iter().enumerate() {
-                    body.row(TBL_ROW_H, |mut row| {
-                        row.col(|ui| {
-                            if ui
-                                .add(Button::new("❎").frame(false))
-                                .on_hover_text("Remove")
-                                .clicked()
-                            {
-                                app.remove_font(i)
-                            }
-                        });
-                        row.col(|ui| {
-                            let name = sf.file_name().unwrap().to_str().unwrap().to_owned();
-                            let highlight = Some(i) == app.get_font_idx();
-                            if ui
-                                .add(
-                                    Button::new(name)
-                                        .frame(highlight)
-                                        .wrap_mode(TextWrapMode::Truncate),
-                                )
-                                .clicked()
-                            {
-                                app.set_font_idx(i);
-                            }
-                        });
-                    });
-                }
             });
+
+        table.body(|mut body| {
+            for (i, sf) in app.get_fonts().clone().iter().enumerate() {
+                body.row(TBL_ROW_H, |mut row| {
+                    row.set_selected(Some(i) == app.get_font_idx());
+
+                    row.col(|ui| {
+                        if ui
+                            .add(Button::new("❎").frame(false))
+                            .on_hover_text("Remove")
+                            .clicked()
+                        {
+                            app.remove_font(i)
+                        }
+                    });
+                    row.col(|ui| {
+                        let name = sf.file_name().unwrap().to_str().unwrap().to_owned();
+                        if ui
+                            .add(
+                                Button::new(name)
+                                    .frame(false)
+                                    .wrap_mode(TextWrapMode::Truncate),
+                            )
+                            .clicked()
+                        {
+                            app.set_font_idx(i);
+                        }
+                    });
+
+                    // TODO: Find out why this doesn't work
+                    if row.response().clicked() {
+                        println!("CLICK");
+                        app.set_font_idx(i);
+                    }
+                });
+            }
+        });
     });
 }
 
 fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     ScrollArea::vertical().show(ui, |ui| {
-        TableBuilder::new(ui)
+        let width = ui.available_width() - 192.;
+        let table = TableBuilder::new(ui)
             .striped(true)
             .vscroll(false)
             .column(Column::exact(16.))
-            .column(Column::auto().resizable(true))
+            .column(Column::auto_with_initial_suggestion(width).resizable(true))
             .column(Column::remainder())
+            .sense(Sense::click());
+
+        table
             .header(20.0, |mut header| {
                 header.col(|_| {});
                 header.col(|ui| {
@@ -175,7 +190,6 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             })
             .body(|mut body| {
                 for i in 0..app.get_midis().len() {
-                    let is_selected = Some(i) == app.get_midi_idx();
                     let filename = app.get_midis()[i]
                         .get_path()
                         .file_name()
@@ -186,6 +200,8 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     let time = app.get_midis()[i].get_duration().unwrap_or(Duration::ZERO);
 
                     body.row(TBL_ROW_H, |mut row| {
+                        row.set_selected(Some(i) == app.get_midi_idx());
+
                         // Remove button
                         row.col(|ui| {
                             if ui
@@ -201,7 +217,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                             if ui
                                 .add(
                                     Button::new(filename)
-                                        .frame(is_selected)
+                                        .frame(false)
                                         .wrap_mode(TextWrapMode::Truncate),
                                 )
                                 .clicked()
@@ -214,6 +230,13 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                         row.col(|ui| {
                             ui.label(format_duration(time));
                         });
+
+                        // TODO: Find out why this doesn't work
+                        if row.response().clicked() {
+                            println!("CLICK");
+                            app.set_midi_idx(i);
+                            app.start();
+                        }
                     });
                 }
             });
