@@ -18,8 +18,8 @@ pub(crate) fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
 }
 
 fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
-    let (back_enabled, skip_enabled) = if let Some(idx) = app.get_queue_idx() {
-        (idx > 0, idx < app.get_queue().len() - 1)
+    let (back_enabled, skip_enabled) = if let Some(idx) = app.get_workspace().queue_idx {
+        (idx > 0, idx < app.get_workspace().queue.len() - 1)
     } else {
         (false, false)
     };
@@ -32,15 +32,15 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
         } else {
             "playing"
         },
-        if let Some(index) = app.get_midi_idx() {
-            app.get_midis()[index].get_name()
+        if let Some(index) = app.get_workspace().midi_idx {
+            app.get_workspace().midis[index].get_name()
         } else {
             "Nothing".into()
         }
     );
     if ui
         .add_enabled(
-            app.get_midi_idx().is_some(),
+            app.get_workspace().midi_idx.is_some(),
             egui::Button::new(RichText::new("🎵").size(ICON_SIZE)).frame(false),
         )
         .on_hover_text(current_hover_text)
