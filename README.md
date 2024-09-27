@@ -1,7 +1,7 @@
 # SfontPlayer
 ![ci badge](https://github.com/sevonj/sfontplayer/actions/workflows/rust.yml/badge.svg)
 
-![image](https://github.com/user-attachments/assets/e8a97024-355a-48f1-b7a8-cccafeb42afc)
+![image](https://github.com/user-attachments/assets/31e1fafb-6ab2-41c6-9a90-cd2807e3762b)
 
 A simple midi player that makes soundfont comparison easy.
 
