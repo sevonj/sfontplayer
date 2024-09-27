@@ -11,9 +11,7 @@ use crate::SfontPlayer;
 use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
-use eframe::egui::{
-    Button, CentralPanel, Context, Sense, TextWrapMode, TopBottomPanel, Ui,
-};
+use eframe::egui::{Button, CentralPanel, Context, Sense, TextWrapMode, TopBottomPanel, Ui};
 use egui_extras::{Column, TableBuilder};
 use hotkeys::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
