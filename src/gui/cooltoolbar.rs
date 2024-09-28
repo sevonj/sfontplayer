@@ -2,7 +2,7 @@ use eframe::egui::{TextEdit, Ui};
 use egui::{Button, Theme, ThemePreference};
 use rfd::FileDialog;
 
-use crate::SfontPlayer;
+use crate::{data::FileListMode, SfontPlayer};
 
 use super::hotkeys::{
     WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REMOVE,
@@ -73,12 +73,44 @@ fn options_menu(ui: &mut Ui) {
 
 fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.menu_button("Workspace", |ui| {
-        ui.label("Rename Workspace");
-        let rename_response =
-            ui.add(TextEdit::singleline(&mut app.get_workspace_mut().name).desired_width(128.));
-        if rename_response.lost_focus() {
-            ui.close_menu();
-        }
+        ui.menu_button("Rename Workspace", |ui| {
+            if ui
+                .add(TextEdit::singleline(&mut app.get_workspace_mut().name).desired_width(128.))
+                .lost_focus()
+            {
+                ui.close_menu();
+            }
+            if ui.button("OK").clicked() {
+                ui.close_menu();
+            }
+        });
+        ui.menu_button("Soundfont list", |ui| {
+            let mut list_mode = app.get_workspace().get_font_list_mode();
+            let response1 = ui.radio_value(&mut list_mode, FileListMode::Manual, "Manual");
+            let response2 = ui.radio_value(&mut list_mode, FileListMode::Directory, "Directory");
+            let response3 = ui.radio_value(
+                &mut list_mode,
+                FileListMode::Subdirectories,
+                "Subdirectories",
+            );
+            if response1.clicked() || response2.clicked() || response3.clicked() {
+                app.get_workspace_mut().set_font_list_type(list_mode);
+            }
+        });
+        ui.menu_button("Midi file list", |ui| {
+            let mut list_mode = app.get_workspace().get_midi_list_mode();
+            let response1 = ui.radio_value(&mut list_mode, FileListMode::Manual, "Manual");
+            let response2 = ui.radio_value(&mut list_mode, FileListMode::Directory, "Directory");
+            let response3 = ui.radio_value(
+                &mut list_mode,
+                FileListMode::Subdirectories,
+                "Subdirectories",
+            );
+            if response1.clicked() || response2.clicked() || response3.clicked() {
+                app.get_workspace_mut().set_midi_list_mode(list_mode);
+            }
+        });
+
         if ui
             .add_enabled(
                 app.workspace_idx > 0,
@@ -124,8 +156,7 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
             ui.close_menu();
         }
         if ui
-            .add_enabled(
-                app.workspace_idx < app.workspaces.len() - 1,
+            .add(
                 Button::new("Create a new workspace")
                     .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_CREATE)),
             )
@@ -135,8 +166,7 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
             ui.close_menu();
         }
         if ui
-            .add_enabled(
-                app.workspace_idx < app.workspaces.len() - 1,
+            .add(
                 Button::new("Remove workspace")
                     .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_REMOVE)),
             )

@@ -7,12 +7,12 @@ mod workspace_select;
 
 use std::time::Duration;
 
-use crate::SfontPlayer;
+use crate::{data::FileListMode, SfontPlayer};
 use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
 use eframe::egui::{Button, CentralPanel, Context, Sense, TextWrapMode, TopBottomPanel, Ui};
-use egui::RichText;
+use egui::{Layout, RichText};
 use egui_extras::{Column, TableBuilder};
 use hotkeys::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
@@ -44,21 +44,84 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
             .show(ctx, |ui| {
                 disable_if_modal(ui, app);
                 ui.horizontal(|ui| {
-                    if ui
-                        .add(Button::new("➕").frame(false))
-                        .on_hover_text("Add")
-                        .clicked()
-                    {
-                        if let Some(paths) = FileDialog::new()
-                            .add_filter("Soundfonts", &["sf2"])
-                            .pick_files()
+                    // Manually add files
+                    if app.get_workspace().get_font_list_mode() == FileListMode::Manual {
+                        if ui
+                            .add(Button::new("➕").frame(false))
+                            .on_hover_text("Add")
+                            .clicked()
                         {
-                            for path in paths {
-                                app.get_workspace_mut().add_font(path);
+                            if let Some(paths) = FileDialog::new()
+                                .add_filter("Soundfonts", &["sf2"])
+                                .pick_files()
+                            {
+                                for path in paths {
+                                    app.get_workspace_mut().add_font(path);
+                                }
                             }
                         }
                     }
+                    // Select directory
+                    else {
+                        let folder_text = if app.get_workspace().get_font_dir().is_some() {
+                            "🗁"
+                        } else {
+                            "🗀"
+                        };
+                        if ui
+                            .add(Button::new(folder_text).frame(false))
+                            .on_hover_text("Select directory")
+                            .clicked()
+                        {
+                            if let Some(path) = FileDialog::new().pick_folder() {
+                                app.get_workspace_mut().set_font_dir(path);
+                                app.get_workspace_mut().refresh_font_list();
+                            }
+                        }
+                    }
+
+                    // Title
                     ui.heading("Soundfonts");
+
+                    // Dir path
+                    if app.get_workspace().get_font_list_mode() != FileListMode::Manual {
+                        if ui
+                            .add(Button::new("🔃").frame(false))
+                            .on_hover_text("Refresh content")
+                            .clicked()
+                        {
+                            app.get_workspace_mut().refresh_font_list();
+                        }
+
+                        if let Some(dir) = &app.get_workspace().get_font_dir() {
+                            ui.label(dir.to_string_lossy());
+                        } else {
+                            ui.label("No directory.");
+                        }
+                    }
+
+                    // Content mode select
+                    ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+                        let mut list_mode = app.get_workspace().get_font_list_mode();
+                        egui::ComboBox::from_id_salt("mode_select")
+                            .selected_text(format!("Content: {:?}", list_mode))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut list_mode, FileListMode::Manual, "Manual");
+                                ui.selectable_value(
+                                    &mut list_mode,
+                                    FileListMode::Directory,
+                                    "Directory",
+                                );
+                                ui.selectable_value(
+                                    &mut list_mode,
+                                    FileListMode::Subdirectories,
+                                    "Subdirectories",
+                                );
+                            });
+                        if list_mode != app.get_workspace().get_font_list_mode() {
+                            app.get_workspace_mut().set_font_list_type(list_mode);
+                        }
+                    });
                 });
             });
         TopBottomPanel::top("font_table")
@@ -79,21 +142,83 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
                 disable_if_modal(ui, app);
-                if ui
-                    .add(Button::new("➕").frame(false))
-                    .on_hover_text("Add")
-                    .clicked()
-                {
-                    if let Some(paths) = FileDialog::new()
-                        .add_filter("Midi files", &["mid"])
-                        .pick_files()
+                // Manually add files
+                if app.get_workspace().get_midi_list_mode() == FileListMode::Manual {
+                    if ui
+                        .add(Button::new("➕").frame(false))
+                        .on_hover_text("Add")
+                        .clicked()
                     {
-                        for path in paths {
-                            app.get_workspace_mut().add_midi(path);
+                        if let Some(paths) = FileDialog::new()
+                            .add_filter("Midi files", &["mid"])
+                            .pick_files()
+                        {
+                            for path in paths {
+                                app.get_workspace_mut().add_midi(path);
+                            }
                         }
                     }
                 }
+                // Select directory
+                else {
+                    let folder_text = if app.get_workspace().get_midi_dir().is_some() {
+                        "🗁"
+                    } else {
+                        "🗀"
+                    };
+                    if ui
+                        .add(Button::new(folder_text).frame(false))
+                        .on_hover_text("Select directory")
+                        .clicked()
+                    {
+                        if let Some(path) = FileDialog::new().pick_folder() {
+                            app.get_workspace_mut().set_midi_dir(path);
+                        }
+                    }
+                }
+
+                // Title
                 ui.heading("Midi files");
+
+                // Dir path
+                if app.get_workspace().get_midi_list_mode() != FileListMode::Manual {
+                    if ui
+                        .add(Button::new("🔃").frame(false))
+                        .on_hover_text("Refresh content")
+                        .clicked()
+                    {
+                        app.get_workspace_mut().refresh_midi_list();
+                    }
+
+                    if let Some(dir) = &app.get_workspace().get_midi_dir() {
+                        ui.label(dir.to_string_lossy());
+                    } else {
+                        ui.label("No directory.");
+                    }
+                }
+
+                // Content mode select
+                ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+                    let mut list_mode = app.get_workspace().get_midi_list_mode();
+                    egui::ComboBox::from_id_salt("mode_select")
+                        .selected_text(format!("Content: {:?}", list_mode))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut list_mode, FileListMode::Manual, "Manual");
+                            ui.selectable_value(
+                                &mut list_mode,
+                                FileListMode::Directory,
+                                "Directory",
+                            );
+                            ui.selectable_value(
+                                &mut list_mode,
+                                FileListMode::Subdirectories,
+                                "Subdirectories",
+                            );
+                        });
+                    if list_mode != app.get_workspace().get_midi_list_mode() {
+                        app.get_workspace_mut().set_midi_list_mode(list_mode);
+                    }
+                });
             });
         });
     CentralPanel::default().show(ctx, |ui| {
@@ -139,15 +264,17 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
             let fontref = &app.get_workspace().fonts[index];
             let filename = fontref.get_name();
             let is_error = fontref.is_error();
+            let manual_files = app.get_workspace().get_font_list_mode() == FileListMode::Manual;
 
             row.set_selected(Some(index) == app.get_workspace().font_idx);
 
             // Remove button
             row.col(|ui| {
-                if ui
-                    .add(Button::new("❎").frame(false))
-                    .on_hover_text("Remove")
-                    .clicked()
+                if manual_files
+                    && ui
+                        .add(Button::new("❎").frame(false))
+                        .on_hover_text("Remove")
+                        .clicked()
                 {
                     app.get_workspace_mut().remove_font(index)
                 }
@@ -218,6 +345,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             let midiref = &app.get_workspace().midis[index];
             let filename = midiref.get_name();
             let is_error = midiref.is_error();
+            let manual_files = app.get_workspace().get_midi_list_mode() == FileListMode::Manual;
 
             let time = app.get_workspace().midis[index]
                 .get_duration()
@@ -227,10 +355,11 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
             // Remove button
             row.col(|ui| {
-                if ui
-                    .add(Button::new("❎").frame(false))
-                    .on_hover_text("Remove")
-                    .clicked()
+                if manual_files
+                    && ui
+                        .add(Button::new("❎").frame(false))
+                        .on_hover_text("Remove")
+                        .clicked()
                 {
                     app.get_workspace_mut().remove_midi(index)
                 }

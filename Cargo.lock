@@ -3444,6 +3444,7 @@ dependencies = [
  "rustysynth",
  "serde",
  "serde_repr",
+ "walkdir",
 ]
 
 [[package]]
