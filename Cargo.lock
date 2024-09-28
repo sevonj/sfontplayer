@@ -3443,6 +3443,7 @@ dependencies = [
  "rodio",
  "rustysynth",
  "serde",
+ "serde_repr",
 ]
 
 [[package]]

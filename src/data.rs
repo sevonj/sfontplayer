@@ -117,9 +117,7 @@ impl Workspace {
         }
 
         // Start from currently selected song, if any
-        if let Some(selected_song) = self.midi_idx {
-            self.queue_idx = Some(selected_song);
-        }
+        self.queue_idx = Some(self.midi_idx.unwrap_or(0));
 
         if shuffle {
             self.queue.shuffle(&mut rand::thread_rng());

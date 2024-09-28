@@ -5,6 +5,7 @@ use audio::AudioPlayer;
 use data::Workspace;
 use eframe::egui;
 use gui::draw_gui;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 mod audio;
 mod data;
@@ -23,6 +24,15 @@ fn main() {
         native_options,
         Box::new(|cc| Ok(Box::new(SfontPlayer::new(cc)))),
     );
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy)]
+#[repr(u8)]
+enum RepeatMode {
+    #[default]
+    Disabled,
+    Queue,
+    Song,
 }
 
 /// GUI update flags. Cleared at the end of frame update.
@@ -55,6 +65,7 @@ struct SfontPlayer {
 
     // -- Settings
     shuffle: bool,
+    repeat: RepeatMode,
     show_soundfonts: bool,
     #[serde(skip)]
     show_about_modal: bool,
@@ -63,6 +74,10 @@ struct SfontPlayer {
 
     #[serde(skip)]
     update_flags: UpdateFlags,
+
+    /// Is there playback going on? Paused playback also counts.
+    #[serde(skip)]
+    is_playing: bool,
 }
 
 impl SfontPlayer {
@@ -111,11 +126,13 @@ impl SfontPlayer {
         if let Err(e) = self.audioplayer.start_playback() {
             println!("{}", e);
         }
+        self.is_playing = true;
     }
     /// Stop playback
     fn stop(&mut self) {
         self.audioplayer.stop_playback();
         self.get_playing_workspace_mut().queue_idx = None;
+        self.is_playing = false;
     }
     /// Unpause
     fn play(&mut self) {
@@ -126,38 +143,51 @@ impl SfontPlayer {
         self.audioplayer.pause()
     }
     /// Play previous song
-    fn skip_back(&mut self) -> Result<(), ()> {
+    fn skip_back(&mut self) {
         if let Some(mut index) = self.get_playing_workspace().queue_idx {
             if index == 0 {
-                return Ok(());
+                if self.repeat == RepeatMode::Queue {
+                    index = self.get_playing_workspace().queue.len() - 1;
+                    self.get_playing_workspace_mut().queue_idx = Some(index);
+                    self.play_selected_song();
+                    return;
+                }
+                return;
             }
             index -= 1;
             self.get_playing_workspace_mut().queue_idx = Some(index);
             self.play_selected_song();
-            return Ok(());
         }
-        // Ignore for now.
-        Ok(())
     }
     /// Play next song
-    fn skip(&mut self) -> Result<(), ()> {
+    fn skip(&mut self) {
         if let Some(mut index) = self.get_playing_workspace().queue_idx {
             index += 1;
             if index >= self.get_playing_workspace().queue.len() {
-                return Ok(());
+                if self.repeat == RepeatMode::Queue {
+                    self.get_playing_workspace_mut().queue_idx = Some(0);
+                    self.play_selected_song();
+                    return;
+                }
+                return;
             }
             self.get_playing_workspace_mut().queue_idx = Some(index);
             self.play_selected_song();
-            return Ok(());
         }
-        // Ignore for now.
-        Ok(())
     }
     /// Toggles shuffle and rebuilds queue
     fn toggle_shuffle(&mut self) {
         let shuffle = !self.shuffle;
         self.shuffle = shuffle;
         self.get_playing_workspace_mut().rebuild_queue(shuffle);
+    }
+    /// Cycles repeat modes
+    fn cycle_repeat(&mut self) {
+        match self.repeat {
+            RepeatMode::Disabled => self.repeat = RepeatMode::Queue,
+            RepeatMode::Queue => self.repeat = RepeatMode::Song,
+            RepeatMode::Song => self.repeat = RepeatMode::Disabled,
+        }
     }
     /// Set volume (safe)
     fn set_volume(&mut self, volume: f32) {
@@ -170,7 +200,6 @@ impl SfontPlayer {
     }
 
     // --- Playback Status
-
     /// Pause status.
     fn is_paused(&self) -> bool {
         self.audioplayer.is_paused()
@@ -208,18 +237,18 @@ impl SfontPlayer {
     /// Get a reference to the currently playing workspace.
     /// If nothing's playing, it gives the currently open workspace instead.
     fn get_playing_workspace(&self) -> &Workspace {
-        if self.is_empty() {
-            return &self.workspaces[self.workspace_idx];
+        if self.is_playing {
+            return &self.workspaces[self.playing_workspace_idx];
         }
-        &self.workspaces[self.playing_workspace_idx]
+        &self.workspaces[self.workspace_idx]
     }
     /// Get a mutable reference to the currently playing workspace.
     /// If nothing's playing, it gives the currently open workspace instead.
     fn get_playing_workspace_mut(&mut self) -> &mut Workspace {
-        if self.is_empty() {
-            return &mut self.workspaces[self.workspace_idx];
+        if self.is_playing {
+            return &mut self.workspaces[self.playing_workspace_idx];
         }
-        &mut self.workspaces[self.playing_workspace_idx]
+        &mut self.workspaces[self.workspace_idx]
     }
     /// Switch to another workspace
     fn switch_workspace(&mut self, index: usize) {
@@ -270,6 +299,44 @@ impl SfontPlayer {
             self.move_workspace(self.workspace_idx, self.workspace_idx + 1);
         }
     }
+
+    // When previous song has ended, advance queue or stop.
+    fn advance_queue(&mut self) {
+        let repeat = self.repeat;
+        let workspace = self.get_playing_workspace_mut();
+
+        let mut queue_index = match workspace.queue_idx {
+            Some(value) => value,
+            None => {
+                workspace.midi_idx = None;
+                self.stop();
+                return;
+            }
+        };
+
+        if repeat == RepeatMode::Song {
+            workspace.midi_idx = Some(workspace.queue[queue_index]);
+            self.play_selected_song();
+            return;
+        }
+
+        queue_index += 1;
+
+        // End reached, loop back or bail out
+        if queue_index == workspace.queue.len() {
+            if repeat == RepeatMode::Queue {
+                queue_index = 0;
+                workspace.queue_idx = Some(queue_index);
+            } else {
+                workspace.midi_idx = None;
+                self.stop();
+                return;
+            }
+        }
+
+        workspace.midi_idx = Some(workspace.queue[queue_index]);
+        self.play_selected_song();
+    }
 }
 
 impl eframe::App for SfontPlayer {
@@ -286,24 +353,8 @@ impl eframe::App for SfontPlayer {
             self.new_workspace();
         }
 
-        // When previous song has ended, advance queue or stop.
         if !self.audioplayer.is_paused() && self.audioplayer.is_empty() {
-            let workspace = self.get_playing_workspace_mut();
-            if let Some(mut idx) = workspace.queue_idx {
-                idx += 1;
-                workspace.queue_idx = Some(idx);
-                if idx < workspace.queue.len() {
-                    // Next song.
-                    workspace.midi_idx = Some(workspace.queue[idx]);
-                    self.start();
-                } else {
-                    // Reached the end.
-                    workspace.queue_idx = None;
-                }
-            } else {
-                workspace.midi_idx = None;
-                self.stop();
-            }
+            self.advance_queue();
         }
 
         draw_gui(ctx, self);
