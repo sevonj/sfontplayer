@@ -102,7 +102,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
 
                     // Content mode select
                     ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-                        let mut list_mode = app.get_workspace().get_font_list_mode().clone();
+                        let mut list_mode = app.get_workspace().get_font_list_mode();
                         egui::ComboBox::from_id_salt("mode_select")
                             .selected_text(format!("Content: {:?}", list_mode))
                             .show_ui(ui, |ui| {
@@ -199,7 +199,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
 
                 // Content mode select
                 ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-                    let mut list_mode = app.get_workspace().get_midi_list_mode().clone();
+                    let mut list_mode = app.get_workspace().get_midi_list_mode();
                     egui::ComboBox::from_id_salt("mode_select")
                         .selected_text(format!("Content: {:?}", list_mode))
                         .show_ui(ui, |ui| {
@@ -270,14 +270,13 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
             // Remove button
             row.col(|ui| {
-                if manual_files {
-                    if ui
+                if manual_files
+                    && ui
                         .add(Button::new("❎").frame(false))
                         .on_hover_text("Remove")
                         .clicked()
-                    {
-                        app.get_workspace_mut().remove_font(index)
-                    }
+                {
+                    app.get_workspace_mut().remove_font(index)
                 }
             });
             // Filename
@@ -356,14 +355,13 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
             // Remove button
             row.col(|ui| {
-                if manual_files {
-                    if ui
+                if manual_files
+                    && ui
                         .add(Button::new("❎").frame(false))
                         .on_hover_text("Remove")
                         .clicked()
-                    {
-                        app.get_workspace_mut().remove_midi(index)
-                    }
+                {
+                    app.get_workspace_mut().remove_midi(index)
                 }
             });
             // Filename
