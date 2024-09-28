@@ -46,7 +46,7 @@ impl UpdateFlags {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Default)]
+#[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 struct SfontPlayer {
     // -- Audio
@@ -54,6 +54,9 @@ struct SfontPlayer {
     audioplayer: AudioPlayer,
     /// Ranges 0.0..=100.0 as in percentage.
     volume: f32,
+    /// Is there playback going on? Paused playback also counts.
+    #[serde(skip)]
+    is_playing: bool,
 
     // -- Data
     workspaces: Vec<Workspace>,
@@ -63,21 +66,41 @@ struct SfontPlayer {
     /// Which workspace was last playing music
     playing_workspace_idx: usize,
 
-    // -- Settings
+    // -- settings
     shuffle: bool,
     repeat: RepeatMode,
+
+    // --- GUI
     show_soundfonts: bool,
     #[serde(skip)]
     show_about_modal: bool,
     #[serde(skip)]
     show_shortcut_modal: bool,
-
     #[serde(skip)]
     update_flags: UpdateFlags,
+}
 
-    /// Is there playback going on? Paused playback also counts.
-    #[serde(skip)]
-    is_playing: bool,
+impl Default for SfontPlayer {
+    fn default() -> Self {
+        Self {
+            audioplayer: Default::default(),
+            volume: 100.,
+            is_playing: false,
+
+            workspaces: Default::default(),
+            workspace_idx: 0,
+            workspace_delet_queue: Default::default(),
+            playing_workspace_idx: Default::default(),
+
+            shuffle: false,
+            repeat: RepeatMode::Disabled,
+
+            show_soundfonts: Default::default(),
+            show_about_modal: false,
+            show_shortcut_modal: false,
+            update_flags: Default::default(),
+        }
+    }
 }
 
 impl SfontPlayer {
