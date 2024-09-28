@@ -4,7 +4,7 @@ use rfd::FileDialog;
 
 use crate::{workspace::FileListMode, SfontPlayer};
 
-use super::hotkeys::{
+use super::keyboard_shortcuts::{
     GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REMOVE,
     WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
 };
@@ -191,7 +191,7 @@ fn help_menu(ui: &mut Ui, app: &mut SfontPlayer) {
             app.show_about_modal = true;
             ui.close_menu();
         }
-        if ui.button("Hotkeys").clicked() {
+        if ui.button("Keyboard shortcuts").clicked() {
             app.show_shortcut_modal = true;
             ui.close_menu();
         }
