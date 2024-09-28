@@ -111,20 +111,26 @@ impl Workspace {
     pub fn rebuild_queue(&mut self, shuffle: bool) {
         self.queue.clear();
 
-        // Sequential queue starting from currently selected song
-        let first_song_idx = self.midi_idx;
+        // Create a sequential queue from all songs
         for i in 0..self.midis.len() {
             self.queue.push(i);
         }
 
+        // Start from currently selected song, if any
+        if let Some(selected_song) = self.midi_idx {
+            self.queue_idx = Some(selected_song);
+        }
+
         if shuffle {
             self.queue.shuffle(&mut rand::thread_rng());
-            // Put current selected song to the beginnning.
-            // If it doesn't exist, the first song is random result of the shuffle.
-            if let Some(song_idx) = first_song_idx {
+
+            // Make selected song the first in queue
+            if let Some(song_idx) = self.midi_idx {
                 self.queue.retain(|&x| x != song_idx); // Remove song from queue
                 self.queue.insert(0, song_idx); // Insert it to the beginning.
             }
+            // Because selected song always becomes first on shuffle
+            self.queue_idx = Some(0);
         }
     }
 
