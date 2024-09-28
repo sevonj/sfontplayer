@@ -86,7 +86,6 @@ impl SfontPlayer {
         self.playing_workspace_idx = self.workspace_idx;
         let shuffle = self.shuffle;
         self.get_playing_workspace_mut().rebuild_queue(shuffle);
-        self.get_playing_workspace_mut().queue_idx = Some(0);
         self.play_selected_song();
     }
     /// Load currently selected song & font from workspace and start playing
