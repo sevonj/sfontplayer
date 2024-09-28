@@ -8,6 +8,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     fs::{self},
     path::PathBuf,
+    time::Duration,
     vec,
 };
 use walkdir::WalkDir;
@@ -25,6 +26,30 @@ pub(crate) enum FileListMode {
     Subdirectories,
 }
 
+/// Option for how fonts are sorted
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy)]
+#[repr(u8)]
+pub(crate) enum FontSort {
+    #[default]
+    NameAsc,
+    NameDesc,
+    SizeAsc,
+    SizeDesc,
+}
+
+/// Option for how songs are sorted
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy)]
+#[repr(u8)]
+pub(crate) enum SongSort {
+    #[default]
+    NameAsc,
+    NameDesc,
+    TimeAsc,
+    TimeDesc,
+    SizeAsc,
+    SizeDesc,
+}
+
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub(crate) struct Workspace {
@@ -35,14 +60,16 @@ pub(crate) struct Workspace {
     font_list_mode: FileListMode,
     font_dir: Option<PathBuf>,
     #[serde(skip)]
-    midi_delete_queue: Vec<usize>,
+    font_delete_queue: Vec<usize>,
+    font_sort: FontSort,
 
     pub midis: Vec<MidiMeta>,
     pub midi_idx: Option<usize>,
     midi_list_mode: FileListMode,
     pub midi_dir: Option<PathBuf>,
     #[serde(skip)]
-    font_delete_queue: Vec<usize>,
+    midi_delete_queue: Vec<usize>,
+    song_sort: SongSort,
 
     #[serde(skip)]
     pub queue: Vec<usize>,
@@ -55,6 +82,7 @@ impl Workspace {
     pub fn add_font(&mut self, path: PathBuf) {
         if !self.contains_font(&path) {
             self.fonts.push(FontMeta::new(path));
+            self.refresh_font_list();
         }
     }
     pub fn remove_font(&mut self, index: usize) {
@@ -89,9 +117,10 @@ impl Workspace {
         self.font_list_mode = mode;
         self.refresh_font_list()
     }
-    /// Refresh font file list for directory list.
+    /// Refresh font file list
     pub fn refresh_font_list(&mut self) {
         if self.font_list_mode == FileListMode::Manual {
+            self.sort_fonts();
             return;
         }
 
@@ -153,6 +182,46 @@ impl Workspace {
             }
             FileListMode::Manual => unreachable!(),
         }
+        self.sort_fonts();
+    }
+    fn sort_fonts(&mut self) {
+        // Remember the selected
+        let selected_font = if let Some(index) = self.font_idx {
+            Some(self.fonts[index].clone())
+        } else {
+            None
+        };
+
+        // Sort
+        match self.font_sort {
+            FontSort::NameAsc => self.fonts.sort_by_key(|f| f.get_name().to_lowercase()),
+            FontSort::NameDesc => {
+                self.fonts.sort_by_key(|f| f.get_name().to_lowercase());
+                self.fonts.reverse();
+            }
+
+            FontSort::SizeAsc => self.fonts.sort_by_key(|f| f.get_size()),
+            FontSort::SizeDesc => {
+                self.fonts.sort_by_key(|f| f.get_size());
+                self.fonts.reverse();
+            }
+        };
+
+        // Find the selected again
+        if let Some(selected) = selected_font {
+            for i in 0..self.fonts.len() {
+                if self.fonts[i].get_path() == selected.get_path() {
+                    self.font_idx = Some(i);
+                }
+            }
+        }
+    }
+    pub fn get_font_sort(&self) -> FontSort {
+        self.font_sort
+    }
+    pub fn set_font_sort(&mut self, sort: FontSort) {
+        self.font_sort = sort;
+        self.refresh_font_list();
     }
 
     // --- Midi files
@@ -160,6 +229,7 @@ impl Workspace {
     pub fn add_midi(&mut self, path: PathBuf) {
         if !self.contains_midi(&path) {
             self.midis.push(MidiMeta::new(path));
+            self.refresh_midi_list();
         }
     }
     pub fn remove_midi(&mut self, index: usize) {
@@ -194,9 +264,10 @@ impl Workspace {
         self.midi_list_mode = mode;
         self.refresh_midi_list()
     }
-    /// Refresh midi file list for directory list.
+    /// Refresh midi file list.
     pub fn refresh_midi_list(&mut self) {
         if self.midi_list_mode == FileListMode::Manual {
+            self.sort_songs();
             return;
         }
 
@@ -259,6 +330,53 @@ impl Workspace {
             }
             FileListMode::Manual => unreachable!(),
         }
+        self.sort_songs();
+    }
+    fn sort_songs(&mut self) {
+        // Remember the  selected
+        let selected_song = if let Some(index) = self.midi_idx {
+            Some(self.midis[index].clone())
+        } else {
+            None
+        };
+
+        // Sort
+        match self.song_sort {
+            SongSort::NameAsc => self.midis.sort_by_key(|f| f.get_name().to_lowercase()),
+            SongSort::NameDesc => {
+                self.midis.sort_by_key(|f| f.get_name().to_lowercase());
+                self.midis.reverse();
+            }
+
+            SongSort::TimeAsc => self
+                .midis
+                .sort_by_key(|f| f.get_duration().unwrap_or(Duration::ZERO)),
+            SongSort::TimeDesc => self
+                .midis
+                .sort_by_key(|f| f.get_duration().unwrap_or(Duration::ZERO)),
+
+            SongSort::SizeAsc => self.midis.sort_by_key(|f| f.get_size()),
+            SongSort::SizeDesc => {
+                self.midis.sort_by_key(|f| f.get_size());
+                self.midis.reverse();
+            }
+        };
+
+        // Find the selected again
+        if let Some(selected) = selected_song {
+            for i in 0..self.midis.len() {
+                if self.midis[i].get_path() == selected.get_path() {
+                    self.midi_idx = Some(i);
+                }
+            }
+        }
+    }
+    pub fn get_song_sort(&self) -> SongSort {
+        self.song_sort
+    }
+    pub fn set_song_sort(&mut self, sort: SongSort) {
+        self.song_sort = sort;
+        self.refresh_midi_list();
     }
 
     // --- Playback Queue
@@ -338,12 +456,14 @@ impl Default for Workspace {
             font_list_mode: FileListMode::Manual,
             font_dir: None,
             font_delete_queue: vec![],
+            font_sort: Default::default(),
 
             midis: vec![],
             midi_idx: None,
             midi_list_mode: FileListMode::Manual,
             midi_dir: None,
             midi_delete_queue: vec![],
+            song_sort: Default::default(),
 
             queue: vec![],
             queue_idx: None,

@@ -7,7 +7,10 @@ mod workspace_select;
 
 use std::time::Duration;
 
-use crate::{workspace::FileListMode, SfontPlayer};
+use crate::{
+    workspace::{FileListMode, FontSort, SongSort},
+    SfontPlayer,
+};
 use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
@@ -254,12 +257,48 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
         .column(Column::remainder());
 
     let table = tablebuilder.header(20.0, |mut header| {
+        let font_sort = app.get_workspace().get_font_sort();
+
         header.col(|_| {});
         header.col(|ui| {
-            ui.label("Name");
+            let title = match font_sort {
+                FontSort::NameAsc => "Name ⏶",
+                FontSort::NameDesc => "Name ⏷",
+                _ => "Name",
+            };
+            if ui
+                .add(
+                    Button::new(title)
+                        .frame(false)
+                        .wrap_mode(TextWrapMode::Extend),
+                )
+                .clicked()
+            {
+                app.get_workspace_mut().set_font_sort(match font_sort {
+                    FontSort::NameAsc => FontSort::NameDesc,
+                    _ => FontSort::NameAsc,
+                });
+            }
         });
         header.col(|ui| {
-            ui.label("File size");
+            let title = match font_sort {
+                FontSort::SizeAsc => "Size ⏶",
+                FontSort::SizeDesc => "Size ⏷",
+                _ => "Size",
+            };
+            if ui
+                .add(
+                    Button::new(title)
+                        .frame(false)
+                        .wrap_mode(TextWrapMode::Extend),
+                )
+                .clicked()
+            {
+                app.get_workspace_mut().set_font_sort(match font_sort {
+                    FontSort::SizeAsc => FontSort::SizeDesc,
+                    _ => FontSort::SizeAsc,
+                });
+            }
         });
     });
 
@@ -341,15 +380,68 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     }
 
     let table = tablebuilder.header(20.0, |mut header| {
+        let song_sort = app.get_workspace().get_song_sort();
+
         header.col(|_| {});
         header.col(|ui| {
-            ui.label("Name");
+            let title = match song_sort {
+                SongSort::NameAsc => "Name ⏶",
+                SongSort::NameDesc => "Name ⏷",
+                _ => "Name",
+            };
+            if ui
+                .add(
+                    Button::new(title)
+                        .frame(false)
+                        .wrap_mode(TextWrapMode::Extend),
+                )
+                .clicked()
+            {
+                app.get_workspace_mut().set_song_sort(match song_sort {
+                    SongSort::NameAsc => SongSort::NameDesc,
+                    _ => SongSort::NameAsc,
+                });
+            }
         });
         header.col(|ui| {
-            ui.label("Time");
+            let title = match song_sort {
+                SongSort::TimeAsc => "Time ⏶",
+                SongSort::TimeDesc => "Time ⏷",
+                _ => "Time",
+            };
+            if ui
+                .add(
+                    Button::new(title)
+                        .frame(false)
+                        .wrap_mode(TextWrapMode::Extend),
+                )
+                .clicked()
+            {
+                app.get_workspace_mut().set_song_sort(match song_sort {
+                    SongSort::TimeAsc => SongSort::TimeDesc,
+                    _ => SongSort::TimeAsc,
+                });
+            }
         });
         header.col(|ui| {
-            ui.label("File size");
+            let title = match song_sort {
+                SongSort::SizeAsc => "Size ⏶",
+                SongSort::SizeDesc => "Size ⏷",
+                _ => "Size",
+            };
+            if ui
+                .add(
+                    Button::new(title)
+                        .frame(false)
+                        .wrap_mode(TextWrapMode::Extend),
+                )
+                .clicked()
+            {
+                app.get_workspace_mut().set_song_sort(match song_sort {
+                    SongSort::SizeAsc => SongSort::SizeDesc,
+                    _ => SongSort::SizeAsc,
+                });
+            }
         });
     });
 
