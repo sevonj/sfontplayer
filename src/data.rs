@@ -1,8 +1,44 @@
 use std::{fs::File, path::PathBuf, time::Duration, vec};
 
 use rand::seq::SliceRandom;
-use rustysynth::MidiFile;
+use rustysynth::{MidiFile, SoundFont};
 
+/// Reference to a font file with metadata
+#[derive(serde::Deserialize, serde::Serialize, Default, Clone)]
+#[serde(default)]
+pub(crate) struct FontMeta {
+    filepath: PathBuf,
+    error: bool,
+}
+impl FontMeta {
+    pub fn new(filepath: PathBuf) -> Self {
+        let mut this = Self {
+            filepath,
+            error: false,
+        };
+        this.refresh();
+        this
+    }
+    pub fn refresh(&mut self) {
+        if let Ok(mut file) = File::open(&self.filepath) {
+            self.error = SoundFont::new(&mut file).is_err();
+        }
+    }
+    pub fn get_path(&self) -> PathBuf {
+        self.filepath.clone()
+    }
+    pub fn get_name(&self) -> String {
+        self.filepath
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_owned()
+    }
+    pub fn is_error(&self) -> bool {
+        self.error
+    }
+}
 /// Reference to a midi file with metadata
 #[derive(serde::Deserialize, serde::Serialize, Default, Clone)]
 #[serde(default)]
@@ -46,13 +82,16 @@ impl MidiMeta {
     pub fn get_duration(&self) -> Option<Duration> {
         self.duration
     }
+    pub fn is_error(&self) -> bool {
+        self.error
+    }
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub(crate) struct Workspace {
     pub name: String,
-    pub fonts: Vec<PathBuf>,
+    pub fonts: Vec<FontMeta>,
     pub midis: Vec<MidiMeta>,
     pub font_idx: Option<usize>,
     pub midi_idx: Option<usize>,
@@ -66,20 +105,11 @@ pub(crate) struct Workspace {
     font_delete_queue: Vec<usize>,
 }
 impl Workspace {
-    pub fn contains_midi(&self, filepath: &PathBuf) -> bool {
-        for i in 0..self.midis.len() {
-            if self.midis[i].get_path() == *filepath {
-                return true;
-            }
-        }
-        false
-    }
-
     // --- Soundfonts
 
     pub fn add_font(&mut self, path: PathBuf) {
-        if !self.fonts.contains(&path) {
-            self.fonts.push(path);
+        if !self.contains_font(&path) {
+            self.fonts.push(FontMeta::new(path));
         }
     }
     pub fn remove_font(&mut self, index: usize) {
@@ -89,6 +119,15 @@ impl Workspace {
         self.midis.clear();
         self.midi_idx = None;
     }
+    pub fn contains_font(&self, filepath: &PathBuf) -> bool {
+        for i in 0..self.fonts.len() {
+            if self.fonts[i].get_path() == *filepath {
+                return true;
+            }
+        }
+        false
+    }
+
     // --- Midi files
 
     pub fn add_midi(&mut self, path: PathBuf) {
@@ -102,6 +141,14 @@ impl Workspace {
     pub fn clear_midis(&mut self) {
         self.midis.clear();
         self.midi_idx = None;
+    }
+    pub fn contains_midi(&self, filepath: &PathBuf) -> bool {
+        for i in 0..self.midis.len() {
+            if self.midis[i].get_path() == *filepath {
+                return true;
+            }
+        }
+        false
     }
 
     // --- Playback Queue
