@@ -17,6 +17,7 @@ rfd = "0.15"                                                    # File dialog
 
 # -- Persistence
 serde = { version = "1", features = ["derive"] }    # Remember app state
+serde_repr = "0.1"
 
 # -- Audio
 rodio = "0.19"      # Audio

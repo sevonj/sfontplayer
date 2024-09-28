@@ -1,7 +1,7 @@
 use eframe::egui::{RichText, Slider, Ui};
 use egui::{include_image, Image, ImageSource, SelectableLabel, Sense, UiBuilder};
 
-use crate::SfontPlayer;
+use crate::{RepeatMode, SfontPlayer};
 
 const ICON_SIZE: f32 = 20.;
 
@@ -18,7 +18,9 @@ pub(crate) fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
 }
 
 fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
-    let (back_enabled, skip_enabled) = if let Some(idx) = app.get_playing_workspace().queue_idx {
+    let (back_enabled, skip_enabled) = if app.repeat == RepeatMode::Queue && app.is_playing {
+        (true, true)
+    } else if let Some(idx) = app.get_playing_workspace().queue_idx {
         (idx > 0, idx < app.get_playing_workspace().queue.len() - 1)
     } else {
         (false, false)
@@ -60,11 +62,26 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
     {
         app.toggle_shuffle();
     };
+    // Repeat
+    let repeat_text = if app.repeat == RepeatMode::Song {
+        "🔂"
+    } else {
+        "🔁"
+    };
+    if ui
+        .add(SelectableLabel::new(
+            app.repeat != RepeatMode::Disabled,
+            RichText::new(repeat_text).size(ICON_SIZE),
+        ))
+        .clicked()
+    {
+        app.cycle_repeat();
+    };
 
     // Skip back
     ui.add_enabled_ui(back_enabled, |ui| {
         if icon_button(ui, include_image!("../assets/icon_prev.svg"), "back").clicked() {
-            let _ = app.skip_back();
+            app.skip_back();
         }
     });
     // Playpause
@@ -82,7 +99,7 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
     // Skip
     ui.add_enabled_ui(skip_enabled, |ui| {
         if icon_button(ui, include_image!("../assets/icon_next.svg"), "skip").clicked() {
-            let _ = app.skip();
+            app.skip();
         }
     });
     // Skip

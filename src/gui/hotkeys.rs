@@ -200,10 +200,10 @@ pub(crate) fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
             }
         }
         if input.consume_shortcut(&PLAYBACK_SKIP) {
-            let _ = app.skip();
+            app.skip();
         }
         if input.consume_shortcut(&PLAYBACK_SKIPBACK) {
-            let _ = app.skip_back();
+            app.skip_back();
         }
         if input.consume_shortcut(&PLAYBACK_SHUFFLE) {
             app.toggle_shuffle();
