@@ -113,6 +113,13 @@ fn handle_dropped_files(ctx: &Context) {
 }
 
 fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
+    let is_active_workspace = !app.is_playing || app.workspace_idx == app.playing_workspace_idx;
+    if !is_active_workspace {
+        // Less intense gray highlight if not active
+        ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
+        ui.style_mut().visuals.selection.stroke = ui.style().visuals.widgets.active.fg_stroke;
+    }
+
     let tablebuilder = TableBuilder::new(ui)
         .striped(true)
         .sense(Sense::click())
@@ -173,6 +180,13 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
 }
 
 fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
+    let is_active_workspace = !app.is_playing || app.workspace_idx == app.playing_workspace_idx;
+    if !is_active_workspace {
+        // Less intense gray highlight if not active
+        ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
+        ui.style_mut().visuals.selection.stroke = ui.style().visuals.widgets.active.fg_stroke;
+    }
+
     let width = ui.available_width() - 192.;
 
     let mut tablebuilder = TableBuilder::new(ui)
