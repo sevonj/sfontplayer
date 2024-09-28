@@ -1,7 +1,7 @@
 mod about;
 pub(crate) mod conversions;
 mod cooltoolbar;
-mod hotkeys;
+mod keyboard_shortcuts;
 mod playback_controls;
 mod workspace_select;
 
@@ -14,7 +14,7 @@ use cooltoolbar::toolbar;
 use eframe::egui::{Button, CentralPanel, Context, Sense, TextWrapMode, TopBottomPanel, Ui};
 use egui::{Layout, RichText};
 use egui_extras::{Column, TableBuilder};
-use hotkeys::{consume_shortcuts, shortcut_modal};
+use keyboard_shortcuts::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
 use rfd::FileDialog;
 use workspace_select::workspace_tabs;
@@ -26,7 +26,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
     about_modal(ctx, app);
     shortcut_modal(ctx, app);
 
-    // Hotkeys
+    // Keyboard shortcuts
     consume_shortcuts(ctx, app);
 
     handle_dropped_files(ctx);

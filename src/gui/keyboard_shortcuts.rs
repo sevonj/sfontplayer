@@ -29,7 +29,7 @@ pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::
 
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
 
-/// Modal window that shows Hotkeys
+/// Modal window that shows keyboard shortcuts
 pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
     Window::new("Keyboard Shortcuts")
         .collapsible(false)
@@ -195,7 +195,7 @@ fn add_shortcut_title(ui: &mut Ui, text: &str) {
     ui.add(Label::new(RichText::new(text).color(color)));
 }
 
-/// Check and act on hotkeys
+/// Check and act on shortcuts
 pub(crate) fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
     if ctx.is_context_menu_open() {
         return;
