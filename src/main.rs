@@ -2,14 +2,14 @@ use std::time::Duration;
 extern crate rand;
 
 use audio::AudioPlayer;
-use data::Workspace;
 use eframe::egui;
 use gui::draw_gui;
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use workspace::Workspace;
 
 mod audio;
-mod data;
 mod gui;
+mod workspace;
 
 fn main() {
     let native_options = eframe::NativeOptions {
