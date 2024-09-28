@@ -21,7 +21,7 @@ impl FontMeta {
     }
     pub fn refresh(&mut self) {
         if let Ok(mut file) = File::open(&self.filepath) {
-            self.error = !SoundFont::new(&mut file).is_ok();
+            self.error = SoundFont::new(&mut file).is_err();
         }
     }
     pub fn get_path(&self) -> PathBuf {
