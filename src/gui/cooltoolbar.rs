@@ -2,7 +2,7 @@ use eframe::egui::{TextEdit, Ui};
 use egui::{Button, Theme, ThemePreference};
 use rfd::FileDialog;
 
-use crate::{data::FileListMode, SfontPlayer};
+use crate::{workspace::FileListMode, SfontPlayer};
 
 use super::hotkeys::{
     WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REMOVE,

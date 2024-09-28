@@ -7,7 +7,7 @@ mod workspace_select;
 
 use std::time::Duration;
 
-use crate::{data::FileListMode, SfontPlayer};
+use crate::{workspace::FileListMode, SfontPlayer};
 use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
