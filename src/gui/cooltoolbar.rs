@@ -5,7 +5,7 @@ use rfd::FileDialog;
 use crate::{workspace::FileListMode, SfontPlayer};
 
 use super::hotkeys::{
-    WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REMOVE,
+    GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REMOVE,
     WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
 };
 
@@ -14,13 +14,11 @@ pub(crate) fn toolbar(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
         file_menu(ui, app);
 
-        options_menu(ui);
+        options_menu(ui, app);
 
         workspace_menu(ui, app);
 
         help_menu(ui, app);
-
-        soundfont_toggle(ui, app);
     });
 }
 
@@ -59,7 +57,7 @@ fn file_menu(ui: &mut Ui, app: &mut SfontPlayer) {
     });
 }
 
-fn options_menu(ui: &mut Ui) {
+fn options_menu(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.menu_button("Options", |ui| {
         if ui.ctx().theme() == Theme::Light {
             if ui.button("🌙 Toggle theme").clicked() {
@@ -67,6 +65,15 @@ fn options_menu(ui: &mut Ui) {
             }
         } else if ui.button("☀ Toggle theme").clicked() {
             ui.ctx().set_theme(ThemePreference::Light)
+        }
+        if ui
+            .add(
+                Button::new("Toggle soundfonts")
+                    .shortcut_text(ui.ctx().format_shortcut(&GUI_SHOWFONTS)),
+            )
+            .clicked()
+        {
+            app.show_soundfonts = !app.show_soundfonts
         }
     });
 }
@@ -189,14 +196,4 @@ fn help_menu(ui: &mut Ui, app: &mut SfontPlayer) {
             ui.close_menu();
         }
     });
-}
-
-/// Special toggle for the soundfont list ui.
-fn soundfont_toggle(ui: &mut Ui, app: &mut SfontPlayer) {
-    if ui
-        .selectable_label(app.show_soundfonts, "Soundfonts")
-        .clicked()
-    {
-        app.show_soundfonts = !app.show_soundfonts
-    }
 }

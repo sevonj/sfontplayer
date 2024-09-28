@@ -27,6 +27,8 @@ pub const WORKSPACE_MOVERIGHT: KeyboardShortcut =
 pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
 pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
 
+pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
+
 /// Modal window that shows Hotkeys
 pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
     Window::new("Keyboard Shortcuts")
@@ -165,6 +167,23 @@ pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_REMOVE));
                             });
                         });
+
+                        // --- GUI
+
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                ui.label("Interface");
+                            });
+                            row.col(|_| {});
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Toggle soundfont table");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&GUI_SHOWFONTS));
+                            });
+                        });
                     });
             });
         });
@@ -234,6 +253,12 @@ pub(crate) fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
         }
         if input.consume_shortcut(&WORKSPACE_REMOVE) {
             app.remove_workspace(app.workspace_idx);
+        }
+
+        // --- GUI
+
+        if input.consume_shortcut(&GUI_SHOWFONTS) {
+            app.show_soundfonts = !app.show_soundfonts;
         }
     });
 }
