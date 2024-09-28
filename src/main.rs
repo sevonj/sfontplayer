@@ -326,13 +326,14 @@ impl SfontPlayer {
         if queue_index == workspace.queue.len() {
             if repeat == RepeatMode::Queue {
                 queue_index = 0;
-                workspace.queue_idx = Some(queue_index);
             } else {
                 workspace.midi_idx = None;
                 self.stop();
                 return;
             }
         }
+
+        workspace.queue_idx = Some(queue_index);
 
         workspace.midi_idx = Some(workspace.queue[queue_index]);
         self.play_selected_song();
