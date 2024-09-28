@@ -17,6 +17,7 @@ use egui_extras::{Column, TableBuilder};
 use keyboard_shortcuts::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
 use rfd::FileDialog;
+use size_format::SizeFormatterBinary;
 use workspace_select::workspace_tabs;
 
 const TBL_ROW_H: f32 = 16.;
@@ -249,12 +250,16 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
         .striped(true)
         .sense(Sense::click())
         .column(Column::exact(16.))
+        .column(Column::auto().resizable(true))
         .column(Column::remainder());
 
     let table = tablebuilder.header(20.0, |mut header| {
         header.col(|_| {});
         header.col(|ui| {
             ui.label("Name");
+        });
+        header.col(|ui| {
+            ui.label("File size");
         });
     });
 
@@ -263,6 +268,7 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
             let index = row.index();
             let fontref = &app.get_workspace().fonts[index];
             let filename = fontref.get_name();
+            let filesize = SizeFormatterBinary::new(fontref.get_size());
             let is_error = fontref.is_error();
             let manual_files = app.get_workspace().get_font_list_mode() == FileListMode::Manual;
 
@@ -296,6 +302,10 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     app.get_workspace_mut().font_idx = Some(index);
                 }
             });
+            // File size
+            row.col(|ui| {
+                ui.label(format!("{}B", filesize));
+            });
 
             // TODO: Find out why this doesn't work
             if row.response().clicked() {
@@ -320,6 +330,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
         .striped(true)
         .column(Column::exact(16.))
         .column(Column::auto_with_initial_suggestion(width).resizable(true))
+        .column(Column::auto_with_initial_suggestion(96.).resizable(true))
         .column(Column::remainder())
         .sense(Sense::click());
 
@@ -337,6 +348,9 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
         header.col(|ui| {
             ui.label("Time");
         });
+        header.col(|ui| {
+            ui.label("File size");
+        });
     });
 
     table.body(|body| {
@@ -344,6 +358,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             let index = row.index();
             let midiref = &app.get_workspace().midis[index];
             let filename = midiref.get_name();
+            let filesize = SizeFormatterBinary::new(midiref.get_size());
             let is_error = midiref.is_error();
             let manual_files = app.get_workspace().get_midi_list_mode() == FileListMode::Manual;
 
@@ -385,6 +400,10 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             // Duration
             row.col(|ui| {
                 ui.label(format_duration(time));
+            });
+            // File size
+            row.col(|ui| {
+                ui.label(format!("{}B", filesize));
             });
 
             // TODO: Find out why this doesn't work

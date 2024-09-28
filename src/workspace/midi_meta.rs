@@ -1,4 +1,8 @@
-use std::{fs::File, path::PathBuf, time::Duration};
+use std::{
+    fs::{self, File},
+    path::PathBuf,
+    time::Duration,
+};
 
 use rustysynth::MidiFile;
 
@@ -7,6 +11,7 @@ use rustysynth::MidiFile;
 #[serde(default)]
 pub(crate) struct MidiMeta {
     filepath: PathBuf,
+    filesize: u64,
     duration: Option<Duration>,
     error: bool,
 }
@@ -14,6 +19,7 @@ impl MidiMeta {
     pub fn new(filepath: PathBuf) -> Self {
         let mut this = Self {
             filepath,
+            filesize: 0,
             duration: None,
             error: false,
         };
@@ -21,6 +27,9 @@ impl MidiMeta {
         this
     }
     pub fn refresh(&mut self) {
+        if let Ok(file_meta) = fs::metadata(&self.filepath) {
+            self.filesize = file_meta.len();
+        }
         if let Ok(mut file) = File::open(&self.filepath) {
             if let Ok(midifile) = MidiFile::new(&mut file) {
                 self.duration = Some(Duration::from_secs_f64(midifile.get_length()));
@@ -44,6 +53,9 @@ impl MidiMeta {
     }
     pub fn get_duration(&self) -> Option<Duration> {
         self.duration
+    }
+    pub fn get_size(&self) -> u64 {
+        self.filesize
     }
     pub fn is_error(&self) -> bool {
         self.error
