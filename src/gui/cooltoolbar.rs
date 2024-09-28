@@ -1,5 +1,5 @@
 use eframe::egui::{TextEdit, Ui};
-use egui::Button;
+use egui::{Button, Theme, ThemePreference};
 use rfd::FileDialog;
 
 use crate::SfontPlayer;
@@ -13,6 +13,8 @@ use super::hotkeys::{
 pub(crate) fn toolbar(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
         file_menu(ui, app);
+
+        options_menu(ui);
 
         workspace_menu(ui, app);
 
@@ -53,6 +55,18 @@ fn file_menu(ui: &mut Ui, app: &mut SfontPlayer) {
         if ui.button("Clear songs").clicked() {
             app.get_workspace_mut().clear_midis();
             ui.close_menu();
+        }
+    });
+}
+
+fn options_menu(ui: &mut Ui) {
+    ui.menu_button("Options", |ui| {
+        if ui.ctx().theme() == Theme::Light {
+            if ui.button("🌙 Toggle theme").clicked() {
+                ui.ctx().set_theme(ThemePreference::Dark)
+            }
+        } else if ui.button("☀ Toggle theme").clicked() {
+            ui.ctx().set_theme(ThemePreference::Light)
         }
     });
 }
