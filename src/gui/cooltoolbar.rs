@@ -12,7 +12,7 @@ use super::keyboard_shortcuts::{
 /// The topmost toolbar with File Menu
 pub(crate) fn toolbar(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
-        file_menu(ui, app);
+        file_menu(ui);
 
         options_menu(ui, app);
 
@@ -22,37 +22,10 @@ pub(crate) fn toolbar(ui: &mut Ui, app: &mut SfontPlayer) {
     });
 }
 
-fn file_menu(ui: &mut Ui, app: &mut SfontPlayer) {
+fn file_menu(ui: &mut Ui) {
     ui.menu_button("File", |ui| {
-        if ui.button("Add soundfonts").clicked() {
-            if let Some(paths) = FileDialog::new()
-                .add_filter("Soundfonts", &["sf2"])
-                .pick_files()
-            {
-                for path in paths {
-                    app.get_workspace_mut().add_font(path);
-                }
-                ui.close_menu();
-            }
-        }
-        if ui.button("Add songs").clicked() {
-            if let Some(paths) = FileDialog::new()
-                .add_filter("Midi files", &["mid"])
-                .pick_files()
-            {
-                for path in paths {
-                    app.get_workspace_mut().add_midi(path);
-                }
-                ui.close_menu();
-            }
-        }
-        if ui.button("Clear soundfonts").clicked() {
-            app.get_workspace_mut().clear_fonts();
-            ui.close_menu();
-        }
-        if ui.button("Clear songs").clicked() {
-            app.get_workspace_mut().clear_midis();
-            ui.close_menu();
+        if ui.button("Exit").clicked() {
+            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
     });
 }
@@ -91,8 +64,26 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
                 ui.close_menu();
             }
         });
-        ui.menu_button("Soundfont list", |ui| {
+        ui.menu_button("Soundfonts", |ui| {
             let mut list_mode = app.get_workspace().get_font_list_mode();
+            ui.add_enabled_ui(list_mode == FileListMode::Manual, |ui| {
+                if ui.button("Add soundfonts").clicked() {
+                    if let Some(paths) = FileDialog::new()
+                        .add_filter("Soundfonts", &["sf2"])
+                        .pick_files()
+                    {
+                        for path in paths {
+                            app.get_workspace_mut().add_font(path);
+                        }
+                        ui.close_menu();
+                    }
+                }
+                if ui.button("Clear soundfonts").clicked() {
+                    app.get_workspace_mut().clear_fonts();
+                    ui.close_menu();
+                }
+            });
+            ui.label("Content mode");
             let response1 = ui.radio_value(&mut list_mode, FileListMode::Manual, "Manual");
             let response2 = ui.radio_value(&mut list_mode, FileListMode::Directory, "Directory");
             let response3 = ui.radio_value(
@@ -104,8 +95,26 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
                 app.get_workspace_mut().set_font_list_type(list_mode);
             }
         });
-        ui.menu_button("Midi file list", |ui| {
+        ui.menu_button("Songs", |ui| {
             let mut list_mode = app.get_workspace().get_midi_list_mode();
+            ui.add_enabled_ui(list_mode == FileListMode::Manual, |ui| {
+                if ui.button("Add songs").clicked() {
+                    if let Some(paths) = FileDialog::new()
+                        .add_filter("Midi files", &["mid"])
+                        .pick_files()
+                    {
+                        for path in paths {
+                            app.get_workspace_mut().add_midi(path);
+                        }
+                        ui.close_menu();
+                    }
+                }
+                if ui.button("Clear songs").clicked() {
+                    app.get_workspace_mut().clear_midis();
+                    ui.close_menu();
+                }
+            });
+            ui.label("Content mode");
             let response1 = ui.radio_value(&mut list_mode, FileListMode::Manual, "Manual");
             let response2 = ui.radio_value(&mut list_mode, FileListMode::Directory, "Directory");
             let response3 = ui.radio_value(
