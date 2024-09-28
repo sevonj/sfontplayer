@@ -12,6 +12,7 @@ use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
 use eframe::egui::{Button, CentralPanel, Context, Sense, TextWrapMode, TopBottomPanel, Ui};
+use egui::RichText;
 use egui_extras::{Column, TableBuilder};
 use hotkeys::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
@@ -128,8 +129,13 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
     table.body(|body| {
         body.rows(TBL_ROW_H, app.get_workspace().fonts.len(), |mut row| {
             let index = row.index();
+            let fontref = &app.get_workspace().fonts[index];
+            let filename = fontref.get_name();
+            let is_error = fontref.is_error();
+
             row.set_selected(Some(index) == app.get_workspace().font_idx);
 
+            // Remove button
             row.col(|ui| {
                 if ui
                     .add(Button::new("❎").frame(false))
@@ -139,16 +145,15 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     app.get_workspace_mut().remove_font(index)
                 }
             });
+            // Filename
             row.col(|ui| {
-                let name = app.get_workspace().fonts[index]
-                    .file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .to_owned();
+                let mut filename_richtext = RichText::new(filename);
+                if is_error {
+                    filename_richtext = filename_richtext.color(ui.visuals().error_fg_color);
+                }
                 if ui
                     .add(
-                        Button::new(name)
+                        Button::new(filename_richtext)
                             .frame(false)
                             .wrap_mode(TextWrapMode::Truncate),
                     )
@@ -196,7 +201,10 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     table.body(|body| {
         body.rows(TBL_ROW_H, app.get_workspace().midis.len(), |mut row| {
             let index = row.index();
-            let filename = app.get_workspace().midis[index].get_name();
+            let midiref = &app.get_workspace().midis[index];
+            let filename = midiref.get_name();
+            let is_error = midiref.is_error();
+
             let time = app.get_workspace().midis[index]
                 .get_duration()
                 .unwrap_or(Duration::ZERO);
@@ -215,9 +223,13 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             });
             // Filename
             row.col(|ui| {
+                let mut filename_richtext = RichText::new(filename);
+                if is_error {
+                    filename_richtext = filename_richtext.color(ui.visuals().error_fg_color);
+                }
                 if ui
                     .add(
-                        Button::new(filename)
+                        Button::new(filename_richtext)
                             .frame(false)
                             .wrap_mode(TextWrapMode::Truncate),
                     )

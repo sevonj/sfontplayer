@@ -107,26 +107,48 @@ impl SfontPlayer {
     fn play_selected_song(&mut self) {
         self.audioplayer.stop_playback();
         let workspace = self.get_playing_workspace_mut();
-        if workspace.font_idx.is_none() {
-            println!("load_song: no soundfont");
+
+        let font_index = match workspace.font_idx {
+            Some(index) => index,
+            None => {
+                println!("load_song: no soundfont");
+                return;
+            }
+        };
+        let queue_index = match workspace.queue_idx {
+            Some(index) => index,
+            None => {
+                println!("load_song: no queue idx");
+                return;
+            }
+        };
+        let midi_index = workspace.queue[queue_index];
+        workspace.midi_idx = Some(midi_index);
+
+        // Font Error Guard
+        workspace.fonts[font_index].refresh();
+        if workspace.fonts[font_index].is_error() {
+            println!("load_song: Error loading soundfont!");
             return;
         }
-        if let Some(idx) = workspace.queue_idx {
-            workspace.midi_idx = Some(workspace.queue[idx]);
-        } else {
-            println!("load_song: no queue idx");
+        // Midi Error Guard
+        workspace.midis[midi_index].refresh();
+        if workspace.midis[midi_index].is_error() {
+            self.advance_queue();
             return;
         }
-        let sf = workspace.fonts[workspace.font_idx.unwrap()].clone();
-        let mid = workspace.midis[workspace.midi_idx.unwrap()].get_path();
+
+        // Play
+        let sf = workspace.fonts[font_index].get_path();
+        let mid = workspace.midis[midi_index].get_path();
         self.audioplayer.set_soundfont(sf);
         self.audioplayer.set_midifile(mid);
-
+        self.is_playing = true;
+        
         self.update_volume();
         if let Err(e) = self.audioplayer.start_playback() {
             println!("{}", e);
         }
-        self.is_playing = true;
     }
     /// Stop playback
     fn stop(&mut self) {
