@@ -144,7 +144,7 @@ impl SfontPlayer {
         self.audioplayer.set_soundfont(sf);
         self.audioplayer.set_midifile(mid);
         self.is_playing = true;
-        
+
         self.update_volume();
         if let Err(e) = self.audioplayer.start_playback() {
             println!("{}", e);
