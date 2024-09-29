@@ -62,16 +62,16 @@ impl AudioPlayer {
         self.sink.set_volume(volume);
     }
     /// Load currently selected midi & font and start playing
-    pub(crate) fn start_playback(&mut self) -> Result<(), &str> {
-        if self.path_soundfont.is_none() {
-            return Err("Can't play, no soundfont!");
-        }
-        if self.path_midifile.is_none() {
-            return Err("Can't play, no midi file!");
-        }
+    pub(crate) fn start_playback(&mut self) -> Result<(), String> {
+        let path_sf = match &self.path_soundfont {
+            Some(path) => path,
+            None => return Err("Can't play, no soundfont!".into()),
+        };
+        let path_mid = match &self.path_midifile {
+            Some(path) => path,
+            None => return Err("Can't play, no midi file!".into()),
+        };
 
-        let path_sf = self.path_soundfont.as_ref().unwrap();
-        let path_mid = self.path_midifile.as_ref().unwrap();
         let midifile = load_midifile(path_mid)?;
         self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
 
@@ -110,17 +110,23 @@ impl AudioPlayer {
 // --- Private --- //
 
 /// Private: Load soundfont file.
-fn load_soundfont(path: &PathBuf) -> Result<SoundFont, &str> {
+fn load_soundfont(path: &PathBuf) -> Result<SoundFont, String> {
     if let Ok(mut file) = File::open(path) {
-        return Ok(SoundFont::new(&mut file).unwrap());
+        return match SoundFont::new(&mut file) {
+            Ok(soundfont) => Ok(soundfont),
+            Err(e) => Err(e.to_string()),
+        };
     }
-    Err("Failed to open the file!")
+    Err("Failed to open the file!".into())
 }
 
 /// Private: Load midi file.
-fn load_midifile(path: &PathBuf) -> Result<MidiFile, &str> {
+fn load_midifile(path: &PathBuf) -> Result<MidiFile, String> {
     if let Ok(mut file) = File::open(path) {
-        return Ok(MidiFile::new(&mut file).unwrap());
+        return match MidiFile::new(&mut file) {
+            Ok(midifile) => Ok(midifile),
+            Err(e) => Err(e.to_string()),
+        };
     }
-    Err("Failed to open the file!")
+    Err("Failed to open the file!".into())
 }
