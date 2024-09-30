@@ -1,36 +1,78 @@
-use std::{
-    fs::{self, File},
-    path::PathBuf,
-};
+use std::{error, fmt, fs, path::PathBuf};
 
 use rustysynth::SoundFont;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum FontMetaError {
+    CantAccessFile { filename: String, message: String },
+    InvalidFile { filename: String, message: String },
+}
+impl error::Error for FontMetaError {}
+impl fmt::Display for FontMetaError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CantAccessFile { filename, message } => {
+                write!(f, "Can't access {}: {}", filename, message)
+            }
+            Self::InvalidFile { filename, message } => {
+                write!(f, "{} is not a valid soundfont: {}", filename, message)
+            }
+        }
+    }
+}
 
 /// Reference to a font file with metadata
 #[derive(serde::Deserialize, serde::Serialize, Default, Clone)]
 #[serde(default)]
 pub(crate) struct FontMeta {
     filepath: PathBuf,
-    filesize: u64,
-    error: bool,
+    filesize: Option<u64>,
+    error: Option<FontMetaError>,
 }
+
 impl FontMeta {
+    /// Create from file path
     pub fn new(filepath: PathBuf) -> Self {
         let mut this = Self {
             filepath,
-            filesize: 0,
-            error: false,
+            filesize: None,
+            error: None,
         };
         this.refresh();
         this
     }
+
+    /// Refresh file metadata
     pub fn refresh(&mut self) {
-        if let Ok(file_meta) = fs::metadata(&self.filepath) {
-            self.filesize = file_meta.len();
+        self.filesize = if let Ok(file_meta) = fs::metadata(&self.filepath) {
+            Some(file_meta.len())
+        } else {
+            None
+        };
+
+        let error;
+        match fs::File::open(&self.filepath) {
+            Ok(mut file) => match SoundFont::new(&mut file) {
+                Ok(_) => error = None,
+                Err(e) => {
+                    error = Some(FontMetaError::InvalidFile {
+                        filename: self.get_name(),
+                        message: e.to_string(),
+                    })
+                }
+            },
+            Err(e) => {
+                error = Some(FontMetaError::CantAccessFile {
+                    filename: self.get_name(),
+                    message: e.to_string(),
+                });
+            }
         }
-        if let Ok(mut file) = File::open(&self.filepath) {
-            self.error = SoundFont::new(&mut file).is_err();
-        }
+        self.error = error;
     }
+
+    // --- Getters
+
     pub fn get_path(&self) -> PathBuf {
         self.filepath.clone()
     }
@@ -42,10 +84,10 @@ impl FontMeta {
             .unwrap()
             .to_owned()
     }
-    pub fn get_size(&self) -> u64 {
+    pub fn get_size(&self) -> Option<u64> {
         self.filesize
     }
-    pub fn is_error(&self) -> bool {
-        self.error
+    pub fn get_error(&self) -> Option<FontMetaError> {
+        self.error.clone()
     }
 }

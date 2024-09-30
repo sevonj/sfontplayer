@@ -5,8 +5,6 @@ mod keyboard_shortcuts;
 mod playback_controls;
 mod workspace_select;
 
-use std::time::Duration;
-
 use crate::{
     workspace::{FileListMode, FontSort, SongSort},
     SfontPlayer,
@@ -21,6 +19,7 @@ use keyboard_shortcuts::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
 use rfd::FileDialog;
 use size_format::SizeFormatterBinary;
+use std::time::Duration;
 use workspace_select::workspace_tabs;
 
 const TBL_ROW_H: f32 = 16.;
@@ -307,11 +306,11 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
             let index = row.index();
             let fontref = &app.get_workspace().fonts[index];
             let filename = fontref.get_name();
-            let filesize = SizeFormatterBinary::new(fontref.get_size());
-            let is_error = fontref.is_error();
+            let filesize = fontref.get_size();
+            let error = fontref.get_error();
             let manual_files = app.get_workspace().get_font_list_mode() == FileListMode::Manual;
 
-            row.set_selected(Some(index) == app.get_workspace().font_idx);
+            row.set_selected(Some(index) == app.get_workspace().get_font_idx());
 
             // Remove button
             row.col(|ui| {
@@ -326,30 +325,37 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
             });
             // Filename
             row.col(|ui| {
-                let mut filename_richtext = RichText::new(filename);
-                if is_error {
-                    filename_richtext = filename_richtext.color(ui.visuals().error_fg_color);
-                }
-                if ui
-                    .add(
-                        Button::new(filename_richtext)
-                            .frame(false)
-                            .wrap_mode(TextWrapMode::Truncate),
-                    )
-                    .clicked()
-                {
-                    app.get_workspace_mut().font_idx = Some(index);
-                }
+                ui.horizontal(|ui| {
+                    if let Some(e) = &error {
+                        ui.label(RichText::new("？")).on_hover_text(e.to_string());
+                    }
+                    if ui
+                        .add_enabled(
+                            error.is_none(),
+                            Button::new(filename)
+                                .frame(false)
+                                .wrap_mode(TextWrapMode::Truncate),
+                        )
+                        .clicked()
+                    {
+                        app.get_workspace_mut().set_font_idx(Some(index));
+                    }
+                });
             });
+
             // File size
             row.col(|ui| {
-                ui.label(format!("{}B", filesize));
+                if let Some(size) = filesize {
+                    ui.label(format!("{}B", SizeFormatterBinary::new(size)));
+                } else {
+                    ui.label("??");
+                }
             });
 
             // TODO: Find out why this doesn't work
             if row.response().clicked() {
                 println!("CLICK");
-                app.get_workspace_mut().font_idx = Some(index);
+                app.get_workspace_mut().set_font_idx(Some(index));
             }
         });
     });
@@ -374,7 +380,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
         .sense(Sense::click());
 
     if app.update_flags.scroll_to_song {
-        if let Some(index) = app.get_workspace().midi_idx {
+        if let Some(index) = app.get_workspace().get_song_idx() {
             tablebuilder = tablebuilder.scroll_to_row(index, Some(egui::Align::Center))
         }
     }
@@ -450,15 +456,15 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             let index = row.index();
             let midiref = &app.get_workspace().midis[index];
             let filename = midiref.get_name();
-            let filesize = SizeFormatterBinary::new(midiref.get_size());
-            let is_error = midiref.is_error();
+            let filesize = midiref.get_size();
+            let error = midiref.get_error();
             let manual_files = app.get_workspace().get_midi_list_mode() == FileListMode::Manual;
 
             let time = app.get_workspace().midis[index]
                 .get_duration()
                 .unwrap_or(Duration::ZERO);
 
-            row.set_selected(Some(index) == app.get_workspace().midi_idx);
+            row.set_selected(Some(index) == app.get_workspace().get_song_idx());
 
             // Remove button
             row.col(|ui| {
@@ -473,21 +479,23 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             });
             // Filename
             row.col(|ui| {
-                let mut filename_richtext = RichText::new(filename);
-                if is_error {
-                    filename_richtext = filename_richtext.color(ui.visuals().error_fg_color);
-                }
-                if ui
-                    .add(
-                        Button::new(filename_richtext)
-                            .frame(false)
-                            .wrap_mode(TextWrapMode::Truncate),
-                    )
-                    .clicked()
-                {
-                    app.get_workspace_mut().midi_idx = Some(index);
-                    app.start();
-                }
+                ui.horizontal(|ui| {
+                    if let Some(e) = &error {
+                        ui.label(RichText::new("？")).on_hover_text(e.to_string());
+                    }
+                    if ui
+                        .add_enabled(
+                            error.is_none(),
+                            Button::new(filename)
+                                .frame(false)
+                                .wrap_mode(TextWrapMode::Truncate),
+                        )
+                        .clicked()
+                    {
+                        app.get_workspace_mut().set_song_idx(Some(index));
+                        app.start();
+                    }
+                });
             });
             // Duration
             row.col(|ui| {
@@ -495,13 +503,17 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
             });
             // File size
             row.col(|ui| {
-                ui.label(format!("{}B", filesize));
+                if let Some(size) = filesize {
+                    ui.label(format!("{}B", SizeFormatterBinary::new(size)));
+                } else {
+                    ui.label("??");
+                }
             });
 
             // TODO: Find out why this doesn't work
             if row.response().clicked() {
                 println!("CLICK");
-                app.get_workspace_mut().midi_idx = Some(index);
+                app.get_workspace_mut().set_song_idx(Some(index));
                 app.start();
             }
         });

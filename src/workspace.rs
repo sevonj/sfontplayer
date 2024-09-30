@@ -56,7 +56,7 @@ pub(crate) struct Workspace {
     pub name: String,
 
     pub fonts: Vec<FontMeta>,
-    pub font_idx: Option<usize>,
+    font_idx: Option<usize>,
     font_list_mode: FileListMode,
     font_dir: Option<PathBuf>,
     #[serde(skip)]
@@ -64,7 +64,7 @@ pub(crate) struct Workspace {
     font_sort: FontSort,
 
     pub midis: Vec<MidiMeta>,
-    pub midi_idx: Option<usize>,
+    midi_idx: Option<usize>,
     midi_list_mode: FileListMode,
     pub midi_dir: Option<PathBuf>,
     #[serde(skip)]
@@ -79,6 +79,19 @@ pub(crate) struct Workspace {
 impl Workspace {
     // --- Soundfonts
 
+    pub fn get_font_idx(&self) -> Option<usize> {
+        self.font_idx
+    }
+    pub fn set_font_idx(&mut self, value: Option<usize>) {
+        if let Some(index) = value {
+            self.font_idx = if index < self.midis.len() {
+                self.midis[index].refresh();
+                Some(index)
+            } else {
+                None
+            }
+        }
+    }
     pub fn add_font(&mut self, path: PathBuf) {
         if !self.contains_font(&path) {
             self.fonts.push(FontMeta::new(path));
@@ -226,6 +239,19 @@ impl Workspace {
 
     // --- Midi files
 
+    pub fn get_song_idx(&self) -> Option<usize> {
+        self.midi_idx
+    }
+    pub fn set_song_idx(&mut self, value: Option<usize>) {
+        if let Some(index) = value {
+            self.midi_idx = if index < self.midis.len() {
+                self.midis[index].refresh();
+                Some(index)
+            } else {
+                None
+            }
+        }
+    }
     pub fn add_midi(&mut self, path: PathBuf) {
         if !self.contains_midi(&path) {
             self.midis.push(MidiMeta::new(path));

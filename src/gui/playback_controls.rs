@@ -34,7 +34,7 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
         } else {
             "playing"
         },
-        if let Some(index) = app.get_playing_workspace().midi_idx {
+        if let Some(index) = app.get_playing_workspace().get_song_idx() {
             app.get_playing_workspace().midis[index].get_name()
         } else {
             "Nothing".into()
@@ -42,7 +42,7 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
     );
     if ui
         .add_enabled(
-            app.get_playing_workspace().midi_idx.is_some(),
+            app.get_playing_workspace().get_song_idx().is_some(),
             egui::Button::new(RichText::new("🎵").size(ICON_SIZE)).frame(false),
         )
         .on_hover_text(current_hover_text)
