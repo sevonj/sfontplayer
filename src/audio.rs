@@ -115,12 +115,10 @@ impl AudioPlayer {
 /// Private: Load soundfont file.
 fn load_soundfont(path: &PathBuf) -> Result<SoundFont, PlayerError> {
     match File::open(path) {
-        Ok(mut file) => {
-            return match SoundFont::new(&mut file) {
-                Ok(soundfont) => Ok(soundfont),
-                Err(e) => Err(PlayerError::InvalidFont { source: e }),
-            };
-        }
+        Ok(mut file) => match SoundFont::new(&mut file) {
+            Ok(soundfont) => Ok(soundfont),
+            Err(e) => Err(PlayerError::InvalidFont { source: e }),
+        },
         Err(e) => Err(PlayerError::CantAccessFile {
             path: path.clone(),
             source: e,
@@ -131,12 +129,10 @@ fn load_soundfont(path: &PathBuf) -> Result<SoundFont, PlayerError> {
 /// Private: Load midi file.
 fn load_midifile(path: &PathBuf) -> Result<MidiFile, PlayerError> {
     match File::open(path) {
-        Ok(mut file) => {
-            return match MidiFile::new(&mut file) {
-                Ok(midifile) => Ok(midifile),
-                Err(e) => Err(PlayerError::InvalidMidi { source: e }),
-            };
-        }
+        Ok(mut file) => match MidiFile::new(&mut file) {
+            Ok(midifile) => Ok(midifile),
+            Err(e) => Err(PlayerError::InvalidMidi { source: e }),
+        },
         Err(e) => Err(PlayerError::CantAccessFile {
             path: path.clone(),
             source: e,
