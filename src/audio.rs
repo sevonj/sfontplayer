@@ -2,10 +2,12 @@
 
 use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
 
+use error::PlayerError;
 use midisource::MidiSource;
 use rodio::{OutputStream, Sink};
 use rustysynth::{MidiFile, SoundFont};
 
+mod error;
 mod midisource;
 
 /// Audio backend struct
@@ -62,20 +64,21 @@ impl AudioPlayer {
         self.sink.set_volume(volume);
     }
     /// Load currently selected midi & font and start playing
-    pub(crate) fn start_playback(&mut self) -> Result<(), String> {
+    pub(crate) fn start_playback(&mut self) -> Result<(), PlayerError> {
         let path_sf = match &self.path_soundfont {
             Some(path) => path,
-            None => return Err("Can't play, no soundfont!".into()),
+            None => return Err(PlayerError::NoFont),
         };
         let path_mid = match &self.path_midifile {
             Some(path) => path,
-            None => return Err("Can't play, no midi file!".into()),
+            None => return Err(PlayerError::NoMidi),
         };
 
-        let midifile = load_midifile(path_mid)?;
+        let soundfont = Arc::new(load_soundfont(path_sf)?);
+        let midifile = Arc::new(load_midifile(path_mid)?);
         self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
 
-        let source = MidiSource::new(Arc::new(load_soundfont(path_sf)?), Arc::new(midifile));
+        let source = MidiSource::new(soundfont, midifile);
         self.sink.append(source);
         self.sink.play();
         Ok(())
@@ -110,23 +113,33 @@ impl AudioPlayer {
 // --- Private --- //
 
 /// Private: Load soundfont file.
-fn load_soundfont(path: &PathBuf) -> Result<SoundFont, String> {
-    if let Ok(mut file) = File::open(path) {
-        return match SoundFont::new(&mut file) {
-            Ok(soundfont) => Ok(soundfont),
-            Err(e) => Err(e.to_string()),
-        };
+fn load_soundfont(path: &PathBuf) -> Result<SoundFont, PlayerError> {
+    match File::open(path) {
+        Ok(mut file) => {
+            return match SoundFont::new(&mut file) {
+                Ok(soundfont) => Ok(soundfont),
+                Err(e) => Err(PlayerError::InvalidFont { source: e }),
+            };
+        }
+        Err(e) => Err(PlayerError::CantAccessFile {
+            path: path.clone(),
+            source: e,
+        }),
     }
-    Err("Failed to open the file!".into())
 }
 
 /// Private: Load midi file.
-fn load_midifile(path: &PathBuf) -> Result<MidiFile, String> {
-    if let Ok(mut file) = File::open(path) {
-        return match MidiFile::new(&mut file) {
-            Ok(midifile) => Ok(midifile),
-            Err(e) => Err(e.to_string()),
-        };
+fn load_midifile(path: &PathBuf) -> Result<MidiFile, PlayerError> {
+    match File::open(path) {
+        Ok(mut file) => {
+            return match MidiFile::new(&mut file) {
+                Ok(midifile) => Ok(midifile),
+                Err(e) => Err(PlayerError::InvalidMidi { source: e }),
+            };
+        }
+        Err(e) => Err(PlayerError::CantAccessFile {
+            path: path.clone(),
+            source: e,
+        }),
     }
-    Err("Failed to open the file!".into())
 }
