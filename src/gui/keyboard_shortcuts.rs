@@ -1,8 +1,7 @@
 use eframe::egui::{
-    vec2, Align2, Context, Key, KeyboardShortcut, Label, Modifiers, RichText, ScrollArea, Ui,
-    Window,
+    vec2, Align2, Context, Key, KeyboardShortcut, Label, Modifiers, RichText, ScrollArea,
+    TextWrapMode, Ui, Window,
 };
-use egui::TextWrapMode;
 use egui_extras::{Column, TableBuilder};
 
 use crate::SfontPlayer;

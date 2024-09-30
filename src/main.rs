@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use audio::AudioPlayer;
-use eframe::egui;
+use eframe::egui::{vec2, Context, FontDefinitions, FontId, ViewportBuilder};
+use egui_notify::Toasts;
 use gui::draw_gui;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use workspace::Workspace;
@@ -12,7 +13,7 @@ mod workspace;
 
 fn main() {
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
+        viewport: ViewportBuilder::default()
             .with_app_id("jyls_sfontplayer")
             .with_inner_size([400.0, 300.0])
             .with_min_inner_size([300.0, 220.0]),
@@ -77,6 +78,8 @@ struct SfontPlayer {
     show_shortcut_modal: bool,
     #[serde(skip)]
     update_flags: UpdateFlags,
+    #[serde(skip)]
+    toasts: Toasts,
 }
 
 impl Default for SfontPlayer {
@@ -98,6 +101,11 @@ impl Default for SfontPlayer {
             show_about_modal: false,
             show_shortcut_modal: false,
             update_flags: Default::default(),
+            toasts: Toasts::new()
+                .with_anchor(egui_notify::Anchor::BottomRight)
+                .with_spacing(4.)
+                .with_default_font(FontId::proportional(14.))
+                .with_padding(vec2(2., 2.)),
         }
     }
 }
@@ -133,34 +141,34 @@ impl SfontPlayer {
         let font_index = match workspace.get_font_idx() {
             Some(index) => index,
             None => {
-                println!("load_song: no soundfont");
+                self.toast_error("No soundfont selected!");
                 return;
             }
         };
         let queue_index = match workspace.queue_idx {
             Some(index) => index,
             None => {
-                println!("load_song: no queue idx");
+                self.toast_error("Can't load song: No queue index!");
                 return;
             }
         };
         let midi_index = workspace.queue[queue_index];
 
         if let Err(e) = workspace.set_song_idx(Some(midi_index)) {
-            println!("{}", e);
+            self.toast_error(e.to_string());
             return;
         }
 
         // Font Error Guard
         workspace.get_fonts_mut()[font_index].refresh();
         if let Some(e) = workspace.get_fonts()[font_index].get_error() {
-            println!("{}", e);
+            self.toast_error(e.to_string());
             return;
         }
         // Midi Error Guard
         workspace.get_songs_mut()[midi_index].refresh();
         if let Some(e) = workspace.get_songs()[midi_index].get_error() {
-            println!("{}", e);
+            self.toast_error(e.to_string());
             self.advance_queue();
             return;
         }
@@ -174,7 +182,7 @@ impl SfontPlayer {
 
         self.update_volume();
         if let Err(e) = self.audioplayer.start_playback() {
-            println!("{}", e);
+            self.toast_error(e.to_string());
         }
     }
     /// Stop playback
@@ -387,6 +395,13 @@ impl SfontPlayer {
         let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
         self.play_selected_song();
     }
+
+    fn toast_error<S: AsRef<str>>(&mut self, caption: S) {
+        self.toasts
+            .error(caption.as_ref())
+            .set_show_progress_bar(false)
+            .set_closable(true);
+    }
 }
 
 impl eframe::App for SfontPlayer {
@@ -394,7 +409,7 @@ impl eframe::App for SfontPlayer {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         // Make sure umage loader exists!
         egui_extras::install_image_loaders(ctx);
 
@@ -408,6 +423,8 @@ impl eframe::App for SfontPlayer {
         }
 
         draw_gui(ctx, self);
+
+        self.toasts.show(ctx);
 
         if !self.is_paused() {
             ctx.request_repaint();
