@@ -12,8 +12,10 @@ use crate::{
 use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
-use eframe::egui::{Button, CentralPanel, Context, Sense, TextWrapMode, TopBottomPanel, Ui};
-use egui::{Layout, RichText};
+use eframe::egui::{
+    Align, Button, CentralPanel, ComboBox, Context, Layout, RichText, Sense, TextWrapMode,
+    TopBottomPanel, Ui,
+};
 use egui_extras::{Column, TableBuilder};
 use keyboard_shortcuts::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
@@ -103,9 +105,9 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                     }
 
                     // Content mode select
-                    ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         let mut list_mode = app.get_workspace().get_font_list_mode();
-                        egui::ComboBox::from_id_salt("mode_select")
+                        ComboBox::from_id_salt("mode_select")
                             .selected_text(format!("Content: {:?}", list_mode))
                             .show_ui(ui, |ui| {
                                 ui.selectable_value(&mut list_mode, FileListMode::Manual, "Manual");
@@ -200,9 +202,9 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                 }
 
                 // Content mode select
-                ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     let mut list_mode = app.get_workspace().get_song_list_mode();
-                    egui::ComboBox::from_id_salt("mode_select")
+                    ComboBox::from_id_salt("mode_select")
                         .selected_text(format!("Content: {:?}", list_mode))
                         .show_ui(ui, |ui| {
                             ui.selectable_value(&mut list_mode, FileListMode::Manual, "Manual");
@@ -384,7 +386,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
     if app.update_flags.scroll_to_song {
         if let Some(index) = app.get_workspace().get_song_idx() {
-            tablebuilder = tablebuilder.scroll_to_row(index, Some(egui::Align::Center))
+            tablebuilder = tablebuilder.scroll_to_row(index, Some(Align::Center))
         }
     }
 

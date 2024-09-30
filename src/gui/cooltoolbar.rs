@@ -1,5 +1,4 @@
-use eframe::egui::{TextEdit, Ui};
-use egui::{Button, Theme, ThemePreference};
+use eframe::egui::{Button, TextEdit, Theme, ThemePreference, Ui, ViewportCommand};
 use rfd::FileDialog;
 
 use crate::{workspace::FileListMode, SfontPlayer};
@@ -25,7 +24,7 @@ pub(crate) fn toolbar(ui: &mut Ui, app: &mut SfontPlayer) {
 fn file_menu(ui: &mut Ui) {
     ui.menu_button("File", |ui| {
         if ui.button("Exit").clicked() {
-            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+            ui.ctx().send_viewport_cmd(ViewportCommand::Close);
         }
     });
 }

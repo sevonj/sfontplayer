@@ -1,5 +1,7 @@
-use eframe::egui::{RichText, Slider, Ui};
-use egui::{include_image, Image, ImageSource, SelectableLabel, Sense, UiBuilder};
+use eframe::egui::{
+    include_image, Button, Image, ImageSource, Response, RichText, SelectableLabel, Sense, Slider,
+    Ui, UiBuilder,
+};
 
 use crate::{RepeatMode, SfontPlayer};
 
@@ -43,7 +45,7 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
     if ui
         .add_enabled(
             app.get_playing_workspace().get_song_idx().is_some(),
-            egui::Button::new(RichText::new("🎵").size(ICON_SIZE)).frame(false),
+            Button::new(RichText::new("🎵").size(ICON_SIZE)).frame(false),
         )
         .on_hover_text(current_hover_text)
         .clicked()
@@ -112,7 +114,7 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
 
 /// Icon Button that reacts to hovering.
 /// Image should be monochromatic (white) as it'll be tinted to intended color.
-fn icon_button(ui: &mut Ui, source: ImageSource, id: &str) -> egui::Response {
+fn icon_button(ui: &mut Ui, source: ImageSource, id: &str) -> Response {
     // Doesn't work properly without using is_salt()?
     ui.scope_builder(UiBuilder::new().id_salt(id).sense(Sense::click()), |ui| {
         let color = ui.style().interact(&ui.response()).text_color();

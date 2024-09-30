@@ -1,9 +1,7 @@
-use build_info::build_info;
-use build_info::CrateInfo;
-use eframe::egui::CollapsingHeader;
+use build_info::{build_info, CrateInfo};
 use eframe::egui::{
-    vec2, Align2, Context, Frame, Label, Link, OpenUrl, Response, RichText, ScrollArea, Sense,
-    Stroke, Ui, Vec2, Window,
+    vec2, Align2, CollapsingHeader, Context, Frame, Label, Link, OpenUrl, Response, RichText,
+    ScrollArea, Sense, Stroke, Ui, Vec2, Window,
 };
 
 use crate::SfontPlayer;
