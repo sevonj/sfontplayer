@@ -66,7 +66,7 @@ pub(crate) struct Workspace {
     pub midis: Vec<MidiMeta>,
     midi_idx: Option<usize>,
     midi_list_mode: FileListMode,
-    pub midi_dir: Option<PathBuf>,
+    midi_dir: Option<PathBuf>,
     #[serde(skip)]
     midi_delete_queue: Vec<usize>,
     song_sort: SongSort,
