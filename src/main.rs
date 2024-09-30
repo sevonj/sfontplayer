@@ -1,5 +1,4 @@
 use std::time::Duration;
-extern crate rand;
 
 use audio::AudioPlayer;
 use eframe::egui;
@@ -131,7 +130,7 @@ impl SfontPlayer {
         self.audioplayer.stop_playback();
         let workspace = self.get_playing_workspace_mut();
 
-        let font_index = match workspace.font_idx {
+        let font_index = match workspace.get_font_idx() {
             Some(index) => index,
             None => {
                 println!("load_song: no soundfont");
@@ -146,24 +145,29 @@ impl SfontPlayer {
             }
         };
         let midi_index = workspace.queue[queue_index];
-        workspace.midi_idx = Some(midi_index);
+
+        if let Err(e) = workspace.set_song_idx(Some(midi_index)) {
+            println!("{}", e);
+            return;
+        }
 
         // Font Error Guard
-        workspace.fonts[font_index].refresh();
-        if workspace.fonts[font_index].is_error() {
-            println!("load_song: Error loading soundfont!");
+        workspace.get_fonts_mut()[font_index].refresh();
+        if let Some(e) = workspace.get_fonts()[font_index].get_error() {
+            println!("{}", e);
             return;
         }
         // Midi Error Guard
-        workspace.midis[midi_index].refresh();
-        if workspace.midis[midi_index].is_error() {
+        workspace.get_songs_mut()[midi_index].refresh();
+        if let Some(e) = workspace.get_songs()[midi_index].get_error() {
+            println!("{}", e);
             self.advance_queue();
             return;
         }
 
         // Play
-        let sf = workspace.fonts[font_index].get_path();
-        let mid = workspace.midis[midi_index].get_path();
+        let sf = workspace.get_fonts()[font_index].get_path();
+        let mid = workspace.get_songs()[midi_index].get_path();
         self.audioplayer.set_soundfont(sf);
         self.audioplayer.set_midifile(mid);
         self.is_playing = true;
@@ -353,14 +357,14 @@ impl SfontPlayer {
         let mut queue_index = match workspace.queue_idx {
             Some(value) => value,
             None => {
-                workspace.midi_idx = None;
+                let _ = workspace.set_song_idx(None);
                 self.stop();
                 return;
             }
         };
 
         if repeat == RepeatMode::Song {
-            workspace.midi_idx = Some(workspace.queue[queue_index]);
+            let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
             self.play_selected_song();
             return;
         }
@@ -372,7 +376,7 @@ impl SfontPlayer {
             if repeat == RepeatMode::Queue {
                 queue_index = 0;
             } else {
-                workspace.midi_idx = None;
+                let _ = workspace.set_song_idx(None);
                 self.stop();
                 return;
             }
@@ -380,7 +384,7 @@ impl SfontPlayer {
 
         workspace.queue_idx = Some(queue_index);
 
-        workspace.midi_idx = Some(workspace.queue[queue_index]);
+        let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
         self.play_selected_song();
     }
 }
