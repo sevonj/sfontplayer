@@ -26,6 +26,7 @@ use workspace_select::workspace_tabs;
 
 const TBL_ROW_H: f32 = 16.;
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
     // Show modals
     about_modal(ctx, app);
@@ -113,7 +114,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         let mut list_mode = app.get_workspace().get_font_list_mode();
                         ComboBox::from_id_salt("mode_select")
-                            .selected_text(format!("Content: {:?}", list_mode))
+                            .selected_text(format!("Content: {list_mode:?}"))
                             .show_ui(ui, |ui| {
                                 ui.selectable_value(&mut list_mode, FileListMode::Manual, "Manual");
                                 ui.selectable_value(
@@ -215,7 +216,7 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     let mut list_mode = app.get_workspace().get_song_list_mode();
                     ComboBox::from_id_salt("mode_select")
-                        .selected_text(format!("Content: {:?}", list_mode))
+                        .selected_text(format!("Content: {list_mode:?}"))
                         .show_ui(ui, |ui| {
                             ui.selectable_value(&mut list_mode, FileListMode::Manual, "Manual");
                             ui.selectable_value(
@@ -242,15 +243,16 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
 }
 
 /// TODO: Drag files into the window to add them
-/// https://github.com/sevonj/sfontplayer/issues/7
+/// <https://github.com/sevonj/sfontplayer/issues/7>
 fn handle_dropped_files(ctx: &Context) {
     ctx.input(|i| {
         for file in i.raw.dropped_files.clone() {
-            println!("{:?}", file)
+            println!("{file:?}");
         }
     });
 }
 
+#[allow(clippy::too_many_lines)]
 fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
     let is_active_workspace = !app.is_playing || app.workspace_idx == app.playing_workspace_idx;
     if !is_active_workspace {
@@ -385,7 +387,7 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     }
                     if ui.button("Go to directory").clicked() {
                         let filepath = app.get_workspace().get_fonts()[index].get_path();
-                        let _ = open::that(filepath.parent().unwrap());
+                        let _ = open::that(filepath.parent().expect("Can't open parent"));
                         ui.close_menu();
                     }
                 });
@@ -394,6 +396,7 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
     });
 }
 
+#[allow(clippy::too_many_lines)]
 fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     let is_active_workspace = !app.is_playing || app.workspace_idx == app.playing_workspace_idx;
     if !is_active_workspace {
@@ -414,7 +417,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
     if app.update_flags.scroll_to_song {
         if let Some(index) = app.get_workspace().get_song_idx() {
-            tablebuilder = tablebuilder.scroll_to_row(index, Some(Align::Center))
+            tablebuilder = tablebuilder.scroll_to_row(index, Some(Align::Center));
         }
     }
 
@@ -566,7 +569,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     }
                     if ui.button("Go to directory").clicked() {
                         let filepath = app.get_workspace().get_songs()[index].get_path();
-                        let _ = open::that(filepath.parent().unwrap());
+                        let _ = open::that(filepath.parent().expect("Can't open parent"));
                         ui.close_menu();
                     }
                 });

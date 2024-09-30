@@ -12,10 +12,10 @@ impl fmt::Display for MidiMetaError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::CantAccessFile { filename, message } => {
-                write!(f, "Can't access {}: {}", filename, message)
+                write!(f, "Can't access {filename}: {message}")
             }
             Self::InvalidFile { filename, message } => {
-                write!(f, "{} is not a valid midi file: {}", filename, message)
+                write!(f, "{filename} is not a valid midi file: {message}")
             }
         }
     }
@@ -67,7 +67,7 @@ impl MidiMeta {
                     error = Some(MidiMetaError::InvalidFile {
                         filename: self.get_name(),
                         message: e.to_string(),
-                    })
+                    });
                 }
             },
             Err(e) => {
@@ -89,9 +89,9 @@ impl MidiMeta {
     pub fn get_name(&self) -> String {
         self.filepath
             .file_name()
-            .unwrap()
+            .expect("No filename")
             .to_str()
-            .unwrap()
+            .expect("Invalid filename")
             .to_owned()
     }
     pub fn get_duration(&self) -> Option<Duration> {

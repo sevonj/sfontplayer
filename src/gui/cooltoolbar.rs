@@ -33,10 +33,10 @@ fn options_menu(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.menu_button("Options", |ui| {
         if ui.ctx().theme() == Theme::Light {
             if ui.button("🌙 Toggle theme").clicked() {
-                ui.ctx().set_theme(ThemePreference::Dark)
+                ui.ctx().set_theme(ThemePreference::Dark);
             }
         } else if ui.button("☀ Toggle theme").clicked() {
-            ui.ctx().set_theme(ThemePreference::Light)
+            ui.ctx().set_theme(ThemePreference::Light);
         }
         if ui
             .add(
@@ -45,11 +45,12 @@ fn options_menu(ui: &mut Ui, app: &mut SfontPlayer) {
             )
             .clicked()
         {
-            app.show_soundfonts = !app.show_soundfonts
+            app.show_soundfonts = !app.show_soundfonts;
         }
     });
 }
 
+#[allow(clippy::too_many_lines)]
 fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.menu_button("Workspace", |ui| {
         ui.menu_button("Rename Workspace", |ui| {
