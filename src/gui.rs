@@ -13,7 +13,7 @@ use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
 use eframe::egui::{
-    Align, Button, CentralPanel, ComboBox, Context, Layout, RichText, Sense, TextWrapMode,
+    Align, Button, CentralPanel, ComboBox, Context, Label, Layout, RichText, Sense, TextWrapMode,
     TopBottomPanel, Ui,
 };
 use egui_extras::{Column, TableBuilder};
@@ -98,7 +98,12 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                         }
 
                         if let Some(dir) = &app.get_workspace().get_font_dir() {
-                            ui.label(dir.to_string_lossy());
+                            ui.label(dir.to_string_lossy()).context_menu(|ui| {
+                                if ui.button("Go to directory").clicked() {
+                                    let _ = open::that(dir);
+                                    ui.close_menu();
+                                }
+                            });
                         } else {
                             ui.label("No directory.");
                         }
@@ -195,7 +200,12 @@ pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                     }
 
                     if let Some(dir) = &app.get_workspace().get_song_dir() {
-                        ui.label(dir.to_string_lossy());
+                        ui.label(dir.to_string_lossy()).context_menu(|ui| {
+                            if ui.button("Go to directory").clicked() {
+                                let _ = open::that(dir);
+                                ui.close_menu();
+                            }
+                        });
                     } else {
                         ui.label("No directory.");
                     }
@@ -349,11 +359,12 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
                 // File size
                 row.col(|ui| {
-                    if let Some(size) = filesize {
-                        ui.label(format!("{}B", SizeFormatterBinary::new(size)));
+                    let size_str = if let Some(size) = filesize {
+                        format!("{}B", SizeFormatterBinary::new(size))
                     } else {
-                        ui.label("??");
-                    }
+                        "??".into()
+                    };
+                    ui.add(Label::new(size_str).wrap_mode(TextWrapMode::Extend));
                 });
 
                 // TODO: Find out why this doesn't work
@@ -361,6 +372,23 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     println!("CLICK");
                     let _ = app.get_workspace_mut().set_font_idx(Some(index));
                 }
+
+                // Context menu
+                row.response().context_menu(|ui| {
+                    if ui.button("Refresh").clicked() {
+                        app.get_workspace_mut().get_fonts_mut()[index].refresh();
+                        ui.close_menu();
+                    }
+                    if ui.button("Remove").clicked() {
+                        let _ = app.get_workspace_mut().remove_font(index);
+                        ui.close_menu();
+                    }
+                    if ui.button("Go to directory").clicked() {
+                        let filepath = app.get_workspace().get_fonts()[index].get_path();
+                        let _ = open::that(filepath.parent().unwrap());
+                        ui.close_menu();
+                    }
+                });
             },
         );
     });
@@ -507,15 +535,16 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 });
                 // Duration
                 row.col(|ui| {
-                    ui.label(format_duration(time));
+                    ui.add(Label::new(format_duration(time)).wrap_mode(TextWrapMode::Extend));
                 });
                 // File size
                 row.col(|ui| {
-                    if let Some(size) = filesize {
-                        ui.label(format!("{}B", SizeFormatterBinary::new(size)));
+                    let size_str = if let Some(size) = filesize {
+                        format!("{}B", SizeFormatterBinary::new(size))
                     } else {
-                        ui.label("??");
-                    }
+                        "??".into()
+                    };
+                    ui.add(Label::new(size_str).wrap_mode(TextWrapMode::Extend));
                 });
 
                 // TODO: Find out why this doesn't work
@@ -524,6 +553,23 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                     let _ = app.get_workspace_mut().set_song_idx(Some(index));
                     app.start();
                 }
+
+                // Context menu
+                row.response().context_menu(|ui| {
+                    if ui.button("Refresh").clicked() {
+                        app.get_workspace_mut().get_songs_mut()[index].refresh();
+                        ui.close_menu();
+                    }
+                    if ui.button("Remove").clicked() {
+                        let _ = app.get_workspace_mut().remove_song(index);
+                        ui.close_menu();
+                    }
+                    if ui.button("Go to directory").clicked() {
+                        let filepath = app.get_workspace().get_songs()[index].get_path();
+                        let _ = open::that(filepath.parent().unwrap());
+                        ui.close_menu();
+                    }
+                });
             },
         );
     });
