@@ -12,7 +12,10 @@ use crate::{
 use about::about_modal;
 use conversions::format_duration;
 use cooltoolbar::toolbar;
-use eframe::egui::{Align, Button, CentralPanel, ComboBox, Context, Layout, RichText, Sense, TextWrapMode, TopBottomPanel, Ui};
+use eframe::egui::{
+    Align, Button, CentralPanel, ComboBox, Context, Layout, RichText, Sense, TextWrapMode,
+    TopBottomPanel, Ui,
+};
 use egui_extras::{Column, TableBuilder};
 use keyboard_shortcuts::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;

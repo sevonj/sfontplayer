@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use audio::AudioPlayer;
-use eframe::egui::{vec2, Context, FontDefinitions, FontId, ViewportBuilder};
+use eframe::egui::{vec2, Context, FontId, ViewportBuilder};
 use egui_notify::Toasts;
 use gui::draw_gui;
 use serde_repr::{Deserialize_repr, Serialize_repr};
