@@ -1,5 +1,4 @@
 use std::time::Duration;
-extern crate rand;
 
 use audio::AudioPlayer;
 use eframe::egui;
@@ -146,25 +145,29 @@ impl SfontPlayer {
             }
         };
         let midi_index = workspace.queue[queue_index];
-        workspace.set_song_idx(Some(midi_index));
+
+        if let Err(e) = workspace.set_song_idx(Some(midi_index)) {
+            println!("{}", e);
+            return;
+        }
 
         // Font Error Guard
-        workspace.fonts[font_index].refresh();
-        if let Some(e) = workspace.fonts[font_index].get_error() {
+        workspace.get_fonts_mut()[font_index].refresh();
+        if let Some(e) = workspace.get_fonts()[font_index].get_error() {
             println!("{}", e);
             return;
         }
         // Midi Error Guard
-        workspace.midis[midi_index].refresh();
-        if let Some(e) = workspace.midis[midi_index].get_error() {
+        workspace.get_songs_mut()[midi_index].refresh();
+        if let Some(e) = workspace.get_songs()[midi_index].get_error() {
             println!("{}", e);
             self.advance_queue();
             return;
         }
 
         // Play
-        let sf = workspace.fonts[font_index].get_path();
-        let mid = workspace.midis[midi_index].get_path();
+        let sf = workspace.get_fonts()[font_index].get_path();
+        let mid = workspace.get_songs()[midi_index].get_path();
         self.audioplayer.set_soundfont(sf);
         self.audioplayer.set_midifile(mid);
         self.is_playing = true;
@@ -354,14 +357,14 @@ impl SfontPlayer {
         let mut queue_index = match workspace.queue_idx {
             Some(value) => value,
             None => {
-                workspace.set_song_idx(None);
+                let _ = workspace.set_song_idx(None);
                 self.stop();
                 return;
             }
         };
 
         if repeat == RepeatMode::Song {
-            workspace.set_song_idx(Some(workspace.queue[queue_index]));
+            let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
             self.play_selected_song();
             return;
         }
@@ -373,7 +376,7 @@ impl SfontPlayer {
             if repeat == RepeatMode::Queue {
                 queue_index = 0;
             } else {
-                workspace.set_song_idx(None);
+                let _ = workspace.set_song_idx(None);
                 self.stop();
                 return;
             }
@@ -381,7 +384,7 @@ impl SfontPlayer {
 
         workspace.queue_idx = Some(queue_index);
 
-        workspace.set_song_idx(Some(workspace.queue[queue_index]));
+        let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
         self.play_selected_song();
     }
 }

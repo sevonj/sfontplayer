@@ -5,12 +5,7 @@ use font_meta::FontMeta;
 use midi_meta::MidiMeta;
 use rand::seq::SliceRandom;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::{
-    fs::{self},
-    path::PathBuf,
-    time::Duration,
-    vec,
-};
+use std::{error::Error, fmt, fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
 
 /// Option for how soundfonts or midis are managed
@@ -50,25 +45,40 @@ pub(crate) enum SongSort {
     SizeDesc,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum WorkspaceError {
+    InvalidFontIndex { index: usize },
+    InvalidSongIndex { index: usize },
+}
+impl Error for WorkspaceError {}
+impl fmt::Display for WorkspaceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidFontIndex { index } => {
+                write!(f, "Font index out of range: {}", index)
+            }
+            Self::InvalidSongIndex { index } => {
+                write!(f, "Song index out of range: {}", index)
+            }
+        }
+    }
+}
+
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub(crate) struct Workspace {
     pub name: String,
 
-    pub fonts: Vec<FontMeta>,
+    fonts: Vec<FontMeta>,
     font_idx: Option<usize>,
     font_list_mode: FileListMode,
     font_dir: Option<PathBuf>,
-    #[serde(skip)]
-    font_delete_queue: Vec<usize>,
     font_sort: FontSort,
 
-    pub midis: Vec<MidiMeta>,
+    midis: Vec<MidiMeta>,
     midi_idx: Option<usize>,
     midi_list_mode: FileListMode,
     midi_dir: Option<PathBuf>,
-    #[serde(skip)]
-    midi_delete_queue: Vec<usize>,
     song_sort: SongSort,
 
     #[serde(skip)]
@@ -79,27 +89,40 @@ pub(crate) struct Workspace {
 impl Workspace {
     // --- Soundfonts
 
+    pub fn get_fonts(&self) -> &Vec<FontMeta> {
+        &self.fonts
+    }
+    pub fn get_fonts_mut(&mut self) -> &mut Vec<FontMeta> {
+        &mut self.fonts
+    }
     pub fn get_font_idx(&self) -> Option<usize> {
         self.font_idx
     }
-    pub fn set_font_idx(&mut self, value: Option<usize>) {
+    pub fn set_font_idx(&mut self, value: Option<usize>) -> Result<(), WorkspaceError> {
         if let Some(index) = value {
-            self.font_idx = if index < self.midis.len() {
-                self.midis[index].refresh();
+            self.font_idx = if index < self.fonts.len() {
+                self.fonts[index].refresh();
                 Some(index)
             } else {
-                None
+                return Err(WorkspaceError::InvalidFontIndex { index });
             }
         }
+        Ok(())
     }
     pub fn add_font(&mut self, path: PathBuf) {
         if !self.contains_font(&path) {
             self.fonts.push(FontMeta::new(path));
-            self.refresh_font_list();
+            if let Err(e) = self.refresh_font_list() {
+                panic!("Refreshing font list failed: {}", e);
+            }
         }
     }
-    pub fn remove_font(&mut self, index: usize) {
-        self.font_delete_queue.push(index);
+    pub fn remove_font(&mut self, index: usize) -> Result<(), WorkspaceError> {
+        if index >= self.fonts.len() {
+            return Err(WorkspaceError::InvalidFontIndex { index });
+        }
+        self.fonts[index].is_queued_for_deletion = true;
+        Ok(())
     }
     pub fn clear_fonts(&mut self) {
         self.fonts.clear();
@@ -124,17 +147,27 @@ impl Workspace {
             return;
         }
         self.font_dir = Some(path);
-        self.refresh_font_list();
+        if let Err(e) = self.refresh_font_list() {
+            panic!("Refreshing font list failed: {}", e);
+        }
     }
     pub fn set_font_list_type(&mut self, mode: FileListMode) {
         self.font_list_mode = mode;
-        self.refresh_font_list()
+        if let Err(e) = self.refresh_font_list() {
+            panic!("Refreshing font list failed: {}", e);
+        }
     }
     /// Refresh font file list
-    pub fn refresh_font_list(&mut self) {
+    pub fn refresh_fonts(&mut self) {
+        if let Err(e) = self.refresh_font_list() {
+            panic!("Refreshing font list failed: {}", e);
+        }
+    }
+    /// Refresh font file list
+    fn refresh_font_list(&mut self) -> Result<(), WorkspaceError> {
         if self.font_list_mode == FileListMode::Manual {
             self.sort_fonts();
-            return;
+            return Ok(());
         }
 
         // Remove files
@@ -142,20 +175,20 @@ impl Workspace {
             let filepath = self.fonts[i].get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.remove_font(i);
+                self.remove_font(i)?;
             }
             match self.font_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.font_dir.as_deref() {
-                        self.remove_font(i);
+                        self.remove_font(i)?;
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.font_dir {
                         if !filepath.starts_with(dir) {
-                            self.remove_font(i);
+                            self.remove_font(i)?;
                         }
                     }
                 }
@@ -169,7 +202,7 @@ impl Workspace {
             Some(path) => path,
             None => {
                 self.clear_fonts();
-                return;
+                return Ok(());
             }
         };
         match self.font_list_mode {
@@ -196,6 +229,7 @@ impl Workspace {
             FileListMode::Manual => unreachable!(),
         }
         self.sort_fonts();
+        Ok(())
     }
     fn sort_fonts(&mut self) {
         // Remember the selected
@@ -234,34 +268,49 @@ impl Workspace {
     }
     pub fn set_font_sort(&mut self, sort: FontSort) {
         self.font_sort = sort;
-        self.refresh_font_list();
+        if let Err(e) = self.refresh_font_list() {
+            panic!("Refreshing font list failed: {}", e);
+        }
     }
 
     // --- Midi files
 
+    pub fn get_songs(&self) -> &Vec<MidiMeta> {
+        &self.midis
+    }
+    pub fn get_songs_mut(&mut self) -> &mut Vec<MidiMeta> {
+        &mut self.midis
+    }
     pub fn get_song_idx(&self) -> Option<usize> {
         self.midi_idx
     }
-    pub fn set_song_idx(&mut self, value: Option<usize>) {
+    pub fn set_song_idx(&mut self, value: Option<usize>) -> Result<(), WorkspaceError> {
         if let Some(index) = value {
             self.midi_idx = if index < self.midis.len() {
                 self.midis[index].refresh();
                 Some(index)
             } else {
-                None
+                return Err(WorkspaceError::InvalidSongIndex { index });
+            }
+        }
+        Ok(())
+    }
+    pub fn add_song(&mut self, path: PathBuf) {
+        if !self.contains_midi(&path) {
+            self.midis.push(MidiMeta::new(path));
+            if let Err(e) = self.refresh_song_list() {
+                panic!("Refreshing song list failed: {}", e);
             }
         }
     }
-    pub fn add_midi(&mut self, path: PathBuf) {
-        if !self.contains_midi(&path) {
-            self.midis.push(MidiMeta::new(path));
-            self.refresh_midi_list();
+    pub fn remove_song(&mut self, index: usize) -> Result<(), WorkspaceError> {
+        if index >= self.midis.len() {
+            return Err(WorkspaceError::InvalidSongIndex { index });
         }
+        self.midis[index].is_queued_for_deletion = true;
+        Ok(())
     }
-    pub fn remove_midi(&mut self, index: usize) {
-        self.midi_delete_queue.push(index);
-    }
-    pub fn clear_midis(&mut self) {
+    pub fn clear_songs(&mut self) {
         self.midis.clear();
         self.midi_idx = None;
     }
@@ -273,50 +322,59 @@ impl Workspace {
         }
         false
     }
-    pub fn get_midi_list_mode(&self) -> FileListMode {
+    pub fn get_song_list_mode(&self) -> FileListMode {
         self.midi_list_mode
     }
-    pub fn get_midi_dir(&self) -> &Option<PathBuf> {
+    pub fn get_song_dir(&self) -> &Option<PathBuf> {
         &self.midi_dir
     }
-    pub fn set_midi_dir(&mut self, path: PathBuf) {
+    pub fn set_song_dir(&mut self, path: PathBuf) {
         if self.midi_list_mode == FileListMode::Manual {
             return;
         }
         self.midi_dir = Some(path);
-        self.refresh_midi_list();
+        if let Err(e) = self.refresh_song_list() {
+            panic!("Refreshing song list failed: {}", e);
+        }
     }
-    pub fn set_midi_list_mode(&mut self, mode: FileListMode) {
+    pub fn set_song_list_mode(&mut self, mode: FileListMode) {
         self.midi_list_mode = mode;
-        self.refresh_midi_list()
+        if let Err(e) = self.refresh_song_list() {
+            panic!("Refreshing song list failed: {}", e);
+        }
+    }
+    /// Refresh mifi file list
+    pub fn refresh_songs(&mut self) {
+        if let Err(e) = self.refresh_song_list() {
+            panic!("Refreshing song list failed: {}", e);
+        }
     }
     /// Refresh midi file list.
-    pub fn refresh_midi_list(&mut self) {
+    fn refresh_song_list(&mut self) -> Result<(), WorkspaceError> {
         if self.midi_list_mode == FileListMode::Manual {
             self.sort_songs();
-            return;
+            return Ok(());
         }
 
-        println!("Midi refresh!");
         // Remove files
         for i in 0..self.midis.len() {
             let filepath = self.midis[i].get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.remove_midi(i);
+                self.remove_song(i)?;
             }
             match self.midi_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.midi_dir.as_deref() {
-                        self.remove_midi(i);
+                        self.remove_song(i)?;
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.midi_dir {
                         if !filepath.starts_with(dir) {
-                            self.remove_midi(i);
+                            self.remove_song(i)?;
                         }
                     }
                 }
@@ -329,8 +387,8 @@ impl Workspace {
         let dir = match &self.midi_dir {
             Some(path) => path,
             None => {
-                self.clear_midis();
-                return;
+                self.clear_songs();
+                return Ok(());
             }
         };
         match self.midi_list_mode {
@@ -342,7 +400,7 @@ impl Workspace {
                         continue;
                     }
                     if path.is_file() && path.extension().map(|s| s == "mid").unwrap_or(false) {
-                        self.add_midi(path);
+                        self.add_song(path);
                     }
                 }
             }
@@ -350,13 +408,14 @@ impl Workspace {
                 for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
                     let path = entry.path();
                     if path.is_file() && path.extension().map(|s| s == "mid").unwrap_or(false) {
-                        self.add_midi(path.into());
+                        self.add_song(path.into());
                     }
                 }
             }
             FileListMode::Manual => unreachable!(),
         }
         self.sort_songs();
+        Ok(())
     }
     fn sort_songs(&mut self) {
         // Remember the  selected
@@ -402,7 +461,9 @@ impl Workspace {
     }
     pub fn set_song_sort(&mut self, sort: SongSort) {
         self.song_sort = sort;
-        self.refresh_midi_list();
+        if let Err(e) = self.refresh_song_list() {
+            panic!("Refreshing song list failed: {}", e);
+        }
     }
 
     // --- Playback Queue
@@ -438,37 +499,39 @@ impl Workspace {
     /// Midis and fonts aren't deleted immediately. A queue is used instead.
     /// This handles the queues, call at the end of the frame.
     pub fn delete_queued(&mut self) {
-        self.midi_delete_queue.sort();
-        self.midi_delete_queue.reverse();
-        for deleted_idx in self.midi_delete_queue.clone() {
-            self.midis.remove(deleted_idx);
+        // Songs
+        for i in (0..self.midis.len()).rev() {
+            if !self.midis[i].is_queued_for_deletion {
+                continue;
+            }
+            self.midis.remove(i);
 
-            // Check if deletion affected index
+            // Check if deletion affected selected index
             if let Some(current) = self.midi_idx {
-                match deleted_idx {
+                match i {
                     deleted if deleted == current => self.midi_idx = None,
                     deleted if deleted < current => self.midi_idx = Some(current - 1),
                     _ => (),
                 }
             }
         }
-        self.midi_delete_queue.clear();
 
-        self.font_delete_queue.sort();
-        self.font_delete_queue.reverse();
-        for deleted_idx in self.font_delete_queue.clone() {
-            self.fonts.remove(deleted_idx);
+        // Fonts
+        for i in (0..self.fonts.len()).rev() {
+            if !self.fonts[i].is_queued_for_deletion {
+                continue;
+            }
+            self.fonts.remove(i);
 
             // Check if deletion affected index
             if let Some(current) = self.font_idx {
-                match deleted_idx {
+                match i {
                     deleted if deleted == current => self.font_idx = None,
                     deleted if deleted < current => self.font_idx = Some(current - 1),
                     _ => (),
                 }
             }
         }
-        self.font_delete_queue.clear();
     }
 }
 
@@ -481,14 +544,12 @@ impl Default for Workspace {
             font_idx: None,
             font_list_mode: FileListMode::Manual,
             font_dir: None,
-            font_delete_queue: vec![],
             font_sort: Default::default(),
 
             midis: vec![],
             midi_idx: None,
             midi_list_mode: FileListMode::Manual,
             midi_dir: None,
-            midi_delete_queue: vec![],
             song_sort: Default::default(),
 
             queue: vec![],

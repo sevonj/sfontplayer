@@ -29,6 +29,7 @@ pub(crate) struct MidiMeta {
     filesize: Option<u64>,
     duration: Option<Duration>,
     error: Option<MidiMetaError>,
+    pub is_queued_for_deletion: bool,
 }
 
 impl MidiMeta {
@@ -39,6 +40,7 @@ impl MidiMeta {
             filesize: None,
             duration: None,
             error: None,
+            is_queued_for_deletion: false,
         };
         this.refresh();
         this

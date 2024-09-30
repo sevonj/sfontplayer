@@ -96,7 +96,7 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
             }
         });
         ui.menu_button("Songs", |ui| {
-            let mut list_mode = app.get_workspace().get_midi_list_mode();
+            let mut list_mode = app.get_workspace().get_song_list_mode();
             ui.add_enabled_ui(list_mode == FileListMode::Manual, |ui| {
                 if ui.button("Add songs").clicked() {
                     if let Some(paths) = FileDialog::new()
@@ -104,13 +104,13 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
                         .pick_files()
                     {
                         for path in paths {
-                            app.get_workspace_mut().add_midi(path);
+                            app.get_workspace_mut().add_song(path);
                         }
                         ui.close_menu();
                     }
                 }
                 if ui.button("Clear songs").clicked() {
-                    app.get_workspace_mut().clear_midis();
+                    app.get_workspace_mut().clear_songs();
                     ui.close_menu();
                 }
             });
@@ -123,7 +123,7 @@ fn workspace_menu(ui: &mut Ui, app: &mut SfontPlayer) {
                 "Subdirectories",
             );
             if response1.clicked() || response2.clicked() || response3.clicked() {
-                app.get_workspace_mut().set_midi_list_mode(list_mode);
+                app.get_workspace_mut().set_song_list_mode(list_mode);
             }
         });
 

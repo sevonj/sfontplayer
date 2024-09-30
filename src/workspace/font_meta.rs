@@ -28,6 +28,7 @@ pub(crate) struct FontMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
     error: Option<FontMetaError>,
+    pub is_queued_for_deletion: bool,
 }
 
 impl FontMeta {
@@ -37,6 +38,7 @@ impl FontMeta {
             filepath,
             filesize: None,
             error: None,
+            is_queued_for_deletion: false,
         };
         this.refresh();
         this

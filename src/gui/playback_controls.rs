@@ -35,7 +35,7 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
             "playing"
         },
         if let Some(index) = app.get_playing_workspace().get_song_idx() {
-            app.get_playing_workspace().midis[index].get_name()
+            app.get_playing_workspace().get_songs()[index].get_name()
         } else {
             "Nothing".into()
         }
