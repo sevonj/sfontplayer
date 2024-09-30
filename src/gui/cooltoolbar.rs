@@ -9,7 +9,7 @@ use super::keyboard_shortcuts::{
 };
 
 /// The topmost toolbar with File Menu
-pub(crate) fn toolbar(ui: &mut Ui, app: &mut SfontPlayer) {
+pub fn toolbar(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
         file_menu(ui);
 

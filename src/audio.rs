@@ -11,7 +11,7 @@ mod error;
 mod midisource;
 
 /// Audio backend struct
-pub(crate) struct AudioPlayer {
+pub struct AudioPlayer {
     path_soundfont: Option<PathBuf>,
     path_midifile: Option<PathBuf>,
     midifile_duration: Option<Duration>,
@@ -52,15 +52,15 @@ impl AudioPlayer {
     // --- Playback Control
 
     /// Unpause
-    pub(crate) fn play(&mut self) {
+    pub(crate) fn play(&self) {
         self.sink.play();
     }
     /// Pause
-    pub(crate) fn pause(&mut self) {
+    pub(crate) fn pause(&self) {
         self.sink.pause();
     }
     /// Standard volume range is 0.0..=1.0
-    pub(crate) fn set_volume(&mut self, volume: f32) {
+    pub(crate) fn set_volume(&self, volume: f32) {
         self.sink.set_volume(volume);
     }
     /// Load currently selected midi & font and start playing
@@ -99,7 +99,7 @@ impl AudioPlayer {
         self.sink.empty()
     }
     /// Current midi file duration, if midi file exists
-    pub(crate) fn get_midi_length(&self) -> Option<Duration> {
+    pub const fn get_midi_length(&self) -> Option<Duration> {
         self.midifile_duration
     }
     /// Playback position. Zero if player is empty.

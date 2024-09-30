@@ -9,9 +9,9 @@ use std::{error::Error, fmt, fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
 
 /// Option for how soundfonts or midis are managed
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy, Debug)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy, Debug)]
 #[repr(u8)]
-pub(crate) enum FileListMode {
+pub enum FileListMode {
     /// The contents are added and removed manually.
     #[default]
     Manual,
@@ -22,9 +22,9 @@ pub(crate) enum FileListMode {
 }
 
 /// Option for how fonts are sorted
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
 #[repr(u8)]
-pub(crate) enum FontSort {
+pub enum FontSort {
     #[default]
     NameAsc,
     NameDesc,
@@ -33,9 +33,9 @@ pub(crate) enum FontSort {
 }
 
 /// Option for how songs are sorted
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
 #[repr(u8)]
-pub(crate) enum SongSort {
+pub enum SongSort {
     #[default]
     NameAsc,
     NameDesc,
@@ -66,7 +66,7 @@ impl fmt::Display for WorkspaceError {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub(crate) struct Workspace {
+pub struct Workspace {
     pub name: String,
 
     fonts: Vec<FontMeta>,
@@ -89,13 +89,13 @@ pub(crate) struct Workspace {
 impl Workspace {
     // --- Soundfonts
 
-    pub fn get_fonts(&self) -> &Vec<FontMeta> {
+    pub const fn get_fonts(&self) -> &Vec<FontMeta> {
         &self.fonts
     }
     pub fn get_fonts_mut(&mut self) -> &mut Vec<FontMeta> {
         &mut self.fonts
     }
-    pub fn get_font_idx(&self) -> Option<usize> {
+    pub const fn get_font_idx(&self) -> Option<usize> {
         self.font_idx
     }
     pub fn set_font_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
@@ -136,10 +136,10 @@ impl Workspace {
         }
         false
     }
-    pub fn get_font_list_mode(&self) -> FileListMode {
+    pub const fn get_font_list_mode(&self) -> FileListMode {
         self.font_list_mode
     }
-    pub fn get_font_dir(&self) -> &Option<PathBuf> {
+    pub const fn get_font_dir(&self) -> &Option<PathBuf> {
         &self.font_dir
     }
     pub fn set_font_dir(&mut self, path: PathBuf) {
@@ -263,7 +263,7 @@ impl Workspace {
             }
         }
     }
-    pub fn get_font_sort(&self) -> FontSort {
+    pub const fn get_font_sort(&self) -> FontSort {
         self.font_sort
     }
     pub fn set_font_sort(&mut self, sort: FontSort) {
@@ -275,13 +275,13 @@ impl Workspace {
 
     // --- Midi files
 
-    pub fn get_songs(&self) -> &Vec<MidiMeta> {
+    pub const fn get_songs(&self) -> &Vec<MidiMeta> {
         &self.midis
     }
     pub fn get_songs_mut(&mut self) -> &mut Vec<MidiMeta> {
         &mut self.midis
     }
-    pub fn get_song_idx(&self) -> Option<usize> {
+    pub const fn get_song_idx(&self) -> Option<usize> {
         self.midi_idx
     }
     pub fn set_song_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
@@ -322,10 +322,10 @@ impl Workspace {
         }
         false
     }
-    pub fn get_song_list_mode(&self) -> FileListMode {
+    pub const fn get_song_list_mode(&self) -> FileListMode {
         self.midi_list_mode
     }
-    pub fn get_song_dir(&self) -> &Option<PathBuf> {
+    pub const fn get_song_dir(&self) -> &Option<PathBuf> {
         &self.midi_dir
     }
     pub fn set_song_dir(&mut self, path: PathBuf) {
@@ -456,7 +456,7 @@ impl Workspace {
             }
         }
     }
-    pub fn get_song_sort(&self) -> SongSort {
+    pub const fn get_song_sort(&self) -> SongSort {
         self.song_sort
     }
     pub fn set_song_sort(&mut self, sort: SongSort) {

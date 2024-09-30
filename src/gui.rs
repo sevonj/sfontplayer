@@ -1,5 +1,5 @@
 mod about;
-pub(crate) mod conversions;
+pub mod conversions;
 mod cooltoolbar;
 mod keyboard_shortcuts;
 mod playback_controls;
@@ -27,7 +27,7 @@ use workspace_select::workspace_tabs;
 const TBL_ROW_H: f32 = 16.;
 
 #[allow(clippy::too_many_lines)]
-pub(crate) fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
+pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
     // Show modals
     about_modal(ctx, app);
     shortcut_modal(ctx, app);
@@ -361,11 +361,10 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
                 // File size
                 row.col(|ui| {
-                    let size_str = if let Some(size) = filesize {
-                        format!("{}B", SizeFormatterBinary::new(size))
-                    } else {
-                        "??".into()
-                    };
+                    let size_str = filesize.map_or_else(
+                        || "??".into(),
+                        |size| format!("{}B", SizeFormatterBinary::new(size)),
+                    );
                     ui.add(Label::new(size_str).wrap_mode(TextWrapMode::Extend));
                 });
 
@@ -542,11 +541,10 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 });
                 // File size
                 row.col(|ui| {
-                    let size_str = if let Some(size) = filesize {
-                        format!("{}B", SizeFormatterBinary::new(size))
-                    } else {
-                        "??".into()
-                    };
+                    let size_str = filesize.map_or_else(
+                        || "??".into(),
+                        |size| format!("{}B", SizeFormatterBinary::new(size)),
+                    );
                     ui.add(Label::new(size_str).wrap_mode(TextWrapMode::Extend));
                 });
 

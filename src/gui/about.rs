@@ -9,7 +9,7 @@ use crate::SfontPlayer;
 build_info!(fn build_info);
 
 /// Modal window that shows "About"
-pub(crate) fn about_modal(ctx: &Context, app: &mut SfontPlayer) {
+pub fn about_modal(ctx: &Context, app: &mut SfontPlayer) {
     Window::new("About")
         .collapsible(false)
         .resizable(false)
@@ -101,7 +101,7 @@ fn dependency_item(ui: &mut Ui, crate_info: &CrateInfo) {
             crate_info
                 .license
                 .clone()
-                .unwrap_or("(this crate did not specify its license!)".into()),
+                .unwrap_or_else(|| "(this crate did not specify its license!)".into()),
         );
     });
 

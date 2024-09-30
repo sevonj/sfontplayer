@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 /// Formatted to represent playback times. "07:32"
-pub(crate) fn format_duration(dur: Duration) -> String {
+pub fn format_duration(dur: Duration) -> String {
     let sec = dur.as_secs() % 60;
     let min = dur.as_secs() / 60;
     let h = dur.as_secs() / 60 / 60;

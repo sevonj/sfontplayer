@@ -24,7 +24,7 @@ impl fmt::Display for FontMetaError {
 /// Reference to a font file with metadata
 #[derive(serde::Deserialize, serde::Serialize, Default, Clone)]
 #[serde(default)]
-pub(crate) struct FontMeta {
+pub struct FontMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
     error: Option<FontMetaError>,
@@ -46,11 +46,8 @@ impl FontMeta {
 
     /// Refresh file metadata
     pub fn refresh(&mut self) {
-        self.filesize = if let Ok(file_meta) = fs::metadata(&self.filepath) {
-            Some(file_meta.len())
-        } else {
-            None
-        };
+        self.filesize =
+            fs::metadata(&self.filepath).map_or(None, |file_meta| Some(file_meta.len()));
 
         let error;
         match fs::File::open(&self.filepath) {
@@ -86,7 +83,7 @@ impl FontMeta {
             .expect("Invalid filename")
             .to_owned()
     }
-    pub fn get_size(&self) -> Option<u64> {
+    pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
     pub fn get_error(&self) -> Option<FontMetaError> {

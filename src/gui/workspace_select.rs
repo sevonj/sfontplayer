@@ -2,7 +2,7 @@ use eframe::egui::{scroll_area::ScrollBarVisibility, Button, Frame, ScrollArea, 
 
 use crate::SfontPlayer;
 
-pub(crate) fn workspace_tabs(ui: &mut Ui, app: &mut SfontPlayer) {
+pub fn workspace_tabs(ui: &mut Ui, app: &mut SfontPlayer) {
     ScrollArea::horizontal()
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
         .drag_to_scroll(true)

@@ -8,7 +8,7 @@ use crate::{RepeatMode, SfontPlayer};
 const ICON_SIZE: f32 = 20.;
 
 use super::conversions::format_duration;
-pub(crate) fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
+pub fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.horizontal(|ui| {
         playback_controls(ui, app);
 
@@ -36,11 +36,10 @@ fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
         } else {
             "playing"
         },
-        if let Some(index) = app.get_playing_workspace().get_song_idx() {
-            app.get_playing_workspace().get_songs()[index].get_name()
-        } else {
-            "Nothing".into()
-        }
+        app.get_playing_workspace().get_song_idx().map_or_else(
+            || "Nothing".into(),
+            |index| app.get_playing_workspace().get_songs()[index].get_name()
+        )
     );
     if ui
         .add_enabled(
@@ -124,7 +123,7 @@ fn icon_button(ui: &mut Ui, source: ImageSource, id: &str) -> Response {
 }
 
 /// Song position slider
-fn position_control(ui: &mut Ui, app: &mut SfontPlayer, width: f32) {
+fn position_control(ui: &mut Ui, app: &SfontPlayer, width: f32) {
     let len = app.get_midi_length();
     let pos = app.get_midi_position();
 

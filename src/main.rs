@@ -186,11 +186,11 @@ impl SfontPlayer {
         self.is_playing = false;
     }
     /// Unpause
-    fn play(&mut self) {
+    fn play(&self) {
         self.audioplayer.play();
     }
     /// Pause
-    fn pause(&mut self) {
+    fn pause(&self) {
         self.audioplayer.pause();
     }
     /// Play previous song
@@ -245,7 +245,7 @@ impl SfontPlayer {
         self.volume = f32::clamp(volume, 0., 100.);
     }
     /// Sends current volume setting to backend
-    fn update_volume(&mut self) {
+    fn update_volume(&self) {
         // Not dividing the volume by 100 is a mistake you only make once.
         self.audioplayer.set_volume(self.volume * 0.001);
     }
@@ -260,7 +260,7 @@ impl SfontPlayer {
         self.audioplayer.is_empty()
     }
     /// Get total length of currently playing file
-    fn get_midi_length(&self) -> Duration {
+    const fn get_midi_length(&self) -> Duration {
         if let Some(len) = self.audioplayer.get_midi_length() {
             return len;
         }
@@ -274,7 +274,7 @@ impl SfontPlayer {
     // --- Manage Workspaces
 
     /// Get a reference to the workspace list
-    fn get_workspaces(&self) -> &Vec<Workspace> {
+    const fn get_workspaces(&self) -> &Vec<Workspace> {
         &self.workspaces
     }
     /// Get a reference to the currently open workspace

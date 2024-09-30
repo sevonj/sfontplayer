@@ -24,7 +24,7 @@ impl fmt::Display for MidiMetaError {
 /// Reference to a midi file with metadata
 #[derive(serde::Deserialize, serde::Serialize, Default, Clone)]
 #[serde(default)]
-pub(crate) struct MidiMeta {
+pub struct MidiMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
     duration: Option<Duration>,
@@ -51,11 +51,8 @@ impl MidiMeta {
         let error;
         let mut duration = None;
 
-        self.filesize = if let Ok(file_meta) = fs::metadata(&self.filepath) {
-            Some(file_meta.len())
-        } else {
-            None
-        };
+        self.filesize =
+            fs::metadata(&self.filepath).map_or(None, |file_meta| Some(file_meta.len()));
 
         match fs::File::open(&self.filepath) {
             Ok(mut file) => match MidiFile::new(&mut file) {
@@ -94,10 +91,10 @@ impl MidiMeta {
             .expect("Invalid filename")
             .to_owned()
     }
-    pub fn get_duration(&self) -> Option<Duration> {
+    pub const fn get_duration(&self) -> Option<Duration> {
         self.duration
     }
-    pub fn get_size(&self) -> Option<u64> {
+    pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
     pub fn get_error(&self) -> Option<MidiMetaError> {
