@@ -345,35 +345,31 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                         if let Some(e) = &error {
                             ui.label(RichText::new("？")).on_hover_text(e.to_string());
                         }
-                        if ui
-                            .add_enabled(
-                                error.is_none(),
-                                Button::new(filename)
-                                    .frame(false)
-                                    .wrap_mode(TextWrapMode::Truncate),
-                            )
-                            .clicked()
-                        {
-                            let _ = app.get_workspace_mut().set_font_idx(Some(index));
-                        }
+                        ui.add_enabled(
+                            error.is_none(),
+                            Label::new(filename)
+                                .wrap_mode(TextWrapMode::Truncate)
+                                .selectable(false),
+                        );
                     });
                 });
-
                 // File size
                 row.col(|ui| {
                     let size_str = filesize.map_or_else(
                         || "??".into(),
                         |size| format!("{}B", SizeFormatterBinary::new(size)),
                     );
-                    ui.add(Label::new(size_str).wrap_mode(TextWrapMode::Extend));
+                    ui.add(
+                        Label::new(size_str)
+                            .wrap_mode(TextWrapMode::Extend)
+                            .selectable(false),
+                    );
                 });
 
-                // TODO: Find out why this doesn't work
+                // Select
                 if row.response().clicked() {
-                    println!("CLICK");
                     let _ = app.get_workspace_mut().set_font_idx(Some(index));
                 }
-
                 // Context menu
                 row.response().context_menu(|ui| {
                     if ui.button("Refresh").clicked() {
@@ -521,23 +517,21 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                         if let Some(e) = &error {
                             ui.label(RichText::new("？")).on_hover_text(e.to_string());
                         }
-                        if ui
-                            .add_enabled(
-                                error.is_none(),
-                                Button::new(filename)
-                                    .frame(false)
-                                    .wrap_mode(TextWrapMode::Truncate),
-                            )
-                            .clicked()
-                        {
-                            let _ = app.get_workspace_mut().set_song_idx(Some(index));
-                            app.start();
-                        }
+                        ui.add_enabled(
+                            error.is_none(),
+                            Label::new(filename)
+                                .wrap_mode(TextWrapMode::Truncate)
+                                .selectable(false),
+                        );
                     });
                 });
                 // Duration
                 row.col(|ui| {
-                    ui.add(Label::new(format_duration(time)).wrap_mode(TextWrapMode::Extend));
+                    ui.add(
+                        Label::new(format_duration(time))
+                            .wrap_mode(TextWrapMode::Extend)
+                            .selectable(false),
+                    );
                 });
                 // File size
                 row.col(|ui| {
@@ -545,12 +539,15 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                         || "??".into(),
                         |size| format!("{}B", SizeFormatterBinary::new(size)),
                     );
-                    ui.add(Label::new(size_str).wrap_mode(TextWrapMode::Extend));
+                    ui.add(
+                        Label::new(size_str)
+                            .wrap_mode(TextWrapMode::Extend)
+                            .selectable(false),
+                    );
                 });
 
-                // TODO: Find out why this doesn't work
+                // Select
                 if row.response().clicked() {
-                    println!("CLICK");
                     let _ = app.get_workspace_mut().set_song_idx(Some(index));
                     app.start();
                 }
