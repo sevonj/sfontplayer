@@ -95,7 +95,7 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                             .on_hover_text("Refresh content")
                             .clicked()
                         {
-                            app.get_workspace_mut().refresh_fonts();
+                            app.get_workspace_mut().refresh_font_list();
                         }
 
                         if let Some(dir) = &app.get_workspace().get_font_dir() {
@@ -197,7 +197,7 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                         .on_hover_text("Refresh content")
                         .clicked()
                     {
-                        app.get_workspace_mut().refresh_songs();
+                        app.get_workspace_mut().refresh_song_list();
                     }
 
                     if let Some(dir) = &app.get_workspace().get_song_dir() {
