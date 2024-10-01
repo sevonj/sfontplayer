@@ -9,9 +9,9 @@ use std::{error::Error, fmt, fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
 
 /// Option for how soundfonts or midis are managed
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy, Debug)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy, Debug)]
 #[repr(u8)]
-pub(crate) enum FileListMode {
+pub enum FileListMode {
     /// The contents are added and removed manually.
     #[default]
     Manual,
@@ -22,9 +22,9 @@ pub(crate) enum FileListMode {
 }
 
 /// Option for how fonts are sorted
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
 #[repr(u8)]
-pub(crate) enum FontSort {
+pub enum FontSort {
     #[default]
     NameAsc,
     NameDesc,
@@ -33,9 +33,9 @@ pub(crate) enum FontSort {
 }
 
 /// Option for how songs are sorted
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
 #[repr(u8)]
-pub(crate) enum SongSort {
+pub enum SongSort {
     #[default]
     NameAsc,
     NameDesc,
@@ -55,10 +55,10 @@ impl fmt::Display for WorkspaceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidFontIndex { index } => {
-                write!(f, "Font index out of range: {}", index)
+                write!(f, "Font index out of range: {index}")
             }
             Self::InvalidSongIndex { index } => {
-                write!(f, "Song index out of range: {}", index)
+                write!(f, "Song index out of range: {index}")
             }
         }
     }
@@ -66,7 +66,7 @@ impl fmt::Display for WorkspaceError {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
-pub(crate) struct Workspace {
+pub struct Workspace {
     pub name: String,
 
     fonts: Vec<FontMeta>,
@@ -89,22 +89,22 @@ pub(crate) struct Workspace {
 impl Workspace {
     // --- Soundfonts
 
-    pub fn get_fonts(&self) -> &Vec<FontMeta> {
+    pub const fn get_fonts(&self) -> &Vec<FontMeta> {
         &self.fonts
     }
     pub fn get_fonts_mut(&mut self) -> &mut Vec<FontMeta> {
         &mut self.fonts
     }
-    pub fn get_font_idx(&self) -> Option<usize> {
+    pub const fn get_font_idx(&self) -> Option<usize> {
         self.font_idx
     }
-    pub fn set_font_idx(&mut self, value: Option<usize>) -> Result<(), WorkspaceError> {
+    pub fn set_font_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
         if let Some(index) = value {
             self.font_idx = if index < self.fonts.len() {
                 self.fonts[index].refresh();
                 Some(index)
             } else {
-                return Err(WorkspaceError::InvalidFontIndex { index });
+                anyhow::bail!(WorkspaceError::InvalidFontIndex { index });
             }
         }
         Ok(())
@@ -113,13 +113,13 @@ impl Workspace {
         if !self.contains_font(&path) {
             self.fonts.push(FontMeta::new(path));
             if let Err(e) = self.refresh_font_list() {
-                panic!("Refreshing font list failed: {}", e);
+                panic!("Refreshing font list failed: {e}");
             }
         }
     }
-    pub fn remove_font(&mut self, index: usize) -> Result<(), WorkspaceError> {
+    pub fn remove_font(&mut self, index: usize) -> anyhow::Result<()> {
         if index >= self.fonts.len() {
-            return Err(WorkspaceError::InvalidFontIndex { index });
+            anyhow::bail!(WorkspaceError::InvalidFontIndex { index });
         }
         self.fonts[index].is_queued_for_deletion = true;
         Ok(())
@@ -136,10 +136,10 @@ impl Workspace {
         }
         false
     }
-    pub fn get_font_list_mode(&self) -> FileListMode {
+    pub const fn get_font_list_mode(&self) -> FileListMode {
         self.font_list_mode
     }
-    pub fn get_font_dir(&self) -> &Option<PathBuf> {
+    pub const fn get_font_dir(&self) -> &Option<PathBuf> {
         &self.font_dir
     }
     pub fn set_font_dir(&mut self, path: PathBuf) {
@@ -148,23 +148,23 @@ impl Workspace {
         }
         self.font_dir = Some(path);
         if let Err(e) = self.refresh_font_list() {
-            panic!("Refreshing font list failed: {}", e);
+            panic!("Refreshing font list failed: {e}");
         }
     }
     pub fn set_font_list_type(&mut self, mode: FileListMode) {
         self.font_list_mode = mode;
         if let Err(e) = self.refresh_font_list() {
-            panic!("Refreshing font list failed: {}", e);
+            panic!("Refreshing font list failed: {e}");
         }
     }
     /// Refresh font file list
     pub fn refresh_fonts(&mut self) {
         if let Err(e) = self.refresh_font_list() {
-            panic!("Refreshing font list failed: {}", e);
+            panic!("Refreshing font list failed: {e}");
         }
     }
     /// Refresh font file list
-    fn refresh_font_list(&mut self) -> Result<(), WorkspaceError> {
+    fn refresh_font_list(&mut self) -> anyhow::Result<()> {
         if self.font_list_mode == FileListMode::Manual {
             self.sort_fonts();
             return Ok(());
@@ -198,30 +198,30 @@ impl Workspace {
         self.delete_queued();
 
         // Look for new files
-        let dir = match &self.font_dir {
-            Some(path) => path,
-            None => {
-                self.clear_fonts();
-                return Ok(());
-            }
+        let Some(dir) = &self.font_dir else {
+            self.clear_fonts();
+            return Ok(());
         };
         match self.font_list_mode {
             FileListMode::Directory => {
-                let paths = fs::read_dir(dir).unwrap();
-                for entry in paths.filter_map(|e| e.ok()) {
+                let paths = fs::read_dir(dir)?;
+                for entry in paths.filter_map(std::result::Result::ok) {
                     let path = entry.path();
                     if self.contains_font(&path) {
                         continue;
                     }
-                    if path.is_file() && path.extension().map(|s| s == "sf2").unwrap_or(false) {
+                    if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
                         self.add_font(path);
                     }
                 }
             }
             FileListMode::Subdirectories => {
-                for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+                for entry in WalkDir::new(dir)
+                    .into_iter()
+                    .filter_map(std::result::Result::ok)
+                {
                     let path = entry.path();
-                    if path.is_file() && path.extension().map(|s| s == "sf2").unwrap_or(false) {
+                    if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
                         self.add_font(path.into());
                     }
                 }
@@ -247,9 +247,9 @@ impl Workspace {
                 self.fonts.reverse();
             }
 
-            FontSort::SizeAsc => self.fonts.sort_by_key(|f| f.get_size()),
+            FontSort::SizeAsc => self.fonts.sort_by_key(font_meta::FontMeta::get_size),
             FontSort::SizeDesc => {
-                self.fonts.sort_by_key(|f| f.get_size());
+                self.fonts.sort_by_key(font_meta::FontMeta::get_size);
                 self.fonts.reverse();
             }
         };
@@ -263,34 +263,34 @@ impl Workspace {
             }
         }
     }
-    pub fn get_font_sort(&self) -> FontSort {
+    pub const fn get_font_sort(&self) -> FontSort {
         self.font_sort
     }
     pub fn set_font_sort(&mut self, sort: FontSort) {
         self.font_sort = sort;
         if let Err(e) = self.refresh_font_list() {
-            panic!("Refreshing font list failed: {}", e);
+            panic!("Refreshing font list failed: {e}");
         }
     }
 
     // --- Midi files
 
-    pub fn get_songs(&self) -> &Vec<MidiMeta> {
+    pub const fn get_songs(&self) -> &Vec<MidiMeta> {
         &self.midis
     }
     pub fn get_songs_mut(&mut self) -> &mut Vec<MidiMeta> {
         &mut self.midis
     }
-    pub fn get_song_idx(&self) -> Option<usize> {
+    pub const fn get_song_idx(&self) -> Option<usize> {
         self.midi_idx
     }
-    pub fn set_song_idx(&mut self, value: Option<usize>) -> Result<(), WorkspaceError> {
+    pub fn set_song_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
         if let Some(index) = value {
             self.midi_idx = if index < self.midis.len() {
                 self.midis[index].refresh();
                 Some(index)
             } else {
-                return Err(WorkspaceError::InvalidSongIndex { index });
+                anyhow::bail!(WorkspaceError::InvalidSongIndex { index });
             }
         }
         Ok(())
@@ -299,13 +299,13 @@ impl Workspace {
         if !self.contains_midi(&path) {
             self.midis.push(MidiMeta::new(path));
             if let Err(e) = self.refresh_song_list() {
-                panic!("Refreshing song list failed: {}", e);
+                panic!("Refreshing song list failed: {e}");
             }
         }
     }
-    pub fn remove_song(&mut self, index: usize) -> Result<(), WorkspaceError> {
+    pub fn remove_song(&mut self, index: usize) -> anyhow::Result<()> {
         if index >= self.midis.len() {
-            return Err(WorkspaceError::InvalidSongIndex { index });
+            anyhow::bail!(WorkspaceError::InvalidSongIndex { index });
         }
         self.midis[index].is_queued_for_deletion = true;
         Ok(())
@@ -322,10 +322,10 @@ impl Workspace {
         }
         false
     }
-    pub fn get_song_list_mode(&self) -> FileListMode {
+    pub const fn get_song_list_mode(&self) -> FileListMode {
         self.midi_list_mode
     }
-    pub fn get_song_dir(&self) -> &Option<PathBuf> {
+    pub const fn get_song_dir(&self) -> &Option<PathBuf> {
         &self.midi_dir
     }
     pub fn set_song_dir(&mut self, path: PathBuf) {
@@ -334,23 +334,23 @@ impl Workspace {
         }
         self.midi_dir = Some(path);
         if let Err(e) = self.refresh_song_list() {
-            panic!("Refreshing song list failed: {}", e);
+            panic!("Refreshing song list failed: {e}");
         }
     }
     pub fn set_song_list_mode(&mut self, mode: FileListMode) {
         self.midi_list_mode = mode;
         if let Err(e) = self.refresh_song_list() {
-            panic!("Refreshing song list failed: {}", e);
+            panic!("Refreshing song list failed: {e}");
         }
     }
     /// Refresh mifi file list
     pub fn refresh_songs(&mut self) {
         if let Err(e) = self.refresh_song_list() {
-            panic!("Refreshing song list failed: {}", e);
+            panic!("Refreshing song list failed: {e}");
         }
     }
     /// Refresh midi file list.
-    fn refresh_song_list(&mut self) -> Result<(), WorkspaceError> {
+    fn refresh_song_list(&mut self) -> anyhow::Result<()> {
         if self.midi_list_mode == FileListMode::Manual {
             self.sort_songs();
             return Ok(());
@@ -384,30 +384,30 @@ impl Workspace {
         self.delete_queued();
 
         // Look for new files
-        let dir = match &self.midi_dir {
-            Some(path) => path,
-            None => {
-                self.clear_songs();
-                return Ok(());
-            }
+        let Some(dir) = &self.midi_dir else {
+            self.clear_songs();
+            return Ok(());
         };
         match self.midi_list_mode {
             FileListMode::Directory => {
-                let paths = fs::read_dir(dir).unwrap();
-                for entry in paths.filter_map(|e| e.ok()) {
+                let paths = fs::read_dir(dir)?;
+                for entry in paths.filter_map(std::result::Result::ok) {
                     let path = entry.path();
                     if self.contains_midi(&path) {
                         continue;
                     }
-                    if path.is_file() && path.extension().map(|s| s == "mid").unwrap_or(false) {
+                    if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
                         self.add_song(path);
                     }
                 }
             }
             FileListMode::Subdirectories => {
-                for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+                for entry in WalkDir::new(dir)
+                    .into_iter()
+                    .filter_map(std::result::Result::ok)
+                {
                     let path = entry.path();
-                    if path.is_file() && path.extension().map(|s| s == "mid").unwrap_or(false) {
+                    if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
                         self.add_song(path.into());
                     }
                 }
@@ -440,9 +440,9 @@ impl Workspace {
                 .midis
                 .sort_by_key(|f| f.get_duration().unwrap_or(Duration::ZERO)),
 
-            SongSort::SizeAsc => self.midis.sort_by_key(|f| f.get_size()),
+            SongSort::SizeAsc => self.midis.sort_by_key(midi_meta::MidiMeta::get_size),
             SongSort::SizeDesc => {
-                self.midis.sort_by_key(|f| f.get_size());
+                self.midis.sort_by_key(midi_meta::MidiMeta::get_size);
                 self.midis.reverse();
             }
         };
@@ -456,13 +456,13 @@ impl Workspace {
             }
         }
     }
-    pub fn get_song_sort(&self) -> SongSort {
+    pub const fn get_song_sort(&self) -> SongSort {
         self.song_sort
     }
     pub fn set_song_sort(&mut self, sort: SongSort) {
         self.song_sort = sort;
         if let Err(e) = self.refresh_song_list() {
-            panic!("Refreshing song list failed: {}", e);
+            panic!("Refreshing song list failed: {e}");
         }
     }
 
@@ -544,13 +544,13 @@ impl Default for Workspace {
             font_idx: None,
             font_list_mode: FileListMode::Manual,
             font_dir: None,
-            font_sort: Default::default(),
+            font_sort: FontSort::default(),
 
             midis: vec![],
             midi_idx: None,
             midi_list_mode: FileListMode::Manual,
             midi_dir: None,
-            song_sort: Default::default(),
+            song_sort: SongSort::default(),
 
             queue: vec![],
             queue_idx: None,

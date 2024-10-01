@@ -23,13 +23,13 @@ impl fmt::Display for PlayerError {
             Self::NoFont => write!(f, "No soundfont!"),
             Self::NoMidi => write!(f, "No midi file!"),
             Self::CantAccessFile { path, source } => {
-                write!(f, "Can't access {:?}: {}", path, source)
+                write!(f, "Can't access {path:?}: {source}")
             }
             Self::InvalidFont { source } => {
-                write!(f, "Invalid soundfont: {}", source)
+                write!(f, "Invalid soundfont: {source}")
             }
             Self::InvalidMidi { source } => {
-                write!(f, "Invalid midi file: {}", source)
+                write!(f, "Invalid midi file: {source}")
             }
         }
     }

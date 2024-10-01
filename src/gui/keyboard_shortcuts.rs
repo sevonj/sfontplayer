@@ -29,7 +29,8 @@ pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
 
 /// Modal window that shows keyboard shortcuts
-pub(crate) fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
+#[allow(clippy::too_many_lines)]
+pub fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
     Window::new("Keyboard Shortcuts")
         .collapsible(false)
         .resizable(false)
@@ -195,7 +196,7 @@ fn add_shortcut_title(ui: &mut Ui, text: &str) {
 }
 
 /// Check and act on shortcuts
-pub(crate) fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
+pub fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
     if ctx.is_context_menu_open() {
         return;
     }

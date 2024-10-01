@@ -85,13 +85,13 @@ struct SfontPlayer {
 impl Default for SfontPlayer {
     fn default() -> Self {
         Self {
-            audioplayer: Default::default(),
+            audioplayer: AudioPlayer::default(),
             volume: 100.,
             is_playing: false,
 
-            workspaces: Default::default(),
+            workspaces: Vec::default(),
             workspace_idx: 0,
-            workspace_delet_queue: Default::default(),
+            workspace_delet_queue: Vec::default(),
             playing_workspace_idx: Default::default(),
 
             shuffle: false,
@@ -100,7 +100,7 @@ impl Default for SfontPlayer {
             show_soundfonts: Default::default(),
             show_about_modal: false,
             show_shortcut_modal: false,
-            update_flags: Default::default(),
+            update_flags: UpdateFlags::default(),
             toasts: Toasts::new()
                 .with_anchor(egui_notify::Anchor::BottomRight)
                 .with_spacing(4.)
@@ -138,19 +138,13 @@ impl SfontPlayer {
         self.audioplayer.stop_playback();
         let workspace = self.get_playing_workspace_mut();
 
-        let font_index = match workspace.get_font_idx() {
-            Some(index) => index,
-            None => {
-                self.toast_error("No soundfont selected!");
-                return;
-            }
+        let Some(font_index) = workspace.get_font_idx() else {
+            self.toast_error("No soundfont selected!");
+            return;
         };
-        let queue_index = match workspace.queue_idx {
-            Some(index) => index,
-            None => {
-                self.toast_error("Can't load song: No queue index!");
-                return;
-            }
+        let Some(queue_index) = workspace.queue_idx else {
+            self.toast_error("Can't load song: No queue index!");
+            return;
         };
         let midi_index = workspace.queue[queue_index];
 
@@ -192,12 +186,12 @@ impl SfontPlayer {
         self.is_playing = false;
     }
     /// Unpause
-    fn play(&mut self) {
+    fn play(&self) {
         self.audioplayer.play();
     }
     /// Pause
-    fn pause(&mut self) {
-        self.audioplayer.pause()
+    fn pause(&self) {
+        self.audioplayer.pause();
     }
     /// Play previous song
     fn skip_back(&mut self) {
@@ -248,12 +242,12 @@ impl SfontPlayer {
     }
     /// Set volume (safe)
     fn set_volume(&mut self, volume: f32) {
-        self.volume = f32::clamp(volume, 0., 100.)
+        self.volume = f32::clamp(volume, 0., 100.);
     }
     /// Sends current volume setting to backend
-    fn update_volume(&mut self) {
+    fn update_volume(&self) {
         // Not dividing the volume by 100 is a mistake you only make once.
-        self.audioplayer.set_volume(self.volume * 0.001)
+        self.audioplayer.set_volume(self.volume * 0.001);
     }
 
     // --- Playback Status
@@ -266,7 +260,7 @@ impl SfontPlayer {
         self.audioplayer.is_empty()
     }
     /// Get total length of currently playing file
-    fn get_midi_length(&self) -> Duration {
+    const fn get_midi_length(&self) -> Duration {
         if let Some(len) = self.audioplayer.get_midi_length() {
             return len;
         }
@@ -280,7 +274,7 @@ impl SfontPlayer {
     // --- Manage Workspaces
 
     /// Get a reference to the workspace list
-    fn get_workspaces(&self) -> &Vec<Workspace> {
+    const fn get_workspaces(&self) -> &Vec<Workspace> {
         &self.workspaces
     }
     /// Get a reference to the currently open workspace
@@ -309,16 +303,16 @@ impl SfontPlayer {
     }
     /// Switch to another workspace
     fn switch_workspace(&mut self, index: usize) {
-        self.workspace_idx = index
+        self.workspace_idx = index;
     }
     fn switch_workspace_left(&mut self) {
         if self.workspace_idx > 0 {
-            self.workspace_idx -= 1
+            self.workspace_idx -= 1;
         }
     }
     fn switch_workspace_right(&mut self) {
         if self.workspace_idx < self.workspaces.len() - 1 {
-            self.workspace_idx += 1
+            self.workspace_idx += 1;
         }
     }
     /// Create a new workspace
@@ -362,13 +356,10 @@ impl SfontPlayer {
         let repeat = self.repeat;
         let workspace = self.get_playing_workspace_mut();
 
-        let mut queue_index = match workspace.queue_idx {
-            Some(value) => value,
-            None => {
-                let _ = workspace.set_song_idx(None);
-                self.stop();
-                return;
-            }
+        let Some(mut queue_index) = workspace.queue_idx else {
+            let _ = workspace.set_song_idx(None);
+            self.stop();
+            return;
         };
 
         if repeat == RepeatMode::Song {

@@ -22,12 +22,13 @@ pub struct MidiSource {
 }
 
 impl MidiSource {
-    /// New MidiSource that immediately starts playing.
-    pub fn new(sf: Arc<SoundFont>, midifile: Arc<MidiFile>) -> Self {
+    /// New `MidiSource` that immediately starts playing.
+    #[allow(clippy::cast_possible_wrap)] // It's ok to cast here
+    pub fn new(sf: &Arc<SoundFont>, midifile: &Arc<MidiFile>) -> Self {
         let settings = SynthesizerSettings::new(SAMPLERATE as i32);
-        let synthesizer = Synthesizer::new(&sf, &settings).unwrap();
+        let synthesizer = Synthesizer::new(sf, &settings).expect("Could not create synthesizer");
         let mut sequencer = MidiFileSequencer::new(synthesizer);
-        sequencer.play(&midifile, false);
+        sequencer.play(midifile, false);
 
         Self {
             sequencer,
@@ -77,7 +78,7 @@ impl rodio::Source for MidiSource {
         };
         let pos = self.sequencer.get_position();
         let remaining = len - pos;
-        let remaining_samples = remaining * SAMPLERATE as f64;
+        let remaining_samples = remaining * f64::from(SAMPLERATE);
         Some(remaining_samples as usize)
     }
 

@@ -11,7 +11,7 @@ mod error;
 mod midisource;
 
 /// Audio backend struct
-pub(crate) struct AudioPlayer {
+pub struct AudioPlayer {
     path_soundfont: Option<PathBuf>,
     path_midifile: Option<PathBuf>,
     midifile_duration: Option<Duration>,
@@ -25,8 +25,8 @@ pub(crate) struct AudioPlayer {
 
 impl Default for AudioPlayer {
     fn default() -> Self {
-        let (stream, stream_handle) = OutputStream::try_default().unwrap();
-        let sink = Sink::try_new(&stream_handle).unwrap();
+        let (stream, stream_handle) = OutputStream::try_default().expect("Could not create stream");
+        let sink = Sink::try_new(&stream_handle).expect("Could not create sink");
         sink.pause();
         Self {
             path_soundfont: None,
@@ -52,33 +52,31 @@ impl AudioPlayer {
     // --- Playback Control
 
     /// Unpause
-    pub(crate) fn play(&mut self) {
+    pub(crate) fn play(&self) {
         self.sink.play();
     }
     /// Pause
-    pub(crate) fn pause(&mut self) {
+    pub(crate) fn pause(&self) {
         self.sink.pause();
     }
     /// Standard volume range is 0.0..=1.0
-    pub(crate) fn set_volume(&mut self, volume: f32) {
+    pub(crate) fn set_volume(&self, volume: f32) {
         self.sink.set_volume(volume);
     }
     /// Load currently selected midi & font and start playing
-    pub(crate) fn start_playback(&mut self) -> Result<(), PlayerError> {
-        let path_sf = match &self.path_soundfont {
-            Some(path) => path,
-            None => return Err(PlayerError::NoFont),
+    pub(crate) fn start_playback(&mut self) -> anyhow::Result<()> {
+        let Some(path_sf) = &self.path_soundfont else {
+            anyhow::bail!(PlayerError::NoFont);
         };
-        let path_mid = match &self.path_midifile {
-            Some(path) => path,
-            None => return Err(PlayerError::NoMidi),
+        let Some(path_mid) = &self.path_midifile else {
+            anyhow::bail!(PlayerError::NoMidi);
         };
 
         let soundfont = Arc::new(load_soundfont(path_sf)?);
         let midifile = Arc::new(load_midifile(path_mid)?);
         self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
 
-        let source = MidiSource::new(soundfont, midifile);
+        let source = MidiSource::new(&soundfont, &midifile);
         self.sink.append(source);
         self.sink.play();
         Ok(())
@@ -101,7 +99,7 @@ impl AudioPlayer {
         self.sink.empty()
     }
     /// Current midi file duration, if midi file exists
-    pub(crate) fn get_midi_length(&self) -> Option<Duration> {
+    pub const fn get_midi_length(&self) -> Option<Duration> {
         self.midifile_duration
     }
     /// Playback position. Zero if player is empty.
@@ -113,13 +111,13 @@ impl AudioPlayer {
 // --- Private --- //
 
 /// Private: Load soundfont file.
-fn load_soundfont(path: &PathBuf) -> Result<SoundFont, PlayerError> {
+fn load_soundfont(path: &PathBuf) -> anyhow::Result<SoundFont> {
     match File::open(path) {
         Ok(mut file) => match SoundFont::new(&mut file) {
             Ok(soundfont) => Ok(soundfont),
-            Err(e) => Err(PlayerError::InvalidFont { source: e }),
+            Err(e) => anyhow::bail!(PlayerError::InvalidFont { source: e }),
         },
-        Err(e) => Err(PlayerError::CantAccessFile {
+        Err(e) => anyhow::bail!(PlayerError::CantAccessFile {
             path: path.clone(),
             source: e,
         }),
@@ -127,13 +125,13 @@ fn load_soundfont(path: &PathBuf) -> Result<SoundFont, PlayerError> {
 }
 
 /// Private: Load midi file.
-fn load_midifile(path: &PathBuf) -> Result<MidiFile, PlayerError> {
+fn load_midifile(path: &PathBuf) -> anyhow::Result<MidiFile> {
     match File::open(path) {
         Ok(mut file) => match MidiFile::new(&mut file) {
             Ok(midifile) => Ok(midifile),
-            Err(e) => Err(PlayerError::InvalidMidi { source: e }),
+            Err(e) => anyhow::bail!(PlayerError::InvalidMidi { source: e }),
         },
-        Err(e) => Err(PlayerError::CantAccessFile {
+        Err(e) => anyhow::bail!(PlayerError::CantAccessFile {
             path: path.clone(),
             source: e,
         }),
