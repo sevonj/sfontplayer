@@ -4,7 +4,7 @@ use eframe::egui::{
 };
 use egui_extras::{Column, TableBuilder};
 
-use crate::SfontPlayer;
+use crate::{player::Player, GuiState};
 
 const CTRL_SHIFT: Modifiers = Modifiers::CTRL.plus(Modifiers::SHIFT);
 
@@ -30,12 +30,12 @@ pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT
 
 /// Modal window that shows keyboard shortcuts
 #[allow(clippy::too_many_lines)]
-pub fn shortcut_modal(ctx: &Context, app: &mut SfontPlayer) {
+pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
     Window::new("Keyboard Shortcuts")
         .collapsible(false)
         .resizable(false)
         .anchor(Align2::CENTER_CENTER, vec2(0., 0.))
-        .open(&mut app.show_shortcut_modal)
+        .open(&mut gui.show_shortcut_modal)
         .show(ctx, |ui| {
             ui.set_width(300.);
             ScrollArea::vertical().max_height(500.).show(ui, |ui| {
@@ -196,7 +196,7 @@ fn add_shortcut_title(ui: &mut Ui, text: &str) {
 }
 
 /// Check and act on shortcuts
-pub fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
+pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     if ctx.is_context_menu_open() {
         return;
     }
@@ -205,60 +205,62 @@ pub fn consume_shortcuts(ctx: &Context, app: &mut SfontPlayer) {
         // --- Playback
 
         if input.consume_shortcut(&PLAYBACK_PLAYPAUSE) {
-            if !app.is_paused() {
-                app.pause();
-            } else if !app.is_empty() {
-                app.play();
+            if !player.is_paused() {
+                player.pause();
+            } else if !player.is_empty() {
+                player.play();
             }
         }
         if input.consume_shortcut(&PLAYBACK_STARTSTOP) {
-            if app.is_empty() {
-                app.start();
+            if player.is_empty() {
+                player.start();
             } else {
-                app.stop();
+                player.stop();
             }
         }
         if input.consume_shortcut(&PLAYBACK_SKIP) {
-            app.skip();
+            player.skip();
         }
         if input.consume_shortcut(&PLAYBACK_SKIPBACK) {
-            app.skip_back();
+            player.skip_back();
         }
         if input.consume_shortcut(&PLAYBACK_SHUFFLE) {
-            app.toggle_shuffle();
+            player.toggle_shuffle();
         }
         if input.consume_shortcut(&PLAYBACK_VOLUP) {
-            app.set_volume(app.volume + 5.);
+            let volume = player.get_volume();
+            player.set_volume(volume + 5.);
         }
         if input.consume_shortcut(&PLAYBACK_VOLDN) {
-            app.set_volume(app.volume - 5.);
+            let volume = player.get_volume();
+            player.set_volume(volume - 5.);
         }
 
         // --- Workspaces
 
         if input.consume_shortcut(&WORKSPACE_SWITCHLEFT) {
-            app.switch_workspace_left();
+            player.switch_workspace_left();
         }
         if input.consume_shortcut(&WORKSPACE_SWITCHRIGHT) {
-            app.switch_workspace_right();
+            player.switch_workspace_right();
         }
         if input.consume_shortcut(&WORKSPACE_MOVELEFT) {
-            app.move_workspace_left();
+            player.move_workspace_left();
         }
         if input.consume_shortcut(&WORKSPACE_MOVERIGHT) {
-            app.move_workspace_right();
+            player.move_workspace_right();
         }
         if input.consume_shortcut(&WORKSPACE_CREATE) {
-            app.new_workspace();
+            player.new_workspace();
         }
         if input.consume_shortcut(&WORKSPACE_REMOVE) {
-            app.remove_workspace(app.workspace_idx);
+            player.remove_workspace(player.get_workspace_idx());
         }
 
         // --- GUI
 
         if input.consume_shortcut(&GUI_SHOWFONTS) {
-            app.show_soundfonts = !app.show_soundfonts;
+            gui.show_soundfonts = !gui.show_soundfonts;
         }
     });
 }

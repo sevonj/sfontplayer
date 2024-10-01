@@ -6,8 +6,9 @@ mod playback_controls;
 mod workspace_select;
 
 use crate::{
+    player::Player,
     workspace::{FileListMode, FontSort, SongSort},
-    SfontPlayer,
+    GuiState,
 };
 use about::about_modal;
 use conversions::format_duration;
@@ -27,31 +28,31 @@ use workspace_select::workspace_tabs;
 const TBL_ROW_H: f32 = 16.;
 
 #[allow(clippy::too_many_lines)]
-pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
+pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     // Show modals
-    about_modal(ctx, app);
-    shortcut_modal(ctx, app);
+    about_modal(ctx, gui);
+    shortcut_modal(ctx, gui);
 
     // Keyboard shortcuts
-    consume_shortcuts(ctx, app);
+    consume_shortcuts(ctx, player, gui);
 
     handle_dropped_files(ctx);
     TopBottomPanel::top("top_bar")
         .resizable(false)
         .show(ctx, |ui| {
-            toolbar(ui, app);
-            workspace_tabs(ui, app);
+            toolbar(ui, player, gui);
+            workspace_tabs(ui, player);
         });
 
-    if app.show_soundfonts {
+    if gui.show_soundfonts {
         TopBottomPanel::top("font_titlebar")
             .show_separator_line(false)
             .resizable(false)
             .show(ctx, |ui| {
-                disable_if_modal(ui, app);
+                disable_if_modal(ui, gui);
                 ui.horizontal(|ui| {
                     // Manually add files
-                    if app.get_workspace().get_font_list_mode() == FileListMode::Manual {
+                    if player.get_workspace().get_font_list_mode() == FileListMode::Manual {
                         if ui
                             .add(Button::new("➕").frame(false))
                             .on_hover_text("Add")
@@ -62,14 +63,14 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                                 .pick_files()
                             {
                                 for path in paths {
-                                    app.get_workspace_mut().add_font(path);
+                                    player.get_workspace_mut().add_font(path);
                                 }
                             }
                         }
                     }
                     // Select directory
                     else {
-                        let folder_text = if app.get_workspace().get_font_dir().is_some() {
+                        let folder_text = if player.get_workspace().get_font_dir().is_some() {
                             "🗁"
                         } else {
                             "🗀"
@@ -80,7 +81,7 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                             .clicked()
                         {
                             if let Some(path) = FileDialog::new().pick_folder() {
-                                app.get_workspace_mut().set_font_dir(path);
+                                player.get_workspace_mut().set_font_dir(path);
                             }
                         }
                     }
@@ -89,16 +90,16 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                     ui.heading("Soundfonts");
 
                     // Dir path
-                    if app.get_workspace().get_font_list_mode() != FileListMode::Manual {
+                    if player.get_workspace().get_font_list_mode() != FileListMode::Manual {
                         if ui
                             .add(Button::new("🔃").frame(false))
                             .on_hover_text("Refresh content")
                             .clicked()
                         {
-                            app.get_workspace_mut().refresh_font_list();
+                            player.get_workspace_mut().refresh_font_list();
                         }
 
-                        if let Some(dir) = &app.get_workspace().get_font_dir() {
+                        if let Some(dir) = &player.get_workspace().get_font_dir() {
                             ui.label(dir.to_string_lossy()).context_menu(|ui| {
                                 if ui.button("Go to directory").clicked() {
                                     let _ = open::that(dir);
@@ -112,7 +113,7 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
 
                     // Content mode select
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        let mut list_mode = app.get_workspace().get_font_list_mode();
+                        let mut list_mode = player.get_workspace().get_font_list_mode();
                         ComboBox::from_id_salt("mode_select")
                             .selected_text(format!("Content: {list_mode:?}"))
                             .show_ui(ui, |ui| {
@@ -128,8 +129,8 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                                     "Subdirectories",
                                 );
                             });
-                        if list_mode != app.get_workspace().get_font_list_mode() {
-                            app.get_workspace_mut().set_font_list_type(list_mode);
+                        if list_mode != player.get_workspace().get_font_list_mode() {
+                            player.get_workspace_mut().set_font_list_type(list_mode);
                         }
                     });
                 });
@@ -137,13 +138,13 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
         TopBottomPanel::top("font_table")
             .resizable(true)
             .show(ctx, |ui| {
-                disable_if_modal(ui, app);
-                soundfont_table(ui, app);
+                disable_if_modal(ui, gui);
+                soundfont_table(ui, player);
             });
     }
 
     TopBottomPanel::bottom("playback_panel").show(ctx, |ui| {
-        playback_panel(ui, app);
+        playback_panel(ui, player, gui);
     });
 
     TopBottomPanel::top("midi_titlebar")
@@ -151,9 +152,9 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
         .resizable(false)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
-                disable_if_modal(ui, app);
+                disable_if_modal(ui, gui);
                 // Manually add files
-                if app.get_workspace().get_song_list_mode() == FileListMode::Manual {
+                if player.get_workspace().get_song_list_mode() == FileListMode::Manual {
                     if ui
                         .add(Button::new("➕").frame(false))
                         .on_hover_text("Add")
@@ -164,14 +165,14 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                             .pick_files()
                         {
                             for path in paths {
-                                app.get_workspace_mut().add_song(path);
+                                player.get_workspace_mut().add_song(path);
                             }
                         }
                     }
                 }
                 // Select directory
                 else {
-                    let folder_text = if app.get_workspace().get_song_dir().is_some() {
+                    let folder_text = if player.get_workspace().get_song_dir().is_some() {
                         "🗁"
                     } else {
                         "🗀"
@@ -182,7 +183,7 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                         .clicked()
                     {
                         if let Some(path) = FileDialog::new().pick_folder() {
-                            app.get_workspace_mut().set_song_dir(path);
+                            player.get_workspace_mut().set_song_dir(path);
                         }
                     }
                 }
@@ -191,16 +192,16 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                 ui.heading("Midi files");
 
                 // Dir path
-                if app.get_workspace().get_song_list_mode() != FileListMode::Manual {
+                if player.get_workspace().get_song_list_mode() != FileListMode::Manual {
                     if ui
                         .add(Button::new("🔃").frame(false))
                         .on_hover_text("Refresh content")
                         .clicked()
                     {
-                        app.get_workspace_mut().refresh_song_list();
+                        player.get_workspace_mut().refresh_song_list();
                     }
 
-                    if let Some(dir) = &app.get_workspace().get_song_dir() {
+                    if let Some(dir) = &player.get_workspace().get_song_dir() {
                         ui.label(dir.to_string_lossy()).context_menu(|ui| {
                             if ui.button("Go to directory").clicked() {
                                 let _ = open::that(dir);
@@ -214,7 +215,7 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
 
                 // Content mode select
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    let mut list_mode = app.get_workspace().get_song_list_mode();
+                    let mut list_mode = player.get_workspace().get_song_list_mode();
                     ComboBox::from_id_salt("mode_select")
                         .selected_text(format!("Content: {list_mode:?}"))
                         .show_ui(ui, |ui| {
@@ -230,15 +231,15 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
                                 "Subdirectories",
                             );
                         });
-                    if list_mode != app.get_workspace().get_song_list_mode() {
-                        app.get_workspace_mut().set_song_list_mode(list_mode);
+                    if list_mode != player.get_workspace().get_song_list_mode() {
+                        player.get_workspace_mut().set_song_list_mode(list_mode);
                     }
                 });
             });
         });
     CentralPanel::default().show(ctx, |ui| {
-        disable_if_modal(ui, app);
-        song_table(ui, app);
+        disable_if_modal(ui, gui);
+        song_table(ui, player, gui);
     });
 }
 
@@ -253,8 +254,9 @@ fn handle_dropped_files(ctx: &Context) {
 }
 
 #[allow(clippy::too_many_lines)]
-fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
-    let is_active_workspace = !app.is_playing || app.workspace_idx == app.playing_workspace_idx;
+fn soundfont_table(ui: &mut Ui, player: &mut Player) {
+    let is_active_workspace =
+        !player.is_playing() || player.get_workspace_idx() == player.get_playing_workspace_idx();
     if !is_active_workspace {
         // Less intense gray highlight if not active
         ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
@@ -269,7 +271,7 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
         .column(Column::remainder());
 
     let table = tablebuilder.header(20.0, |mut header| {
-        let font_sort = app.get_workspace().get_font_sort();
+        let font_sort = player.get_workspace().get_font_sort();
 
         header.col(|_| {});
         header.col(|ui| {
@@ -286,7 +288,7 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 )
                 .clicked()
             {
-                app.get_workspace_mut().set_font_sort(match font_sort {
+                player.get_workspace_mut().set_font_sort(match font_sort {
                     FontSort::NameAsc => FontSort::NameDesc,
                     _ => FontSort::NameAsc,
                 });
@@ -306,7 +308,7 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 )
                 .clicked()
             {
-                app.get_workspace_mut().set_font_sort(match font_sort {
+                player.get_workspace_mut().set_font_sort(match font_sort {
                     FontSort::SizeAsc => FontSort::SizeDesc,
                     _ => FontSort::SizeAsc,
                 });
@@ -317,16 +319,17 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
     table.body(|body| {
         body.rows(
             TBL_ROW_H,
-            app.get_workspace().get_fonts().len(),
+            player.get_workspace().get_fonts().len(),
             |mut row| {
                 let index = row.index();
-                let fontref = &app.get_workspace().get_fonts()[index];
+                let fontref = &player.get_workspace().get_fonts()[index];
                 let filename = fontref.get_name();
                 let filesize = fontref.get_size();
-                let error = fontref.get_error();
-                let manual_files = app.get_workspace().get_font_list_mode() == FileListMode::Manual;
+                let status = fontref.get_status();
+                let manual_files =
+                    player.get_workspace().get_font_list_mode() == FileListMode::Manual;
 
-                row.set_selected(Some(index) == app.get_workspace().get_font_idx());
+                row.set_selected(Some(index) == player.get_workspace().get_font_idx());
 
                 // Remove button
                 row.col(|ui| {
@@ -336,17 +339,17 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
                             .on_hover_text("Remove")
                             .clicked()
                     {
-                        let _ = app.get_workspace_mut().remove_font(index);
+                        let _ = player.get_workspace_mut().remove_font(index);
                     }
                 });
                 // Filename
                 row.col(|ui| {
                     ui.horizontal(|ui| {
-                        if let Some(e) = &error {
+                        if let Err(e) = &status {
                             ui.label(RichText::new("？")).on_hover_text(e.to_string());
                         }
                         ui.add_enabled(
-                            error.is_none(),
+                            status.is_ok(),
                             Label::new(filename)
                                 .wrap_mode(TextWrapMode::Truncate)
                                 .selectable(false),
@@ -368,20 +371,20 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
                 // Select
                 if row.response().clicked() {
-                    let _ = app.get_workspace_mut().set_font_idx(Some(index));
+                    let _ = player.get_workspace_mut().set_font_idx(Some(index));
                 }
                 // Context menu
                 row.response().context_menu(|ui| {
                     if ui.button("Refresh").clicked() {
-                        app.get_workspace_mut().get_fonts_mut()[index].refresh();
+                        player.get_workspace_mut().get_fonts_mut()[index].refresh();
                         ui.close_menu();
                     }
                     if ui.button("Remove").clicked() {
-                        let _ = app.get_workspace_mut().remove_font(index);
+                        let _ = player.get_workspace_mut().remove_font(index);
                         ui.close_menu();
                     }
                     if ui.button("Go to directory").clicked() {
-                        let filepath = app.get_workspace().get_fonts()[index].get_path();
+                        let filepath = player.get_workspace().get_fonts()[index].get_path();
                         let _ = open::that(filepath.parent().expect("Can't open parent"));
                         ui.close_menu();
                     }
@@ -392,8 +395,9 @@ fn soundfont_table(ui: &mut Ui, app: &mut SfontPlayer) {
 }
 
 #[allow(clippy::too_many_lines)]
-fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
-    let is_active_workspace = !app.is_playing || app.workspace_idx == app.playing_workspace_idx;
+fn song_table(ui: &mut Ui, player: &mut Player, gui: &GuiState) {
+    let is_active_workspace =
+        !player.is_playing() || player.get_workspace_idx() == player.get_playing_workspace_idx();
     if !is_active_workspace {
         // Less intense gray highlight if not active
         ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
@@ -410,14 +414,14 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
         .column(Column::remainder())
         .sense(Sense::click());
 
-    if app.update_flags.scroll_to_song {
-        if let Some(index) = app.get_workspace().get_song_idx() {
+    if gui.update_flags.scroll_to_song {
+        if let Some(index) = player.get_workspace().get_song_idx() {
             tablebuilder = tablebuilder.scroll_to_row(index, Some(Align::Center));
         }
     }
 
     let table = tablebuilder.header(20.0, |mut header| {
-        let song_sort = app.get_workspace().get_song_sort();
+        let song_sort = player.get_workspace().get_song_sort();
 
         header.col(|_| {});
         header.col(|ui| {
@@ -434,7 +438,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 )
                 .clicked()
             {
-                app.get_workspace_mut().set_song_sort(match song_sort {
+                player.get_workspace_mut().set_song_sort(match song_sort {
                     SongSort::NameAsc => SongSort::NameDesc,
                     _ => SongSort::NameAsc,
                 });
@@ -454,7 +458,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 )
                 .clicked()
             {
-                app.get_workspace_mut().set_song_sort(match song_sort {
+                player.get_workspace_mut().set_song_sort(match song_sort {
                     SongSort::TimeAsc => SongSort::TimeDesc,
                     _ => SongSort::TimeAsc,
                 });
@@ -474,7 +478,7 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                 )
                 .clicked()
             {
-                app.get_workspace_mut().set_song_sort(match song_sort {
+                player.get_workspace_mut().set_song_sort(match song_sort {
                     SongSort::SizeAsc => SongSort::SizeDesc,
                     _ => SongSort::SizeAsc,
                 });
@@ -485,20 +489,21 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
     table.body(|body| {
         body.rows(
             TBL_ROW_H,
-            app.get_workspace().get_songs().len(),
+            player.get_workspace().get_songs().len(),
             |mut row| {
                 let index = row.index();
-                let midiref = &app.get_workspace().get_songs()[index];
+                let midiref = &player.get_workspace().get_songs()[index];
                 let filename = midiref.get_name();
                 let filesize = midiref.get_size();
-                let error = midiref.get_error();
-                let manual_files = app.get_workspace().get_song_list_mode() == FileListMode::Manual;
+                let status = midiref.get_status();
+                let manual_files =
+                    player.get_workspace().get_song_list_mode() == FileListMode::Manual;
 
-                let time = app.get_workspace().get_songs()[index]
+                let time = player.get_workspace().get_songs()[index]
                     .get_duration()
                     .unwrap_or(Duration::ZERO);
 
-                row.set_selected(Some(index) == app.get_workspace().get_song_idx());
+                row.set_selected(Some(index) == player.get_workspace().get_song_idx());
 
                 // Remove button
                 row.col(|ui| {
@@ -508,17 +513,17 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
                             .on_hover_text("Remove")
                             .clicked()
                     {
-                        let _ = app.get_workspace_mut().remove_song(index);
+                        let _ = player.get_workspace_mut().remove_song(index);
                     }
                 });
                 // Filename
                 row.col(|ui| {
                     ui.horizontal(|ui| {
-                        if let Some(e) = &error {
+                        if let Err(e) = &status {
                             ui.label(RichText::new("？")).on_hover_text(e.to_string());
                         }
                         ui.add_enabled(
-                            error.is_none(),
+                            status.is_ok(),
                             Label::new(filename)
                                 .wrap_mode(TextWrapMode::Truncate)
                                 .selectable(false),
@@ -548,22 +553,22 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
 
                 // Select
                 if row.response().clicked() {
-                    let _ = app.get_workspace_mut().set_song_idx(Some(index));
-                    app.start();
+                    let _ = player.get_workspace_mut().set_song_idx(Some(index));
+                    player.start();
                 }
 
                 // Context menu
                 row.response().context_menu(|ui| {
                     if ui.button("Refresh").clicked() {
-                        app.get_workspace_mut().get_songs_mut()[index].refresh();
+                        player.get_workspace_mut().get_songs_mut()[index].refresh();
                         ui.close_menu();
                     }
                     if ui.button("Remove").clicked() {
-                        let _ = app.get_workspace_mut().remove_song(index);
+                        let _ = player.get_workspace_mut().remove_song(index);
                         ui.close_menu();
                     }
                     if ui.button("Go to directory").clicked() {
-                        let filepath = app.get_workspace().get_songs()[index].get_path();
+                        let filepath = player.get_workspace().get_songs()[index].get_path();
                         let _ = open::that(filepath.parent().expect("Can't open parent"));
                         ui.close_menu();
                     }
@@ -574,11 +579,11 @@ fn song_table(ui: &mut Ui, app: &mut SfontPlayer) {
 }
 
 /// This will disable the UI if a modal window is open
-fn disable_if_modal(ui: &mut Ui, app: &SfontPlayer) {
-    if app.show_about_modal {
+fn disable_if_modal(ui: &mut Ui, gui: &GuiState) {
+    if gui.show_about_modal {
         ui.disable();
     }
-    if app.show_shortcut_modal {
+    if gui.show_shortcut_modal {
         ui.disable();
     }
 }

@@ -1,5 +1,6 @@
 use std::{error, fmt, fs, path::PathBuf, time::Duration};
 
+use anyhow::bail;
 use rustysynth::MidiFile;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -97,7 +98,10 @@ impl MidiMeta {
     pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
-    pub fn get_error(&self) -> Option<MidiMetaError> {
-        self.error.clone()
+    pub fn get_status(&self) -> anyhow::Result<()> {
+        if let Some(e) = &self.error {
+            bail!(e.clone())
+        }
+        Ok(())
     }
 }
