@@ -112,9 +112,7 @@ impl Workspace {
     pub fn add_font(&mut self, path: PathBuf) {
         if !self.contains_font(&path) {
             self.fonts.push(FontMeta::new(path));
-            if let Err(e) = self.refresh_font_list() {
-                panic!("Refreshing font list failed: {e}");
-            }
+            self.refresh_font_list();
         }
     }
     pub fn remove_font(&mut self, index: usize) -> anyhow::Result<()> {
@@ -147,27 +145,17 @@ impl Workspace {
             return;
         }
         self.font_dir = Some(path);
-        if let Err(e) = self.refresh_font_list() {
-            panic!("Refreshing font list failed: {e}");
-        }
+        self.refresh_font_list();
     }
     pub fn set_font_list_type(&mut self, mode: FileListMode) {
         self.font_list_mode = mode;
-        if let Err(e) = self.refresh_font_list() {
-            panic!("Refreshing font list failed: {e}");
-        }
+        self.refresh_font_list();
     }
     /// Refresh font file list
-    pub fn refresh_fonts(&mut self) {
-        if let Err(e) = self.refresh_font_list() {
-            panic!("Refreshing font list failed: {e}");
-        }
-    }
-    /// Refresh font file list
-    fn refresh_font_list(&mut self) -> anyhow::Result<()> {
+    pub fn refresh_font_list(&mut self) {
         if self.font_list_mode == FileListMode::Manual {
             self.sort_fonts();
-            return Ok(());
+            return;
         }
 
         // Remove files
@@ -175,20 +163,20 @@ impl Workspace {
             let filepath = self.fonts[i].get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.remove_font(i)?;
+                self.remove_font(i).expect("refresh: Font rm failed‽");
             }
             match self.font_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.font_dir.as_deref() {
-                        self.remove_font(i)?;
+                        self.remove_font(i).expect("refresh: Font rm failed‽");
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.font_dir {
                         if !filepath.starts_with(dir) {
-                            self.remove_font(i)?;
+                            self.remove_font(i).expect("refresh: Font rm failed‽");
                         }
                     }
                 }
@@ -200,18 +188,19 @@ impl Workspace {
         // Look for new files
         let Some(dir) = &self.font_dir else {
             self.clear_fonts();
-            return Ok(());
+            return;
         };
         match self.font_list_mode {
             FileListMode::Directory => {
-                let paths = fs::read_dir(dir)?;
-                for entry in paths.filter_map(std::result::Result::ok) {
-                    let path = entry.path();
-                    if self.contains_font(&path) {
-                        continue;
-                    }
-                    if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
-                        self.add_font(path);
+                if let Ok(paths) = fs::read_dir(dir) {
+                    for entry in paths.filter_map(std::result::Result::ok) {
+                        let path = entry.path();
+                        if self.contains_font(&path) {
+                            continue;
+                        }
+                        if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
+                            self.add_font(path);
+                        }
                     }
                 }
             }
@@ -229,7 +218,6 @@ impl Workspace {
             FileListMode::Manual => unreachable!(),
         }
         self.sort_fonts();
-        Ok(())
     }
     fn sort_fonts(&mut self) {
         // Remember the selected
@@ -268,9 +256,7 @@ impl Workspace {
     }
     pub fn set_font_sort(&mut self, sort: FontSort) {
         self.font_sort = sort;
-        if let Err(e) = self.refresh_font_list() {
-            panic!("Refreshing font list failed: {e}");
-        }
+        self.refresh_font_list();
     }
 
     // --- Midi files
@@ -298,9 +284,7 @@ impl Workspace {
     pub fn add_song(&mut self, path: PathBuf) {
         if !self.contains_midi(&path) {
             self.midis.push(MidiMeta::new(path));
-            if let Err(e) = self.refresh_song_list() {
-                panic!("Refreshing song list failed: {e}");
-            }
+            self.refresh_song_list();
         }
     }
     pub fn remove_song(&mut self, index: usize) -> anyhow::Result<()> {
@@ -333,27 +317,17 @@ impl Workspace {
             return;
         }
         self.midi_dir = Some(path);
-        if let Err(e) = self.refresh_song_list() {
-            panic!("Refreshing song list failed: {e}");
-        }
+        self.refresh_song_list();
     }
     pub fn set_song_list_mode(&mut self, mode: FileListMode) {
         self.midi_list_mode = mode;
-        if let Err(e) = self.refresh_song_list() {
-            panic!("Refreshing song list failed: {e}");
-        }
+        self.refresh_song_list();
     }
-    /// Refresh mifi file list
-    pub fn refresh_songs(&mut self) {
-        if let Err(e) = self.refresh_song_list() {
-            panic!("Refreshing song list failed: {e}");
-        }
-    }
-    /// Refresh midi file list.
-    fn refresh_song_list(&mut self) -> anyhow::Result<()> {
+    /// Refresh midi file list
+    pub fn refresh_song_list(&mut self) {
         if self.midi_list_mode == FileListMode::Manual {
             self.sort_songs();
-            return Ok(());
+            return;
         }
 
         // Remove files
@@ -361,20 +335,20 @@ impl Workspace {
             let filepath = self.midis[i].get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.remove_song(i)?;
+                self.remove_song(i).expect("refresh: Song rm failed‽");
             }
             match self.midi_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.midi_dir.as_deref() {
-                        self.remove_song(i)?;
+                        self.remove_song(i).expect("refresh: Song rm failed‽");
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.midi_dir {
                         if !filepath.starts_with(dir) {
-                            self.remove_song(i)?;
+                            self.remove_song(i).expect("refresh: Song rm failed‽");
                         }
                     }
                 }
@@ -386,18 +360,19 @@ impl Workspace {
         // Look for new files
         let Some(dir) = &self.midi_dir else {
             self.clear_songs();
-            return Ok(());
+            return;
         };
         match self.midi_list_mode {
             FileListMode::Directory => {
-                let paths = fs::read_dir(dir)?;
-                for entry in paths.filter_map(std::result::Result::ok) {
-                    let path = entry.path();
-                    if self.contains_midi(&path) {
-                        continue;
-                    }
-                    if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
-                        self.add_song(path);
+                if let Ok(paths) = fs::read_dir(dir) {
+                    for entry in paths.filter_map(std::result::Result::ok) {
+                        let path = entry.path();
+                        if self.contains_midi(&path) {
+                            continue;
+                        }
+                        if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
+                            self.add_song(path);
+                        }
                     }
                 }
             }
@@ -415,7 +390,6 @@ impl Workspace {
             FileListMode::Manual => unreachable!(),
         }
         self.sort_songs();
-        Ok(())
     }
     fn sort_songs(&mut self) {
         // Remember the  selected
@@ -461,9 +435,7 @@ impl Workspace {
     }
     pub fn set_song_sort(&mut self, sort: SongSort) {
         self.song_sort = sort;
-        if let Err(e) = self.refresh_song_list() {
-            panic!("Refreshing song list failed: {e}");
-        }
+        self.refresh_song_list();
     }
 
     // --- Playback Queue
