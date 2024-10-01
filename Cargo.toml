@@ -15,7 +15,7 @@ egui_extras = { version = "0.29", features = [
     "all_loaders",
 ] } # Extra gui components
 rfd = "0.15" # File dialog
-egui-notify = { git = "https://github.com/ItsEthra/egui-notify.git", commit = "2fbf8da60f8775499beccbe59ed0df47fee47079" } # toasts
+egui-notify = { git = "https://github.com/ItsEthra/egui-notify.git", rev = "2fbf8da" } # toasts
 
 # -- Persistence
 serde = { version = "1", features = ["derive"] } # Remember app state
