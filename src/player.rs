@@ -1,10 +1,22 @@
 //! Player app logic module
 
-use std::time::Duration;
-
 use anyhow::bail;
+use audio::AudioPlayer;
+use serde_repr::{Deserialize_repr, Serialize_repr};
+use std::time::Duration;
+use workspace::Workspace;
 
-use crate::{audio::AudioPlayer, workspace::Workspace, RepeatMode};
+pub mod audio;
+pub mod workspace;
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
+#[repr(u8)]
+pub enum RepeatMode {
+    #[default]
+    Disabled,
+    Queue,
+    Song,
+}
 
 /// The Player class does high-level app logic, which includes workspaces and playback.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -55,11 +67,9 @@ impl Default for Player {
 }
 
 impl Player {
+    /// GUI frame update
     pub fn update(&mut self) {
-        // Make sure at least one workspace exists!
-        if self.get_workspaces().is_empty() {
-            self.new_workspace();
-        }
+        self.ensure_workspace_existence();
 
         if !self.is_paused() && self.is_empty() {
             self.advance_queue();
@@ -212,6 +222,45 @@ impl Player {
         // Not dividing the volume by 100 is a mistake you only make once.
         self.audioplayer.set_volume(self.volume * 0.001);
     }
+    // When previous song has ended, advance queue or stop.
+    fn advance_queue(&mut self) {
+        let repeat = self.repeat;
+        let workspace = self.get_playing_workspace_mut();
+
+        let Some(mut queue_index) = workspace.queue_idx else {
+            let _ = workspace.set_song_idx(None);
+            self.stop();
+            return;
+        };
+
+        if repeat == RepeatMode::Song {
+            let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
+            if let Err(e) = self.play_selected_song() {
+                self.notification_queue.push(e.to_string());
+            }
+            return;
+        }
+
+        queue_index += 1;
+
+        // End reached, loop back or bail out
+        if queue_index == workspace.queue.len() {
+            if repeat == RepeatMode::Queue {
+                queue_index = 0;
+            } else {
+                let _ = workspace.set_song_idx(None);
+                self.stop();
+                return;
+            }
+        }
+
+        workspace.queue_idx = Some(queue_index);
+
+        let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
+        if let Err(e) = self.play_selected_song() {
+            self.notification_queue.push(e.to_string());
+        }
+    }
 
     // --- Playback Status
 
@@ -297,6 +346,7 @@ impl Player {
     /// Remove a workspace by index
     pub fn remove_workspace(&mut self, index: usize) {
         self.workspace_delet_queue.push(index);
+        self.ensure_workspace_existence();
     }
     /// Rearrange workspaces
     pub fn move_workspace(&mut self, old_index: usize, new_index: usize) {
@@ -324,46 +374,14 @@ impl Player {
             self.move_workspace(self.workspace_idx, self.workspace_idx + 1);
         }
     }
-
-    // When previous song has ended, advance queue or stop.
-    pub fn advance_queue(&mut self) {
-        let repeat = self.repeat;
-        let workspace = self.get_playing_workspace_mut();
-
-        let Some(mut queue_index) = workspace.queue_idx else {
-            let _ = workspace.set_song_idx(None);
-            self.stop();
-            return;
-        };
-
-        if repeat == RepeatMode::Song {
-            let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
-            if let Err(e) = self.play_selected_song() {
-                self.notification_queue.push(e.to_string());
-            }
-            return;
-        }
-
-        queue_index += 1;
-
-        // End reached, loop back or bail out
-        if queue_index == workspace.queue.len() {
-            if repeat == RepeatMode::Queue {
-                queue_index = 0;
-            } else {
-                let _ = workspace.set_song_idx(None);
-                self.stop();
-                return;
-            }
-        }
-
-        workspace.queue_idx = Some(queue_index);
-
-        let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
-        if let Err(e) = self.play_selected_song() {
-            self.notification_queue.push(e.to_string());
+    /// Make sure at least one workspace exists!
+    fn ensure_workspace_existence(&mut self) {
+        if self.get_workspaces().is_empty() {
+            self.new_workspace();
         }
     }
+
+    // --- Other
 
     pub fn get_notification_queue_mut(&mut self) -> &mut Vec<String> {
         &mut self.notification_queue

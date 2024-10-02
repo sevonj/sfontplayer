@@ -3,7 +3,10 @@ use eframe::egui::{
     Ui, UiBuilder,
 };
 
-use crate::{player::Player, GuiState, RepeatMode};
+use crate::{
+    player::{Player, RepeatMode},
+    GuiState,
+};
 
 const ICON_SIZE: f32 = 20.;
 

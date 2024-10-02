@@ -5,10 +5,9 @@ mod keyboard_shortcuts;
 mod playback_controls;
 mod workspace_select;
 
-use crate::{
-    player::Player,
+use crate::player::{
     workspace::{FileListMode, FontSort, SongSort},
-    GuiState,
+    Player,
 };
 use about::about_modal;
 use conversions::format_duration;
@@ -18,6 +17,7 @@ use eframe::egui::{
     TopBottomPanel, Ui,
 };
 use egui_extras::{Column, TableBuilder};
+use egui_notify::Toasts;
 use keyboard_shortcuts::{consume_shortcuts, shortcut_modal};
 use playback_controls::playback_panel;
 use rfd::FileDialog;
@@ -26,6 +26,41 @@ use std::time::Duration;
 use workspace_select::workspace_tabs;
 
 const TBL_ROW_H: f32 = 16.;
+
+/// For gui stuff that doesn't count as app logic.
+#[derive(serde::Deserialize, serde::Serialize, Default)]
+#[serde(default)]
+pub struct GuiState {
+    pub show_soundfonts: bool,
+    #[serde(skip)]
+    pub show_about_modal: bool,
+    #[serde(skip)]
+    pub show_shortcut_modal: bool,
+    /// Frame update flags. Acted on and cleared at the end of frame update.
+    #[serde(skip)]
+    pub update_flags: UpdateFlags,
+    #[serde(skip)]
+    pub toasts: Toasts,
+}
+
+impl GuiState {
+    pub fn toast_error<S: AsRef<str>>(&mut self, caption: S) {
+        self.toasts
+            .error(caption.as_ref())
+            .set_show_progress_bar(false)
+            .set_closable(true);
+    }
+}
+
+#[derive(Default)]
+pub struct UpdateFlags {
+    scroll_to_song: bool,
+}
+impl UpdateFlags {
+    pub fn clear(&mut self) {
+        self.scroll_to_song = false;
+    }
+}
 
 #[allow(clippy::too_many_lines)]
 pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {

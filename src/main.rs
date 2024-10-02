@@ -1,35 +1,9 @@
 use eframe::egui::{Context, ViewportBuilder};
-use egui_notify::Toasts;
-use gui::draw_gui;
+use gui::{draw_gui, GuiState};
 use player::Player;
-use serde_repr::{Deserialize_repr, Serialize_repr};
 
-mod audio;
 mod gui;
 mod player;
-mod workspace;
-
-#[derive(serde::Deserialize, serde::Serialize, Default)]
-#[serde(default)]
-struct GuiState {
-    pub show_soundfonts: bool,
-    #[serde(skip)]
-    pub show_about_modal: bool,
-    #[serde(skip)]
-    pub show_shortcut_modal: bool,
-    #[serde(skip)]
-    pub update_flags: UpdateFlags,
-    #[serde(skip)]
-    pub toasts: Toasts,
-}
-impl GuiState {
-    pub fn toast_error<S: AsRef<str>>(&mut self, caption: S) {
-        self.toasts
-            .error(caption.as_ref())
-            .set_show_progress_bar(false)
-            .set_closable(true);
-    }
-}
 
 fn main() {
     let native_options = eframe::NativeOptions {
@@ -44,26 +18,6 @@ fn main() {
         native_options,
         Box::new(|cc| Ok(Box::new(SfontPlayer::new(cc)))),
     );
-}
-
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Default, Clone, Copy)]
-#[repr(u8)]
-enum RepeatMode {
-    #[default]
-    Disabled,
-    Queue,
-    Song,
-}
-
-/// GUI update flags. Cleared at the end of frame update.
-#[derive(Default)]
-struct UpdateFlags {
-    scroll_to_song: bool,
-}
-impl UpdateFlags {
-    fn clear(&mut self) {
-        self.scroll_to_song = false;
-    }
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -94,7 +48,7 @@ impl eframe::App for SfontPlayer {
     }
 
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        // Make sure umage loader exists!
+        // Make sure image loader exists!
         egui_extras::install_image_loaders(ctx);
 
         self.player.update();

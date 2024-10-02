@@ -1,7 +1,10 @@
 use eframe::egui::{Button, TextEdit, Theme, ThemePreference, Ui, ViewportCommand};
 use rfd::FileDialog;
 
-use crate::{player::Player, workspace::FileListMode, GuiState};
+use crate::{
+    player::{workspace::FileListMode, Player},
+    GuiState,
+};
 
 use super::keyboard_shortcuts::{
     GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REMOVE,

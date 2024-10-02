@@ -40,6 +40,7 @@ impl Default for AudioPlayer {
 
 impl AudioPlayer {
     // --- File Management
+
     /// Choose new soundfont
     pub(crate) fn set_soundfont(&mut self, path: PathBuf) {
         self.path_soundfont = Some(path);
@@ -90,7 +91,7 @@ impl AudioPlayer {
 
     // --- Playback State
 
-    /// Pause status
+    /// Pause status. Fully stopped should also always be paused.
     pub(crate) fn is_paused(&self) -> bool {
         self.sink.is_paused()
     }
