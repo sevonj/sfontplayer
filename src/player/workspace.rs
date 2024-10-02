@@ -1,12 +1,12 @@
-mod font_meta;
-mod midi_meta;
-
 use font_meta::FontMeta;
 use midi_meta::MidiMeta;
 use rand::seq::SliceRandom;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{error::Error, fmt, fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
+
+mod font_meta;
+mod midi_meta;
 
 /// Option for how soundfonts or midis are managed
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy, Debug)]

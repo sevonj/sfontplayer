@@ -1,33 +1,33 @@
 use eframe::egui::{scroll_area::ScrollBarVisibility, Button, Frame, ScrollArea, Stroke, Ui};
 
-use crate::SfontPlayer;
+use crate::player::Player;
 
-pub fn workspace_tabs(ui: &mut Ui, app: &mut SfontPlayer) {
+pub fn workspace_tabs(ui: &mut Ui, player: &mut Player) {
     ScrollArea::horizontal()
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
         .drag_to_scroll(true)
         .enable_scrolling(true)
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                for i in 0..app.get_workspaces().len() {
-                    workspace_tab(ui, app, i);
+                for i in 0..player.get_workspaces().len() {
+                    workspace_tab(ui, player, i);
                 }
                 if ui.add(Button::new("➕").frame(false)).clicked() {
-                    app.new_workspace();
-                    app.switch_workspace(app.get_workspaces().len() - 1);
+                    player.new_workspace();
+                    player.switch_to_workspace(player.get_workspaces().len() - 1);
                 }
             });
         });
 }
 
-fn workspace_tab(ui: &mut Ui, app: &mut SfontPlayer, index: usize) {
-    let mut workspace_title = app.get_workspaces()[index].name.clone();
-    if !app.is_paused() && app.playing_workspace_idx == index {
+fn workspace_tab(ui: &mut Ui, player: &mut Player, index: usize) {
+    let mut workspace_title = player.get_workspaces()[index].name.clone();
+    if !player.is_paused() && player.get_playing_workspace_idx() == index {
         workspace_title = "▶ ".to_owned() + &workspace_title;
-    } else if !app.is_empty() && app.playing_workspace_idx == index {
+    } else if !player.is_empty() && player.get_playing_workspace_idx() == index {
         workspace_title = "⏸ ".to_owned() + &workspace_title;
     }
-    let current_tab = app.workspace_idx == index;
+    let current_tab = player.get_workspace_idx() == index;
 
     let style = (*ui.ctx().style()).clone();
     let fill = if current_tab {
@@ -44,10 +44,10 @@ fn workspace_tab(ui: &mut Ui, app: &mut SfontPlayer, index: usize) {
         .fill(fill)
         .show(ui, |ui| {
             if ui.add(Button::new(workspace_title).frame(false)).clicked() {
-                app.workspace_idx = index;
+                player.switch_to_workspace(index);
             }
             if ui.add(Button::new("❌").frame(false)).clicked() {
-                app.remove_workspace(index);
+                player.remove_workspace(index);
             }
         });
 }

@@ -1,42 +1,45 @@
-use std::{error, fmt, fs, path::PathBuf};
+use std::{error, fmt, fs, path::PathBuf, time::Duration};
 
-use rustysynth::SoundFont;
+use anyhow::bail;
+use rustysynth::MidiFile;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum FontMetaError {
+pub enum MidiMetaError {
     CantAccessFile { filename: String, message: String },
     InvalidFile { filename: String, message: String },
 }
-impl error::Error for FontMetaError {}
-impl fmt::Display for FontMetaError {
+impl error::Error for MidiMetaError {}
+impl fmt::Display for MidiMetaError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::CantAccessFile { filename, message } => {
                 write!(f, "Can't access {filename}: {message}")
             }
             Self::InvalidFile { filename, message } => {
-                write!(f, "{filename} is not a valid soundfont: {message}")
+                write!(f, "{filename} is not a valid midi file: {message}")
             }
         }
     }
 }
 
-/// Reference to a font file with metadata
+/// Reference to a midi file with metadata
 #[derive(serde::Deserialize, serde::Serialize, Default, Clone)]
 #[serde(default)]
-pub struct FontMeta {
+pub struct MidiMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
-    error: Option<FontMetaError>,
+    duration: Option<Duration>,
+    error: Option<MidiMetaError>,
     pub is_queued_for_deletion: bool,
 }
 
-impl FontMeta {
+impl MidiMeta {
     /// Create from file path
     pub fn new(filepath: PathBuf) -> Self {
         let mut this = Self {
             filepath,
             filesize: None,
+            duration: None,
             error: None,
             is_queued_for_deletion: false,
         };
@@ -46,27 +49,33 @@ impl FontMeta {
 
     /// Refresh file metadata
     pub fn refresh(&mut self) {
+        let error;
+        let mut duration = None;
+
         self.filesize =
             fs::metadata(&self.filepath).map_or(None, |file_meta| Some(file_meta.len()));
 
-        let error;
         match fs::File::open(&self.filepath) {
-            Ok(mut file) => match SoundFont::new(&mut file) {
-                Ok(_) => error = None,
+            Ok(mut file) => match MidiFile::new(&mut file) {
+                Ok(midifile) => {
+                    duration = Some(Duration::from_secs_f64(midifile.get_length()));
+                    error = None;
+                }
                 Err(e) => {
-                    error = Some(FontMetaError::InvalidFile {
+                    error = Some(MidiMetaError::InvalidFile {
                         filename: self.get_name(),
                         message: e.to_string(),
                     });
                 }
             },
             Err(e) => {
-                error = Some(FontMetaError::CantAccessFile {
+                error = Some(MidiMetaError::CantAccessFile {
                     filename: self.get_name(),
                     message: e.to_string(),
                 });
             }
         }
+        self.duration = duration;
         self.error = error;
     }
 
@@ -83,10 +92,16 @@ impl FontMeta {
             .expect("Invalid filename")
             .to_owned()
     }
+    pub const fn get_duration(&self) -> Option<Duration> {
+        self.duration
+    }
     pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
-    pub fn get_error(&self) -> Option<FontMetaError> {
-        self.error.clone()
+    pub fn get_status(&self) -> anyhow::Result<()> {
+        if let Some(e) = &self.error {
+            bail!(e.clone())
+        }
+        Ok(())
     }
 }

@@ -3,110 +3,117 @@ use eframe::egui::{
     Ui, UiBuilder,
 };
 
-use crate::{RepeatMode, SfontPlayer};
+use crate::{
+    player::{Player, RepeatMode},
+    GuiState,
+};
 
 const ICON_SIZE: f32 = 20.;
 
 use super::conversions::format_duration;
-pub fn playback_panel(ui: &mut Ui, app: &mut SfontPlayer) {
+pub fn playback_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.horizontal(|ui| {
-        playback_controls(ui, app);
+        playback_controls(ui, player, gui);
 
         let slider_width = f32::max(ui.available_width() - 144., 64.);
-        position_control(ui, app, slider_width);
+        position_control(ui, player, slider_width);
 
-        volume_control(ui, app);
+        volume_control(ui, player);
     });
 }
 
-fn playback_controls(ui: &mut Ui, app: &mut SfontPlayer) {
-    let (back_enabled, skip_enabled) = if app.repeat == RepeatMode::Queue && app.is_playing {
-        (true, true)
-    } else if let Some(idx) = app.get_playing_workspace().queue_idx {
-        (idx > 0, idx < app.get_playing_workspace().queue.len() - 1)
-    } else {
-        (false, false)
-    };
+fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
+    let (back_enabled, skip_enabled) =
+        if player.get_repeat() == RepeatMode::Queue && player.is_playing() {
+            (true, true)
+        } else if let Some(idx) = player.get_playing_workspace().queue_idx {
+            (
+                idx > 0,
+                idx < player.get_playing_workspace().queue.len() - 1,
+            )
+        } else {
+            (false, false)
+        };
 
     // Current song info
     let current_hover_text = format!(
         "Currently {}: {}",
-        if app.is_empty() {
+        if player.is_empty() {
             "selected"
         } else {
             "playing"
         },
-        app.get_playing_workspace().get_song_idx().map_or_else(
+        player.get_playing_workspace().get_song_idx().map_or_else(
             || "Nothing".into(),
-            |index| app.get_playing_workspace().get_songs()[index].get_name()
+            |index| player.get_playing_workspace().get_songs()[index].get_name()
         )
     );
     if ui
         .add_enabled(
-            app.get_playing_workspace().get_song_idx().is_some(),
+            player.get_playing_workspace().get_song_idx().is_some(),
             Button::new(RichText::new("🎵").size(ICON_SIZE)).frame(false),
         )
         .on_hover_text(current_hover_text)
         .clicked()
     {
-        app.switch_workspace(app.playing_workspace_idx);
-        app.update_flags.scroll_to_song = true;
+        player.switch_to_workspace(player.get_playing_workspace_idx());
+        gui.update_flags.scroll_to_song = true;
     }
 
     // Shuffle button
     if ui
         .add(SelectableLabel::new(
-            app.shuffle,
+            player.get_shuffle(),
             RichText::new("🔀").size(ICON_SIZE),
         ))
         .clicked()
     {
-        app.toggle_shuffle();
+        player.toggle_shuffle();
     };
     // Repeat
-    let repeat_text = if app.repeat == RepeatMode::Song {
+    let repeat_text = if player.get_repeat() == RepeatMode::Song {
         "🔂"
     } else {
         "🔁"
     };
     if ui
         .add(SelectableLabel::new(
-            app.repeat != RepeatMode::Disabled,
+            player.get_repeat() != RepeatMode::Disabled,
             RichText::new(repeat_text).size(ICON_SIZE),
         ))
         .clicked()
     {
-        app.cycle_repeat();
+        player.cycle_repeat();
     };
 
     // Skip back
     ui.add_enabled_ui(back_enabled, |ui| {
         if icon_button(ui, include_image!("../assets/icon_prev.svg"), "back").clicked() {
-            app.skip_back();
+            player.skip_back();
         }
     });
     // Playpause
-    if app.is_paused() {
+    if player.is_paused() {
         if icon_button(ui, include_image!("../assets/icon_play.svg"), "play").clicked() {
-            if app.is_empty() {
-                app.start();
+            if player.is_empty() {
+                player.start();
             } else {
-                app.play();
+                player.play();
             }
         };
     } else if icon_button(ui, include_image!("../assets/icon_pause.svg"), "pause").clicked() {
-        app.pause();
+        player.pause();
     }
     // Skip
     ui.add_enabled_ui(skip_enabled, |ui| {
         if icon_button(ui, include_image!("../assets/icon_next.svg"), "skip").clicked() {
-            app.skip();
+            player.skip();
         }
     });
     // Skip
-    ui.add_enabled_ui(!app.is_empty(), |ui| {
+    ui.add_enabled_ui(!player.is_empty(), |ui| {
         if icon_button(ui, include_image!("../assets/icon_stop.svg"), "stop").clicked() {
-            app.stop();
+            player.stop();
         }
     });
 }
@@ -123,9 +130,9 @@ fn icon_button(ui: &mut Ui, source: ImageSource, id: &str) -> Response {
 }
 
 /// Song position slider
-fn position_control(ui: &mut Ui, app: &SfontPlayer, width: f32) {
-    let len = app.get_midi_length();
-    let pos = app.get_midi_position();
+fn position_control(ui: &mut Ui, player: &Player, width: f32) {
+    let len = player.get_playback_length();
+    let pos = player.get_playback_position();
 
     // This stops the slider from showing halfway if len is zero.
     let slider_len = if len.is_zero() { 1. } else { len.as_secs_f64() };
@@ -143,8 +150,8 @@ fn position_control(ui: &mut Ui, app: &SfontPlayer, width: f32) {
     ui.label(format!("{}/{}", format_duration(pos), format_duration(len)));
 }
 
-fn volume_control(ui: &mut Ui, app: &mut SfontPlayer) {
-    let speaker_icon_str = match app.volume {
+fn volume_control(ui: &mut Ui, player: &Player) {
+    let speaker_icon_str = match player.get_volume() {
         x if x == 0.0 => "🔇",
         x if (0.0..33.0).contains(&x) => "🔈",
         x if (33.0..66.0).contains(&x) => "🔉",
@@ -154,16 +161,16 @@ fn volume_control(ui: &mut Ui, app: &mut SfontPlayer) {
     ui.menu_button(RichText::new(speaker_icon_str).size(ICON_SIZE), |ui| {
         if ui
             .add(
-                Slider::new(&mut app.volume, 0.0..=100.)
+                Slider::new(&mut player.get_volume(), 0.0..=100.)
                     .vertical()
                     .show_value(false)
                     .trailing_fill(true),
             )
             .changed()
         {
-            app.update_volume();
+            player.update_volume();
         }
     });
 
-    ui.label(format!("{:00}", app.volume));
+    ui.label(format!("{:00}", player.get_volume()));
 }
