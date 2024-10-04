@@ -3,7 +3,7 @@
 use anyhow::bail;
 use audio::AudioPlayer;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::time::Duration;
+use std::{error, fmt, time::Duration};
 use workspace::Workspace;
 
 pub mod audio;
@@ -16,6 +16,29 @@ pub enum RepeatMode {
     Disabled,
     Queue,
     Song,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum PlayerError {
+    InvalidWorkspaceIndex { index: usize },
+    CantMoveWorkspace,
+    CantSwitchWorkspace,
+    NoQueueIndex,
+    NoSoundfont,
+}
+impl error::Error for PlayerError {}
+impl fmt::Display for PlayerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidWorkspaceIndex { index } => {
+                write!(f, "Workspace index {index} is out of bounds.")
+            }
+            Self::CantMoveWorkspace => write!(f, "Can't move this workspace further."),
+            Self::CantSwitchWorkspace => write!(f, "Can't switch workspaces further."),
+            Self::NoQueueIndex => write!(f, "No queue index!"),
+            Self::NoSoundfont => write!(f, "No soundfont selected!"),
+        }
+    }
 }
 
 /// The Player class does high-level app logic, which includes workspaces and playback.
@@ -72,7 +95,9 @@ impl Player {
         self.ensure_workspace_existence();
 
         if !self.is_paused() && self.is_empty() {
-            self.advance_queue();
+            if let Err(e) = self.advance_queue() {
+                self.notification_queue.push(e.to_string());
+            }
         }
 
         // Deletion queues
@@ -103,15 +128,15 @@ impl Player {
         }
     }
     /// Load currently selected song & font from workspace and start playing
-    pub fn play_selected_song(&mut self) -> anyhow::Result<()> {
+    fn play_selected_song(&mut self) -> anyhow::Result<()> {
         self.audioplayer.stop_playback();
         let workspace = self.get_playing_workspace_mut();
 
         let Some(font_index) = workspace.get_font_idx() else {
-            bail!("No soundfont selected!");
+            bail!(PlayerError::NoSoundfont);
         };
         let Some(queue_index) = workspace.queue_idx else {
-            bail!("Can't load song: No queue index!");
+            bail!(PlayerError::NoQueueIndex);
         };
         let midi_index = workspace.queue[queue_index];
 
@@ -141,6 +166,7 @@ impl Player {
     pub fn stop(&mut self) {
         self.audioplayer.stop_playback();
         self.get_playing_workspace_mut().queue_idx = None;
+        let _ = self.get_playing_workspace_mut().set_song_idx(None);
         self.is_playing = false;
     }
     /// Unpause
@@ -154,41 +180,35 @@ impl Player {
     /// Play previous song
     pub fn skip_back(&mut self) {
         if let Some(mut index) = self.get_playing_workspace().queue_idx {
-            if index == 0 {
-                if self.repeat == RepeatMode::Queue {
-                    index = self.get_playing_workspace().queue.len() - 1;
-                    self.get_playing_workspace_mut().queue_idx = Some(index);
-                    if let Err(e) = self.play_selected_song() {
-                        self.notification_queue.push(e.to_string());
-                    }
-                    return;
+            if index > 0 {
+                index -= 1;
+                self.get_playing_workspace_mut().queue_idx = Some(index);
+                if let Err(e) = self.play_selected_song() {
+                    self.notification_queue.push(e.to_string());
                 }
-                return;
-            }
-            index -= 1;
-            self.get_playing_workspace_mut().queue_idx = Some(index);
-            if let Err(e) = self.play_selected_song() {
-                self.notification_queue.push(e.to_string());
+            } else if self.repeat == RepeatMode::Queue {
+                index = self.get_playing_workspace().queue.len() - 1;
+                self.get_playing_workspace_mut().queue_idx = Some(index);
+                if let Err(e) = self.play_selected_song() {
+                    self.notification_queue.push(e.to_string());
+                }
             }
         }
     }
     /// Play next song
     pub fn skip(&mut self) {
-        if let Some(mut index) = self.get_playing_workspace().queue_idx {
-            index += 1;
-            if index >= self.get_playing_workspace().queue.len() {
-                if self.repeat == RepeatMode::Queue {
-                    self.get_playing_workspace_mut().queue_idx = Some(0);
-                    if let Err(e) = self.play_selected_song() {
-                        self.notification_queue.push(e.to_string());
-                    }
-                    return;
+        if let Some(index) = self.get_playing_workspace().queue_idx {
+            if index < self.get_playing_workspace().queue.len() - 1 {
+                self.get_playing_workspace_mut().queue_idx = Some(index + 1);
+                if let Err(e) = self.play_selected_song() {
+                    self.notification_queue.push(e.to_string());
                 }
-                return;
             }
-            self.get_playing_workspace_mut().queue_idx = Some(index);
-            if let Err(e) = self.play_selected_song() {
-                self.notification_queue.push(e.to_string());
+            if self.repeat == RepeatMode::Queue {
+                self.get_playing_workspace_mut().queue_idx = Some(0);
+                if let Err(e) = self.play_selected_song() {
+                    self.notification_queue.push(e.to_string());
+                }
             }
         }
     }
@@ -223,43 +243,44 @@ impl Player {
         self.audioplayer.set_volume(self.volume * 0.001);
     }
     // When previous song has ended, advance queue or stop.
-    fn advance_queue(&mut self) {
+    fn advance_queue(&mut self) -> anyhow::Result<()> {
         let repeat = self.repeat;
         let workspace = self.get_playing_workspace_mut();
 
         let Some(mut queue_index) = workspace.queue_idx else {
-            let _ = workspace.set_song_idx(None);
             self.stop();
-            return;
+            bail!(PlayerError::NoQueueIndex)
         };
 
+        // Replay the same song
         if repeat == RepeatMode::Song {
-            let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
-            if let Err(e) = self.play_selected_song() {
-                self.notification_queue.push(e.to_string());
-            }
-            return;
+            workspace
+                .set_song_idx(Some(workspace.queue[queue_index]))
+                .expect("advance_queue: repeat song idx failed?!");
+            self.play_selected_song()?;
+            return Ok(());
         }
 
         queue_index += 1;
 
-        // End reached, loop back or bail out
+        // Queue end reached, back to start or bail out
         if queue_index == workspace.queue.len() {
             if repeat == RepeatMode::Queue {
                 queue_index = 0;
             } else {
                 let _ = workspace.set_song_idx(None);
                 self.stop();
-                return;
+                return Ok(());
             }
         }
 
+        // Play next song in queue
         workspace.queue_idx = Some(queue_index);
-
-        let _ = workspace.set_song_idx(Some(workspace.queue[queue_index]));
-        if let Err(e) = self.play_selected_song() {
-            self.notification_queue.push(e.to_string());
-        }
+        workspace
+            .set_song_idx(Some(workspace.queue[queue_index]))
+            .expect("advance_queue: next song idx failed?!");
+        self.play_selected_song()?;
+        Ok(())
     }
 
     // --- Playback Status
@@ -325,31 +346,49 @@ impl Player {
         &mut self.workspaces[self.workspace_idx]
     }
     /// Switch to another workspace
-    pub fn switch_to_workspace(&mut self, index: usize) {
+    pub fn switch_to_workspace(&mut self, index: usize) -> anyhow::Result<()> {
+        if index >= self.workspaces.len() {
+            bail!(PlayerError::InvalidWorkspaceIndex { index });
+        }
         self.workspace_idx = index;
+        Ok(())
     }
-    pub fn switch_workspace_left(&mut self) {
-        if self.workspace_idx > 0 {
-            self.workspace_idx -= 1;
+    pub fn switch_workspace_left(&mut self) -> anyhow::Result<()> {
+        if self.workspace_idx == 0 {
+            bail!(PlayerError::CantSwitchWorkspace);
         }
+        self.workspace_idx -= 1;
+        Ok(())
     }
-    pub fn switch_workspace_right(&mut self) {
-        if self.workspace_idx < self.workspaces.len() - 1 {
-            self.workspace_idx += 1;
+    pub fn switch_workspace_right(&mut self) -> anyhow::Result<()> {
+        if self.workspace_idx >= self.workspaces.len() - 1 {
+            bail!(PlayerError::CantSwitchWorkspace);
         }
+        self.workspace_idx += 1;
+        Ok(())
     }
-    /// Create a new workspace
+    /// Create a new workspace and switch to it.
     pub fn new_workspace(&mut self) {
         self.workspaces.push(Workspace::default());
         self.workspace_idx = self.workspaces.len() - 1;
     }
     /// Remove a workspace by index
-    pub fn remove_workspace(&mut self, index: usize) {
+    pub fn remove_workspace(&mut self, index: usize) -> anyhow::Result<()> {
+        if index >= self.workspaces.len() {
+            bail!(PlayerError::InvalidWorkspaceIndex { index });
+        }
         self.workspace_delet_queue.push(index);
         self.ensure_workspace_existence();
+        Ok(())
     }
     /// Rearrange workspaces
-    pub fn move_workspace(&mut self, old_index: usize, new_index: usize) {
+    pub fn move_workspace(&mut self, old_index: usize, new_index: usize) -> anyhow::Result<()> {
+        if old_index >= self.workspaces.len() {
+            bail!(PlayerError::InvalidWorkspaceIndex { index: old_index });
+        }
+        if new_index >= self.workspaces.len() {
+            bail!(PlayerError::InvalidWorkspaceIndex { index: new_index });
+        }
         let workspace = self.workspaces.remove(old_index); // Remove at old index
         self.workspaces.insert(new_index, workspace); // Reinsert at new index
 
@@ -361,18 +400,25 @@ impl Player {
         } else if new_index > self.workspace_idx && self.workspace_idx <= old_index {
             self.playing_workspace_idx += 1;
         }
+        Ok(())
     }
     /// Move current workspace left
-    pub fn move_workspace_left(&mut self) {
-        if self.workspace_idx > 0 {
-            self.move_workspace(self.workspace_idx, self.workspace_idx - 1);
+    pub fn move_workspace_left(&mut self) -> anyhow::Result<()> {
+        if self.workspace_idx == 0 {
+            bail!(PlayerError::CantMoveWorkspace);
         }
+        self.move_workspace(self.workspace_idx, self.workspace_idx - 1)
+            .expect("move_workspace_left out of bounds?!");
+        Ok(())
     }
     /// Move current workspace right
-    pub fn move_workspace_right(&mut self) {
-        if self.workspace_idx < self.workspaces.len() - 1 {
-            self.move_workspace(self.workspace_idx, self.workspace_idx + 1);
+    pub fn move_workspace_right(&mut self) -> anyhow::Result<()> {
+        if self.workspace_idx >= self.workspaces.len() - 1 {
+            bail!(PlayerError::CantMoveWorkspace);
         }
+        self.move_workspace(self.workspace_idx, self.workspace_idx + 1)
+            .expect("move_workspace_right out of bounds?!");
+        Ok(())
     }
     /// Make sure at least one workspace exists!
     fn ensure_workspace_existence(&mut self) {

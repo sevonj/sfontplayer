@@ -138,7 +138,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player) {
             )
             .clicked()
         {
-            player.switch_workspace_left();
+            let _ = player.switch_workspace_left();
             ui.close_menu();
         }
         if ui
@@ -149,7 +149,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player) {
             )
             .clicked()
         {
-            player.switch_workspace_right();
+            let _ = player.switch_workspace_right();
             ui.close_menu();
         }
         if ui
@@ -160,7 +160,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player) {
             )
             .clicked()
         {
-            player.move_workspace_left();
+            let _ = player.move_workspace_left();
             ui.close_menu();
         }
         if ui
@@ -171,7 +171,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player) {
             )
             .clicked()
         {
-            player.move_workspace_right();
+            let _ = player.move_workspace_right();
             ui.close_menu();
         }
         if ui
@@ -181,7 +181,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player) {
             )
             .clicked()
         {
-            player.remove_workspace(player.get_workspace_idx());
+            let _ = player.remove_workspace(player.get_workspace_idx());
             ui.close_menu();
         }
         if ui
@@ -191,7 +191,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player) {
             )
             .clicked()
         {
-            player.remove_workspace(player.get_workspace_idx());
+            let _ = player.remove_workspace(player.get_workspace_idx());
             ui.close_menu();
         }
     });
