@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use eframe::egui::{Context, ViewportBuilder};
 use gui::{draw_gui, GuiState};
 use player::Player;
@@ -48,23 +50,22 @@ impl eframe::App for SfontPlayer {
     }
 
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        // Make sure image loader exists!
-        egui_extras::install_image_loaders(ctx);
-
+        // Run app logic
         self.player.update();
 
+        // Draw gui
+        egui_extras::install_image_loaders(ctx);
         draw_gui(ctx, &mut self.player, &mut self.gui_state);
+        self.gui_state.update_flags.clear();
 
-        let notifications = self.player.get_notification_queue_mut();
-        while !notifications.is_empty() {
-            self.gui_state.toast_error(notifications.remove(0));
-        }
-        self.gui_state.toasts.show(ctx);
-
+        // Repaint continuously while playing
         if !self.player.is_paused() {
             ctx.request_repaint();
         }
 
-        self.gui_state.update_flags.clear();
+        // Repaint periodically because app logic needs to run.
+        if !ctx.has_requested_repaint() {
+            ctx.request_repaint_after(Duration::from_millis(500));
+        };
     }
 }
