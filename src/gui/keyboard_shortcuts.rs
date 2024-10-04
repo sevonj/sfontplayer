@@ -239,22 +239,30 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
         // --- Workspaces
 
         if input.consume_shortcut(&WORKSPACE_SWITCHLEFT) {
-            player.switch_workspace_left();
+            if let Err(e) = player.switch_workspace_left() {
+                gui.toast_error(e.to_string());
+            }
         }
         if input.consume_shortcut(&WORKSPACE_SWITCHRIGHT) {
-            player.switch_workspace_right();
+            if let Err(e) = player.switch_workspace_right() {
+                gui.toast_error(e.to_string());
+            }
         }
         if input.consume_shortcut(&WORKSPACE_MOVELEFT) {
-            player.move_workspace_left();
+            if let Err(e) = player.move_workspace_left() {
+                gui.toast_error(e.to_string());
+            }
         }
         if input.consume_shortcut(&WORKSPACE_MOVERIGHT) {
-            player.move_workspace_right();
+            if let Err(e) = player.move_workspace_right() {
+                gui.toast_error(e.to_string());
+            }
         }
         if input.consume_shortcut(&WORKSPACE_CREATE) {
             player.new_workspace();
         }
         if input.consume_shortcut(&WORKSPACE_REMOVE) {
-            player.remove_workspace(player.get_workspace_idx());
+            let _ = player.remove_workspace(player.get_workspace_idx());
         }
 
         // --- GUI

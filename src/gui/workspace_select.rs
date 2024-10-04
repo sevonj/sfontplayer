@@ -14,7 +14,6 @@ pub fn workspace_tabs(ui: &mut Ui, player: &mut Player) {
                 }
                 if ui.add(Button::new("➕").frame(false)).clicked() {
                     player.new_workspace();
-                    player.switch_to_workspace(player.get_workspaces().len() - 1);
                 }
             });
         });
@@ -44,10 +43,10 @@ fn workspace_tab(ui: &mut Ui, player: &mut Player, index: usize) {
         .fill(fill)
         .show(ui, |ui| {
             if ui.add(Button::new(workspace_title).frame(false)).clicked() {
-                player.switch_to_workspace(index);
+                let _ = player.switch_to_workspace(index);
             }
             if ui.add(Button::new("❌").frame(false)).clicked() {
-                player.remove_workspace(index);
+                let _ = player.remove_workspace(index);
             }
         });
 }

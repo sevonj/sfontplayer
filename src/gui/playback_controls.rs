@@ -56,7 +56,7 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         .on_hover_text(current_hover_text)
         .clicked()
     {
-        player.switch_to_workspace(player.get_playing_workspace_idx());
+        let _ = player.switch_to_workspace(player.get_playing_workspace_idx());
         gui.update_flags.scroll_to_song = true;
     }
 
