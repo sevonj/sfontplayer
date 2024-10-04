@@ -6,8 +6,10 @@
 A simple midi player that makes soundfont comparison easy.
 
 ## Main features:
-- Changing between soundfonts takes one click
-- Multiple workspaces
+- **Changing between soundfonts takes one click**  
+  This was my sole reason to start this project.
+- **Multiple workspaces**  
+  A workspace can automatically track contents of a directory, or be used as a playlist.
 
 ## Download
 Go to [Releases](https://github.com/sevonj/sfontplayer/releases)  
