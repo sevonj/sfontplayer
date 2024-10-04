@@ -66,7 +66,6 @@ impl eframe::App for SfontPlayer {
         // Repaint periodically because app logic needs to run.
         if !ctx.has_requested_repaint() {
             ctx.request_repaint_after(Duration::from_millis(500));
-            println!("REPAINT");
         };
     }
 }
