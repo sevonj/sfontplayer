@@ -3,6 +3,7 @@
 use anyhow::bail;
 use audio::AudioPlayer;
 use eframe::egui::mutex::Mutex;
+#[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use souvlaki::{MediaControlEvent, MediaControls};
@@ -68,6 +69,7 @@ pub struct Player {
     /// Ranges 0.0..=100.0 as in percentage.
     volume: f32,
     /// OS integration
+    #[cfg(not(target_os = "windows"))]
     #[serde(skip)]
     mediacontrol: MediaControls,
     /// Events from system to the player.
@@ -95,6 +97,7 @@ pub struct Player {
 impl Default for Player {
     fn default() -> Self {
         let mediacontrol_events = Arc::new(Mutex::new(vec![]));
+        #[cfg(not(target_os = "windows"))]
         let mediacontrol = create_mediacontrols(Arc::clone(&mediacontrol_events));
 
         Self {
@@ -102,6 +105,7 @@ impl Default for Player {
             is_playing: false,
 
             volume: 100.,
+            #[cfg(not(target_os = "windows"))]
             mediacontrol,
             mediacontrol_events,
             player_events: vec![],
