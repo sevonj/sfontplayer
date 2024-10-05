@@ -59,7 +59,7 @@ impl UpdateFlags {
 pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     about_modal(ctx, gui);
     shortcut_modal(ctx, gui);
-    show_toasts(ctx, player, gui);
+    gui.toasts.show(ctx);
     consume_shortcuts(ctx, player, gui);
     handle_dropped_files(ctx);
 
@@ -101,14 +101,6 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         disable_if_modal(ui, gui);
         song_table(ui, player, gui);
     });
-}
-
-fn show_toasts(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
-    let notifications = player.get_notification_queue_mut();
-    while !notifications.is_empty() {
-        gui.toast_error(notifications.remove(0));
-    }
-    gui.toasts.show(ctx);
 }
 
 /// TODO: Drag files into the window to add them

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use eframe::egui::{Context, ViewportBuilder};
+use eframe::egui::{Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
 use player::Player;
 
@@ -42,6 +42,20 @@ impl SfontPlayer {
 
         Self::default()
     }
+
+    fn handle_events(&mut self, ctx: &Context) {
+        let event_queue = self.player.get_event_queue();
+        while !event_queue.is_empty() {
+            match event_queue.remove(0) {
+                player::PlayerEvent::Raise => {
+                    ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+                    ctx.send_viewport_cmd(ViewportCommand::Focus);
+                }
+                player::PlayerEvent::Exit => ctx.send_viewport_cmd(ViewportCommand::Close),
+                player::PlayerEvent::NotifyError(message) => self.gui_state.toast_error(message),
+            }
+        }
+    }
 }
 
 impl eframe::App for SfontPlayer {
@@ -52,6 +66,7 @@ impl eframe::App for SfontPlayer {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         // Run app logic
         self.player.update();
+        self.handle_events(ctx);
 
         // Draw gui
         egui_extras::install_image_loaders(ctx);

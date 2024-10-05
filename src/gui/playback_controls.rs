@@ -150,7 +150,7 @@ fn position_control(ui: &mut Ui, player: &Player, width: f32) {
     ui.label(format!("{}/{}", format_duration(pos), format_duration(len)));
 }
 
-fn volume_control(ui: &mut Ui, player: &Player) {
+fn volume_control(ui: &mut Ui, player: &mut Player) {
     let speaker_icon_str = match player.get_volume() {
         x if x == 0.0 => "🔇",
         x if (0.0..33.0).contains(&x) => "🔈",
@@ -159,16 +159,17 @@ fn volume_control(ui: &mut Ui, player: &Player) {
     };
 
     ui.menu_button(RichText::new(speaker_icon_str).size(ICON_SIZE), |ui| {
+        let mut volume = player.get_volume();
         if ui
             .add(
-                Slider::new(&mut player.get_volume(), 0.0..=100.)
+                Slider::new(&mut volume, 0.0..=100.)
                     .vertical()
                     .show_value(false)
                     .trailing_fill(true),
             )
             .changed()
         {
-            player.update_volume();
+            player.set_volume(volume);
         }
     });
 

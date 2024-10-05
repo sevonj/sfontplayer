@@ -32,6 +32,7 @@ walkdir = "2.5"
 size_format = "1.0"   # File sizes into string
 open = "5.3"          # Open path in file exprorer
 anyhow = "1.0"        # Errors
+souvlaki = "0.7"      # Media control/metadata system integration
 
 [build-dependencies]
 build-info-build = "0.0.38" # For dependency listing
