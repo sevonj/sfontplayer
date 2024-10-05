@@ -2,12 +2,24 @@
 
 use anyhow::bail;
 use audio::AudioPlayer;
+use eframe::egui::mutex::Mutex;
+use mediacontrols::create_mediacontrols;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::{error, fmt, time::Duration};
+use souvlaki::{MediaControlEvent, MediaControls};
+use std::{error, fmt, sync::Arc, time::Duration};
 use workspace::Workspace;
 
 pub mod audio;
+mod mediacontrols;
 pub mod workspace;
+
+/// To be handled in gui
+pub enum PlayerEvent {
+    /// Bring window to focus
+    Raise,
+    Exit,
+    NotifyError(String),
+}
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
 #[repr(u8)]
@@ -48,43 +60,59 @@ pub struct Player {
     // -- Audio
     #[serde(skip)]
     audioplayer: AudioPlayer,
-    /// Ranges 0.0..=100.0 as in percentage.
-    volume: f32,
     /// Is there playback going on? Paused playback also counts.
     #[serde(skip)]
     is_playing: bool,
 
+    // -- Control
+    /// Ranges 0.0..=100.0 as in percentage.
+    volume: f32,
+    /// OS integration
+    #[serde(skip)]
+    mediacontrol: MediaControls,
+    /// Events from system to the player.
+    #[serde(skip)]
+    mediacontrol_events: Arc<Mutex<Vec<MediaControlEvent>>>,
+    /// Events from player to the gui.
+    #[serde(skip)]
+    #[allow(clippy::struct_field_names)]
+    player_events: Vec<PlayerEvent>,
+
     // -- Data
     workspaces: Vec<Workspace>,
+    /// Which workspace is open
     workspace_idx: usize,
-    /// Queued, because deletion will be requested in a loop.
-    workspace_delet_queue: Vec<usize>,
     /// Which workspace was last playing music
     playing_workspace_idx: usize,
+    /// Queued, because deletion will be requested in a loop.
+    workspace_delet_queue: Vec<usize>,
 
     // -- settings
     shuffle: bool,
     repeat: RepeatMode,
-
-    // -- Misc
-    notification_queue: Vec<String>,
 }
 
 impl Default for Player {
     fn default() -> Self {
+        let mediacontrol_events = Arc::new(Mutex::new(vec![]));
+        let mediacontrol = create_mediacontrols(Arc::clone(&mediacontrol_events));
+
         Self {
             audioplayer: AudioPlayer::default(),
-            volume: 100.,
             is_playing: false,
+
+            volume: 100.,
+            mediacontrol,
+            mediacontrol_events,
+            player_events: vec![],
 
             workspaces: vec![],
             workspace_idx: 0,
-            workspace_delet_queue: vec![],
             playing_workspace_idx: 0,
+            workspace_delet_queue: vec![],
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
-            notification_queue: vec![],
         }
     }
 }
@@ -96,7 +124,7 @@ impl Player {
 
         if !self.is_paused() && self.is_empty() {
             if let Err(e) = self.advance_queue() {
-                self.notification_queue.push(e.to_string());
+                self.push_error(e.to_string());
             }
         }
 
@@ -114,6 +142,8 @@ impl Player {
             }
         }
         self.workspace_delet_queue.clear();
+
+        self.mediacontrol_handle_events();
     }
 
     // --- Playback Control
@@ -124,7 +154,7 @@ impl Player {
         let shuffle = self.shuffle;
         self.get_playing_workspace_mut().rebuild_queue(shuffle);
         if let Err(e) = self.play_selected_song() {
-            self.notification_queue.push(e.to_string());
+            self.push_error(e.to_string());
         }
     }
     /// Load currently selected song & font from workspace and start playing
@@ -160,22 +190,31 @@ impl Player {
         self.update_volume();
         self.audioplayer.start_playback()?;
 
+        self.mediacontrol_update_song();
+
         Ok(())
     }
+
     /// Stop playback
     pub fn stop(&mut self) {
         self.audioplayer.stop_playback();
         self.get_playing_workspace_mut().queue_idx = None;
         let _ = self.get_playing_workspace_mut().set_song_idx(None);
         self.is_playing = false;
+
+        self.mediacontrol_update_song();
     }
     /// Unpause
-    pub fn play(&self) {
-        self.audioplayer.play();
+    pub fn play(&mut self) {
+        if self.is_playing {
+            self.audioplayer.play();
+            self.mediacontrol_update_playback();
+        }
     }
     /// Pause
-    pub fn pause(&self) {
+    pub fn pause(&mut self) {
         self.audioplayer.pause();
+        self.mediacontrol_update_playback();
     }
     /// Play previous song
     pub fn skip_back(&mut self) {
@@ -184,13 +223,13 @@ impl Player {
                 index -= 1;
                 self.get_playing_workspace_mut().queue_idx = Some(index);
                 if let Err(e) = self.play_selected_song() {
-                    self.notification_queue.push(e.to_string());
+                    self.push_error(e.to_string());
                 }
             } else if self.repeat == RepeatMode::Queue {
                 index = self.get_playing_workspace().queue.len() - 1;
                 self.get_playing_workspace_mut().queue_idx = Some(index);
                 if let Err(e) = self.play_selected_song() {
-                    self.notification_queue.push(e.to_string());
+                    self.push_error(e.to_string());
                 }
             }
         }
@@ -201,13 +240,13 @@ impl Player {
             if index < self.get_playing_workspace().queue.len() - 1 {
                 self.get_playing_workspace_mut().queue_idx = Some(index + 1);
                 if let Err(e) = self.play_selected_song() {
-                    self.notification_queue.push(e.to_string());
+                    self.push_error(e.to_string());
                 }
             }
             if self.repeat == RepeatMode::Queue {
                 self.get_playing_workspace_mut().queue_idx = Some(0);
                 if let Err(e) = self.play_selected_song() {
-                    self.notification_queue.push(e.to_string());
+                    self.push_error(e.to_string());
                 }
             }
         }
@@ -236,6 +275,7 @@ impl Player {
     }
     pub fn set_volume(&mut self, volume: f32) {
         self.volume = f32::clamp(volume, 0., 100.);
+        self.mediacontrol_update_volume();
     }
     /// Sends current volume setting to backend
     pub fn update_volume(&self) {
@@ -429,7 +469,10 @@ impl Player {
 
     // --- Other
 
-    pub fn get_notification_queue_mut(&mut self) -> &mut Vec<String> {
-        &mut self.notification_queue
+    pub fn get_event_queue(&mut self) -> &mut Vec<PlayerEvent> {
+        &mut self.player_events
+    }
+    fn push_error(&mut self, message: String) {
+        self.player_events.push(PlayerEvent::NotifyError(message));
     }
 }
