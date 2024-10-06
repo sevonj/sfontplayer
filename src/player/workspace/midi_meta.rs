@@ -2,8 +2,9 @@ use std::{error, fmt, fs, path::PathBuf, time::Duration};
 
 use anyhow::bail;
 use rustysynth::MidiFile;
+use serde::Serialize;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub enum MidiMetaError {
     CantAccessFile { filename: String, message: String },
     InvalidFile { filename: String, message: String },
@@ -23,8 +24,7 @@ impl fmt::Display for MidiMetaError {
 }
 
 /// Reference to a midi file with metadata
-#[derive(serde::Deserialize, serde::Serialize, Default, Clone)]
-#[serde(default)]
+#[derive(Default, Clone, Serialize)]
 pub struct MidiMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
@@ -103,5 +103,95 @@ impl MidiMeta {
             bail!(e.clone())
         }
         Ok(())
+    }
+}
+
+impl TryFrom<&serde_json::Value> for MidiMeta {
+    type Error = anyhow::Error;
+
+    fn try_from(json: &serde_json::Value) -> Result<Self, Self::Error> {
+        let Some(path_str) = json["filepath"].as_str() else {
+            bail!("No filepath.")
+        };
+        let filesize = json["filesize"].as_u64();
+        let duration = json["duration"]["secs"].as_u64().map(Duration::from_secs);
+
+        Ok(Self {
+            filepath: path_str.into(),
+            filesize,
+            duration,
+            error: None,
+            is_queued_for_deletion: false,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::player::workspace::Workspace;
+    use serde_json::Value;
+
+    fn run_serialize(workspace: Workspace) -> Workspace {
+        Workspace::from(Value::from(&workspace))
+    }
+
+    #[test]
+    fn test_serialize_filepath() {
+        let mut workspace = Workspace::default();
+        let song = MidiMeta {
+            filepath: "Fakepath".into(),
+            ..Default::default()
+        };
+        workspace.midis.push(song);
+        let new_workspace = run_serialize(workspace);
+        assert_eq!(
+            new_workspace.midis[0].get_path().to_str().unwrap(),
+            "Fakepath"
+        );
+    }
+
+    #[test]
+    fn test_serialize_filesize() {
+        let mut workspace = Workspace::default();
+        let song_none = MidiMeta {
+            filepath: "unused".into(),
+            filesize: None,
+            ..Default::default()
+        };
+        let song_420 = MidiMeta {
+            filepath: "unused".into(),
+            filesize: Some(420),
+            ..Default::default()
+        };
+        workspace.midis.push(song_none);
+        workspace.midis.push(song_420);
+        let new_workspace = run_serialize(workspace);
+        assert_eq!(new_workspace.midis[0].get_size(), None);
+        assert_eq!(new_workspace.midis[1].get_size().unwrap(), 420);
+    }
+
+    #[test]
+    fn test_serialize_duration() {
+        let mut workspace = Workspace::default();
+        let song_none = MidiMeta {
+            filepath: "unused".into(),
+            duration: None,
+            ..Default::default()
+        };
+        let song_420 = MidiMeta {
+            filepath: "unused".into(),
+            duration: Some(Duration::from_secs(420)),
+            ..Default::default()
+        };
+        workspace.midis.push(song_none);
+        workspace.midis.push(song_420);
+        let new_workspace = run_serialize(workspace);
+        assert_eq!(new_workspace.midis[0].get_duration(), None);
+        assert_eq!(
+            new_workspace.midis[1].get_duration().unwrap(),
+            Duration::from_secs(420)
+        );
     }
 }

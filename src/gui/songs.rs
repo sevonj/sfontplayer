@@ -1,6 +1,6 @@
 use super::{conversions::format_duration, GuiState, TBL_ROW_H};
 use crate::player::{
-    workspace::{FileListMode, SongSort},
+    workspace::enums::{FileListMode, SongSort},
     Player,
 };
 use eframe::egui::{Align, Button, ComboBox, Label, Layout, RichText, Sense, TextWrapMode, Ui};

@@ -2,7 +2,7 @@ use eframe::egui::{Button, TextEdit, Theme, ThemePreference, Ui, ViewportCommand
 use rfd::FileDialog;
 
 use crate::{
-    player::{workspace::FileListMode, Player},
+    player::{workspace::enums::FileListMode, Player},
     GuiState,
 };
 

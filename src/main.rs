@@ -25,6 +25,7 @@ fn main() {
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 struct SfontPlayer {
+    #[serde(skip)]
     player: Player,
     gui_state: GuiState,
 }
@@ -61,6 +62,11 @@ impl SfontPlayer {
 impl eframe::App for SfontPlayer {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
+
+        if let Err(e) = self.player.save_state() {
+            println!("{e}");
+            self.gui_state.toast_error("Saving app state failed.");
+        }
     }
 
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
