@@ -1,5 +1,5 @@
 use crate::player::{
-    workspace::{FileListMode, FontSort},
+    workspace::enums::{FileListMode, FontSort},
     Player,
 };
 use eframe::egui::{Align, Button, ComboBox, Label, Layout, RichText, Sense, TextWrapMode, Ui};

@@ -5,10 +5,20 @@ use audio::AudioPlayer;
 use eframe::egui::mutex::Mutex;
 #[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
+use serde_json::{json, Value};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use souvlaki::{MediaControlEvent, MediaControls};
-use std::{error, fmt, sync::Arc, time::Duration};
+use std::{
+    error, fmt,
+    fs::{remove_file, File},
+    io::Write,
+    path::PathBuf,
+    sync::Arc,
+    time::Duration,
+    vec,
+};
 use workspace::Workspace;
+use xdg::BaseDirectories;
 
 pub mod audio;
 mod mediacontrols;
@@ -26,12 +36,24 @@ pub enum PlayerEvent {
 #[repr(u8)]
 pub enum RepeatMode {
     #[default]
-    Disabled,
-    Queue,
-    Song,
+    Disabled = 0,
+    Queue = 1,
+    Song = 2,
+}
+impl TryFrom<u8> for RepeatMode {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        match v {
+            x if x == Self::Disabled as u8 => Ok(Self::Disabled),
+            x if x == Self::Queue as u8 => Ok(Self::Queue),
+            x if x == Self::Song as u8 => Ok(Self::Song),
+            _ => Err(()),
+        }
+    }
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug)]
 pub enum PlayerError {
     InvalidWorkspaceIndex { index: usize },
     CantMoveWorkspace,
@@ -55,14 +77,10 @@ impl fmt::Display for PlayerError {
 }
 
 /// The Player class does high-level app logic, which includes workspaces and playback.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct Player {
     // -- Audio
-    #[serde(skip)]
     audioplayer: AudioPlayer,
     /// Is there playback going on? Paused playback also counts.
-    #[serde(skip)]
     is_playing: bool,
 
     // -- Control
@@ -70,13 +88,10 @@ pub struct Player {
     volume: f32,
     /// OS integration
     #[cfg(not(target_os = "windows"))]
-    #[serde(skip)]
     mediacontrol: MediaControls,
     /// Events from system to the player.
-    #[serde(skip)]
     mediacontrol_events: Arc<Mutex<Vec<MediaControlEvent>>>,
     /// Events from player to the gui.
-    #[serde(skip)]
     #[allow(clippy::struct_field_names)]
     player_events: Vec<PlayerEvent>,
 
@@ -100,7 +115,7 @@ impl Default for Player {
         #[cfg(not(target_os = "windows"))]
         let mediacontrol = create_mediacontrols(Arc::clone(&mediacontrol_events));
 
-        Self {
+        let mut player = Self {
             audioplayer: AudioPlayer::default(),
             is_playing: false,
 
@@ -117,11 +132,85 @@ impl Default for Player {
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
+        };
+
+        if let Err(e) = player.load_state() {
+            println!("{e}");
         }
+
+        player
     }
 }
 
 impl Player {
+    pub fn save_state(&self) -> anyhow::Result<()> {
+        let xdg_dirs = xdg_dirs();
+
+        let mut new_workspace_filepaths: Vec<PathBuf> = vec![];
+        for (i, workspace) in self.workspaces.iter().enumerate() {
+            let filename = format!(
+                "workspaces/{i:02}_{}.json",
+                workspace
+                    .name
+                    .replace(|c: char| !c.is_ascii_alphanumeric(), "")
+                    .to_lowercase()
+            );
+            let filepath = xdg_dirs
+                .place_data_file(filename)
+                .expect("Can't place workspace file!");
+            let mut file = File::create(&filepath)?;
+            file.write_all(Value::from(workspace).to_string().as_bytes())?;
+            new_workspace_filepaths.push(filepath);
+        }
+        for file in xdg_dirs.list_data_files("workspaces/") {
+            if !new_workspace_filepaths.contains(&file) {
+                remove_file(file)?;
+            }
+        }
+
+        let data = json! ({
+            "shuffle": self.shuffle,
+            "repeat": self.repeat,
+            "workspace_idx": self.workspace_idx,
+        });
+
+        let config_file = xdg_dirs
+            .place_state_file("state.json")
+            .expect("can't place state file!");
+
+        let mut file = File::create(config_file)?;
+        file.write_all(data.to_string().as_bytes())?;
+
+        Ok(())
+    }
+
+    pub fn load_state(&mut self) -> anyhow::Result<()> {
+        let xdg_dirs = xdg_dirs();
+
+        let mut workspace_paths = xdg_dirs.list_data_files("workspaces/");
+        workspace_paths.sort(); // filenames are number-prefixed.
+        for filepath in workspace_paths {
+            println!("{filepath:?}");
+            let data_string = std::fs::read_to_string(filepath)?;
+            let data: Value = serde_json::from_str(&data_string)?;
+            self.workspaces.push(Workspace::from(data));
+        }
+
+        let Some(state_filepath) = xdg_dirs.find_state_file("state.json") else {
+            bail!("No state file.")
+        };
+        let data_string = std::fs::read_to_string(state_filepath)?;
+        let data: Value = serde_json::from_str(&data_string)?;
+
+        self.shuffle = data["shuffle"].as_bool().is_some_and(|value| value);
+        if let Some(repeat) = data["repeat"].as_u64() {
+            self.repeat = RepeatMode::try_from(repeat as u8).unwrap_or_default();
+        }
+        self.workspace_idx = data["workspace_idx"].as_u64().unwrap_or(0) as usize;
+
+        Ok(())
+    }
+
     /// GUI frame update
     pub fn update(&mut self) {
         self.ensure_workspace_existence();
@@ -479,4 +568,8 @@ impl Player {
     fn push_error(&mut self, message: String) {
         self.player_events.push(PlayerEvent::NotifyError(message));
     }
+}
+
+fn xdg_dirs() -> BaseDirectories {
+    xdg::BaseDirectories::with_prefix(env!("CARGO_PKG_NAME")).expect("xdg_dirs failed")
 }

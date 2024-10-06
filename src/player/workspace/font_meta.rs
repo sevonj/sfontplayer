@@ -2,8 +2,9 @@ use std::{error, fmt, fs, path::PathBuf};
 
 use anyhow::bail;
 use rustysynth::SoundFont;
+use serde::Serialize;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub enum FontMetaError {
     CantAccessFile { filename: String, message: String },
     InvalidFile { filename: String, message: String },
@@ -23,8 +24,7 @@ impl fmt::Display for FontMetaError {
 }
 
 /// Reference to a font file with metadata
-#[derive(serde::Deserialize, serde::Serialize, Default, Clone)]
-#[serde(default)]
+#[derive(Default, Clone, Serialize)]
 pub struct FontMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
@@ -92,5 +92,70 @@ impl FontMeta {
             bail!(e.clone())
         }
         Ok(())
+    }
+}
+
+impl TryFrom<&serde_json::Value> for FontMeta {
+    type Error = anyhow::Error;
+
+    fn try_from(json: &serde_json::Value) -> Result<Self, Self::Error> {
+        let Some(path_str) = json["filepath"].as_str() else {
+            bail!("No filepath.")
+        };
+        let filesize = json["filesize"].as_u64();
+
+        Ok(Self {
+            filepath: path_str.into(),
+            filesize,
+            error: None,
+            is_queued_for_deletion: false,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::player::workspace::Workspace;
+    use serde_json::Value;
+
+    fn run_serialize(workspace: Workspace) -> Workspace {
+        Workspace::from(Value::from(&workspace))
+    }
+
+    #[test]
+    fn test_serialize_filepath() {
+        let mut workspace = Workspace::default();
+        let font = FontMeta {
+            filepath: "Fakepath".into(),
+            ..Default::default()
+        };
+        workspace.fonts.push(font);
+        let new_workspace = run_serialize(workspace);
+        assert_eq!(
+            new_workspace.fonts[0].get_path().to_str().unwrap(),
+            "Fakepath"
+        );
+    }
+
+    #[test]
+    fn test_serialize_filesize() {
+        let mut workspace = Workspace::default();
+        let font_none = FontMeta {
+            filepath: "unused".into(),
+            filesize: None,
+            ..Default::default()
+        };
+        let font_420 = FontMeta {
+            filepath: "unused".into(),
+            filesize: Some(420),
+            ..Default::default()
+        };
+        workspace.fonts.push(font_none);
+        workspace.fonts.push(font_420);
+        let new_workspace = run_serialize(workspace);
+        assert_eq!(new_workspace.fonts[0].get_size(), None);
+        assert_eq!(new_workspace.fonts[1].get_size().unwrap(), 420);
     }
 }

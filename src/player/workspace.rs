@@ -1,71 +1,17 @@
+use enums::{FileListMode, FontSort, SongSort};
+use error::WorkspaceError;
 use font_meta::FontMeta;
 use midi_meta::MidiMeta;
 use rand::seq::SliceRandom;
-use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::{error::Error, fmt, fs, path::PathBuf, time::Duration, vec};
+use std::{fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
 
+pub mod enums;
+mod error;
 mod font_meta;
 mod midi_meta;
+mod serialize;
 
-/// Option for how soundfonts or midis are managed
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy, Debug)]
-#[repr(u8)]
-pub enum FileListMode {
-    /// The contents are added and removed manually.
-    #[default]
-    Manual,
-    /// The contents are fetched automatically from a directory.
-    Directory,
-    /// The contents are fetched automatically from a directory and subdirectories.
-    Subdirectories,
-}
-
-/// Option for how fonts are sorted
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
-#[repr(u8)]
-pub enum FontSort {
-    #[default]
-    NameAsc,
-    NameDesc,
-    SizeAsc,
-    SizeDesc,
-}
-
-/// Option for how songs are sorted
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
-#[repr(u8)]
-pub enum SongSort {
-    #[default]
-    NameAsc,
-    NameDesc,
-    TimeAsc,
-    TimeDesc,
-    SizeAsc,
-    SizeDesc,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum WorkspaceError {
-    InvalidFontIndex { index: usize },
-    InvalidSongIndex { index: usize },
-}
-impl Error for WorkspaceError {}
-impl fmt::Display for WorkspaceError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidFontIndex { index } => {
-                write!(f, "Font index out of range: {index}")
-            }
-            Self::InvalidSongIndex { index } => {
-                write!(f, "Song index out of range: {index}")
-            }
-        }
-    }
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)]
 pub struct Workspace {
     pub name: String,
 
@@ -81,9 +27,7 @@ pub struct Workspace {
     midi_dir: Option<PathBuf>,
     song_sort: SongSort,
 
-    #[serde(skip)]
     pub queue: Vec<usize>,
-    #[serde(skip)]
     pub queue_idx: Option<usize>,
 }
 impl Workspace {

@@ -28,6 +28,7 @@ Check out the [linked project](https://github.com/users/sevonj/projects/12) for 
 
 ### Continuous Integration
 Pull requests are gatekept by [this workflow.](https://github.com/sevonj/sfontplayer/blob/master/.github/workflows/rust.yml) It will check if the code
-- builds
+- builds all targets
+- passes unit tests (run `cargo test`)
+- has linter warnings (run `cargo clippy`)
 - is formatted (run `cargo fmt`)
-- has linter errors (run `cargo clippy`)
