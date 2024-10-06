@@ -2,6 +2,7 @@
 
 use anyhow::bail;
 use audio::AudioPlayer;
+use directories::ProjectDirs;
 use eframe::egui::mutex::Mutex;
 #[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
@@ -10,7 +11,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use souvlaki::{MediaControlEvent, MediaControls};
 use std::{
     error, fmt,
-    fs::{remove_file, File},
+    fs::{self, remove_file, File},
     io::Write,
     path::PathBuf,
     sync::Arc,
@@ -18,7 +19,6 @@ use std::{
     vec,
 };
 use workspace::Workspace;
-use xdg::BaseDirectories;
 
 pub mod audio;
 mod mediacontrols;
@@ -144,27 +144,30 @@ impl Default for Player {
 
 impl Player {
     pub fn save_state(&self) -> anyhow::Result<()> {
-        let xdg_dirs = xdg_dirs();
+        let state_dir = state_dir();
+        let workspace_dir = workspace_dir();
+        fs::create_dir_all(&state_dir)?;
+        fs::create_dir_all(&workspace_dir)?;
 
         let mut new_workspace_filepaths: Vec<PathBuf> = vec![];
         for (i, workspace) in self.workspaces.iter().enumerate() {
             let filename = format!(
-                "workspaces/{i:02}_{}.json",
+                "{i:02}_{}.json",
                 workspace
                     .name
                     .replace(|c: char| !c.is_ascii_alphanumeric(), "")
                     .to_lowercase()
             );
-            let filepath = xdg_dirs
-                .place_data_file(filename)
-                .expect("Can't place workspace file!");
+            let filepath = workspace_dir.join(filename);
             let mut file = File::create(&filepath)?;
             file.write_all(Value::from(workspace).to_string().as_bytes())?;
             new_workspace_filepaths.push(filepath);
         }
-        for file in xdg_dirs.list_data_files("workspaces/") {
-            if !new_workspace_filepaths.contains(&file) {
-                remove_file(file)?;
+        let workspace_paths = fs::read_dir(workspace_dir)?;
+        for file in workspace_paths {
+            let filepath = file?.path();
+            if !new_workspace_filepaths.contains(&filepath) {
+                remove_file(filepath)?;
             }
         }
 
@@ -174,9 +177,7 @@ impl Player {
             "workspace_idx": self.workspace_idx,
         });
 
-        let config_file = xdg_dirs
-            .place_state_file("state.json")
-            .expect("can't place state file!");
+        let config_file = state_dir.join("state.json");
 
         let mut file = File::create(config_file)?;
         file.write_all(data.to_string().as_bytes())?;
@@ -185,10 +186,12 @@ impl Player {
     }
 
     pub fn load_state(&mut self) -> anyhow::Result<()> {
-        let xdg_dirs = xdg_dirs();
-
-        let mut workspace_paths = xdg_dirs.list_data_files("workspaces/");
+        let mut workspace_paths = fs::read_dir(workspace_dir())?
+            .filter_map(std::result::Result::ok)
+            .map(|e| e.path())
+            .collect::<Vec<_>>();
         workspace_paths.sort(); // filenames are number-prefixed.
+
         for filepath in workspace_paths {
             println!("{filepath:?}");
             let data_string = std::fs::read_to_string(filepath)?;
@@ -196,9 +199,7 @@ impl Player {
             self.workspaces.push(Workspace::from(data));
         }
 
-        let Some(state_filepath) = xdg_dirs.find_state_file("state.json") else {
-            bail!("No state file.")
-        };
+        let state_filepath = state_dir().join("state.json");
         let data_string = std::fs::read_to_string(state_filepath)?;
         let data: Value = serde_json::from_str(&data_string)?;
 
@@ -570,6 +571,21 @@ impl Player {
     }
 }
 
-fn xdg_dirs() -> BaseDirectories {
-    xdg::BaseDirectories::with_prefix(env!("CARGO_PKG_NAME")).expect("xdg_dirs failed")
+fn workspace_dir() -> PathBuf {
+    project_dirs().data_dir().join("workspaces")
+}
+
+fn state_dir() -> PathBuf {
+    project_dirs()
+        .state_dir()
+        .map(std::borrow::ToOwned::to_owned)
+        .map_or_else(
+            || project_dirs().data_dir().join("fallback_state_dir"),
+            |path| path,
+        )
+}
+
+fn project_dirs() -> ProjectDirs {
+    ProjectDirs::from("fi", "sevonj", env!("CARGO_PKG_NAME"))
+        .expect("Failed to create project dirs.")
 }
