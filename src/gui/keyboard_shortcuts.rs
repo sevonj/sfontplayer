@@ -260,6 +260,7 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
         }
         if input.consume_shortcut(&WORKSPACE_CREATE) {
             player.new_workspace();
+            let _ = player.switch_to_workspace(player.get_workspaces().len() - 1);
         }
         if input.consume_shortcut(&WORKSPACE_REMOVE) {
             let _ = player.remove_workspace(player.get_workspace_idx());

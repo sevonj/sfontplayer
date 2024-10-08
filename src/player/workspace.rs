@@ -226,7 +226,7 @@ impl Workspace {
         Ok(())
     }
     pub fn add_song(&mut self, path: PathBuf) {
-        if !self.contains_midi(&path) {
+        if !self.contains_song(&path) {
             self.midis.push(MidiMeta::new(path));
             self.refresh_song_list();
         }
@@ -242,7 +242,7 @@ impl Workspace {
         self.midis.clear();
         self.midi_idx = None;
     }
-    pub fn contains_midi(&self, filepath: &PathBuf) -> bool {
+    pub fn contains_song(&self, filepath: &PathBuf) -> bool {
         for i in 0..self.midis.len() {
             if self.midis[i].get_path() == *filepath {
                 return true;
@@ -311,7 +311,7 @@ impl Workspace {
                 if let Ok(paths) = fs::read_dir(dir) {
                     for entry in paths.filter_map(std::result::Result::ok) {
                         let path = entry.path();
-                        if self.contains_midi(&path) {
+                        if self.contains_song(&path) {
                             continue;
                         }
                         if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
