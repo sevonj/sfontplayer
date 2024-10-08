@@ -116,7 +116,7 @@ impl Default for Player {
         #[cfg(not(target_os = "windows"))]
         let mediacontrol = create_mediacontrols(Arc::clone(&mediacontrol_events));
 
-        let mut player = Self {
+        Self {
             audioplayer: AudioPlayer::default(),
             is_playing: false,
 
@@ -133,13 +133,7 @@ impl Default for Player {
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
-        };
-
-        if let Err(e) = player.load_state() {
-            println!("{e}");
         }
-
-        player
     }
 }
 

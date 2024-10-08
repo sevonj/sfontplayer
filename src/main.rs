@@ -41,8 +41,12 @@ impl Default for SfontPlayer {
         let (stream, stream_handle) = OutputStream::try_default().expect("Could not create stream");
         let sink = Sink::try_new(&stream_handle).expect("Could not create sink");
 
+        let mut player = Player::default();
+        if let Err(e) = player.load_state() {
+            println!("{e}");
+        }
         let sfontplayer = Self {
-            player: Arc::new(Mutex::new(Player::default())),
+            player: Arc::new(Mutex::new(player)),
             gui_state: GuiState::default(),
             stream,
         };

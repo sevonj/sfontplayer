@@ -26,6 +26,9 @@ pub struct AudioPlayer {
 
 impl AudioPlayer {
     pub(crate) fn set_sink(&mut self, value: Option<Sink>) {
+        if let Some(ref sink) = value {
+            sink.pause();
+        }
         self.sink = value;
     }
 
