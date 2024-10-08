@@ -6,6 +6,7 @@ use directories::ProjectDirs;
 use eframe::egui::mutex::Mutex;
 #[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
+use rodio::Sink;
 use serde_json::{json, Value};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use souvlaki::{MediaControlEvent, MediaControls};
@@ -212,6 +213,11 @@ impl Player {
         Ok(())
     }
 
+    /// You need to give the audio player a sink before it can do anything.
+    pub fn set_sink(&mut self, value: Option<Sink>) {
+        self.audioplayer.set_sink(value);
+    }
+
     /// GUI frame update
     pub fn update(&mut self) {
         self.ensure_workspace_existence();
@@ -253,7 +259,7 @@ impl Player {
     }
     /// Load currently selected song & font from workspace and start playing
     fn play_selected_song(&mut self) -> anyhow::Result<()> {
-        self.audioplayer.stop_playback();
+        self.audioplayer.stop_playback()?;
         let workspace = self.get_playing_workspace_mut();
 
         let Some(font_index) = workspace.get_font_idx() else {
@@ -291,7 +297,7 @@ impl Player {
 
     /// Stop playback
     pub fn stop(&mut self) {
-        self.audioplayer.stop_playback();
+        let _ = self.audioplayer.stop_playback();
         self.get_playing_workspace_mut().queue_idx = None;
         let _ = self.get_playing_workspace_mut().set_song_idx(None);
         self.is_playing = false;
@@ -301,13 +307,13 @@ impl Player {
     /// Unpause
     pub fn play(&mut self) {
         if self.is_playing {
-            self.audioplayer.play();
+            let _ = self.audioplayer.play();
             self.mediacontrol_update_playback();
         }
     }
     /// Pause
     pub fn pause(&mut self) {
-        self.audioplayer.pause();
+        let _ = self.audioplayer.pause();
         self.mediacontrol_update_playback();
     }
     /// Play previous song
@@ -374,7 +380,7 @@ impl Player {
     /// Sends current volume setting to backend
     pub fn update_volume(&self) {
         // Not dividing the volume by 100 is a mistake you only make once.
-        self.audioplayer.set_volume(self.volume * 0.001);
+        let _ = self.audioplayer.set_volume(self.volume * 0.001);
     }
     // When previous song has ended, advance queue or stop.
     fn advance_queue(&mut self) -> anyhow::Result<()> {

@@ -1,8 +1,9 @@
-use std::time::Duration;
+use std::{sync::Arc, thread, time::Duration};
 
-use eframe::egui::{Context, ViewportBuilder, ViewportCommand};
+use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
 use player::Player;
+use rodio::{OutputStream, Sink};
 
 mod gui;
 mod player;
@@ -22,12 +23,28 @@ fn main() {
     );
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Default)]
+#[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 struct SfontPlayer {
     #[serde(skip)]
-    player: Player,
+    player: Arc<Mutex<Player>>,
+    #[serde(skip)]
+    stream: OutputStream,
     gui_state: GuiState,
+}
+impl Default for SfontPlayer {
+    fn default() -> Self {
+        let (stream, stream_handle) = OutputStream::try_default().expect("Could not create stream");
+        let sink = Sink::try_new(&stream_handle).expect("Could not create sink");
+
+        let sfontplayer = Self {
+            player: Arc::new(Mutex::new(Player::default())),
+            gui_state: GuiState::default(),
+            stream,
+        };
+        sfontplayer.player.lock().set_sink(Some(sink));
+        sfontplayer
+    }
 }
 
 impl SfontPlayer {
@@ -37,56 +54,67 @@ impl SfontPlayer {
         // Use the cc.gl (a glow::Context) to create graphics shaders and buffers that you can use
         // for e.g. egui::PaintCallback.
 
-        if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        }
+        let sfontplayer = cc.storage.map_or_else(Self::default, |storage| {
+            eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+        });
 
-        Self::default()
-    }
+        let player_clone = Arc::clone(&sfontplayer.player);
+        update_thread(player_clone);
 
-    fn handle_events(&mut self, ctx: &Context) {
-        let event_queue = self.player.get_event_queue();
-        while !event_queue.is_empty() {
-            match event_queue.remove(0) {
-                player::PlayerEvent::Raise => {
-                    ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
-                    ctx.send_viewport_cmd(ViewportCommand::Focus);
-                }
-                player::PlayerEvent::Exit => ctx.send_viewport_cmd(ViewportCommand::Close),
-                player::PlayerEvent::NotifyError(message) => self.gui_state.toast_error(message),
-            }
-        }
+        sfontplayer
     }
 }
 
 impl eframe::App for SfontPlayer {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        let player = self.player.lock();
         eframe::set_value(storage, eframe::APP_KEY, self);
 
-        if let Err(e) = self.player.save_state() {
+        if let Err(e) = player.save_state() {
             println!("{e}");
             self.gui_state.toast_error("Saving app state failed.");
         }
     }
 
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+        let mut player = self.player.lock();
+
         // Run app logic
-        self.player.update();
-        self.handle_events(ctx);
+        player.update();
+        handle_events(&mut player, &mut self.gui_state, ctx);
 
         // Draw gui
         egui_extras::install_image_loaders(ctx);
-        draw_gui(ctx, &mut self.player, &mut self.gui_state);
+        draw_gui(ctx, &mut player, &mut self.gui_state);
         self.gui_state.update_flags.clear();
 
         // Repaint continuously while playing
-        if !self.player.is_paused() {
+        if !player.is_paused() {
             ctx.request_repaint();
         }
-
-        // Repaint periodically because app logic needs to run.
-        if !ctx.has_requested_repaint() {
-            ctx.request_repaint_after(Duration::from_millis(500));
-        };
     }
+}
+
+fn handle_events(player: &mut Player, gui: &mut GuiState, ctx: &Context) {
+    let event_queue = player.get_event_queue();
+    while !event_queue.is_empty() {
+        match event_queue.remove(0) {
+            player::PlayerEvent::Raise => {
+                ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
+                ctx.send_viewport_cmd(ViewportCommand::Focus);
+            }
+            player::PlayerEvent::Exit => ctx.send_viewport_cmd(ViewportCommand::Close),
+            player::PlayerEvent::NotifyError(message) => gui.toast_error(message),
+        }
+    }
+}
+
+const THREAD_SLEEP: Duration = Duration::from_millis(200);
+
+/// App logic update loop.
+fn update_thread(player: Arc<Mutex<Player>>) {
+    thread::spawn(move || loop {
+        player.lock().update();
+        thread::sleep(THREAD_SLEEP);
+    });
 }
