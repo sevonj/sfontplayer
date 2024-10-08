@@ -6,6 +6,7 @@ use rustysynth::{MidiFileError, SoundFontError};
 pub enum PlayerError {
     NoFont,
     NoMidi,
+    NoSink,
     CantAccessFile {
         path: PathBuf,
         source: std::io::Error,
@@ -22,6 +23,7 @@ impl fmt::Display for PlayerError {
         match self {
             Self::NoFont => write!(f, "No soundfont!"),
             Self::NoMidi => write!(f, "No midi file!"),
+            Self::NoSink => write!(f, "No audio sink assigned!"),
             Self::CantAccessFile { path, source } => {
                 write!(f, "Can't access {path:?}: {source}")
             }

@@ -4,41 +4,31 @@ use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
 
 use error::PlayerError;
 use midisource::MidiSource;
-use rodio::{OutputStream, Sink};
+use rodio::Sink;
 use rustysynth::{MidiFile, SoundFont};
 
 mod error;
 mod midisource;
 
 /// Audio backend struct
+#[derive(Default)]
 pub struct AudioPlayer {
     path_soundfont: Option<PathBuf>,
     path_midifile: Option<PathBuf>,
     midifile_duration: Option<Duration>,
 
     // We need to keep this alive or the sink goes silent.
-    #[allow(dead_code)]
-    stream: OutputStream,
+    //#[allow(dead_code)]
+    //stream: OutputStream,
     /// Audio sink, controls the output
-    sink: Sink,
-}
-
-impl Default for AudioPlayer {
-    fn default() -> Self {
-        let (stream, stream_handle) = OutputStream::try_default().expect("Could not create stream");
-        let sink = Sink::try_new(&stream_handle).expect("Could not create sink");
-        sink.pause();
-        Self {
-            path_soundfont: None,
-            path_midifile: None,
-            midifile_duration: None,
-            stream,
-            sink,
-        }
-    }
+    sink: Option<Sink>,
 }
 
 impl AudioPlayer {
+    pub(crate) fn set_sink(&mut self, value: Option<Sink>) {
+        self.sink = value;
+    }
+
     // --- File Management
 
     /// Choose new soundfont
@@ -53,16 +43,28 @@ impl AudioPlayer {
     // --- Playback Control
 
     /// Unpause
-    pub(crate) fn play(&self) {
-        self.sink.play();
+    pub(crate) fn play(&self) -> anyhow::Result<()> {
+        let Some(sink) = &self.sink else {
+            anyhow::bail!(PlayerError::NoSink);
+        };
+        sink.play();
+        Ok(())
     }
     /// Pause
-    pub(crate) fn pause(&self) {
-        self.sink.pause();
+    pub(crate) fn pause(&self) -> anyhow::Result<()> {
+        let Some(sink) = &self.sink else {
+            anyhow::bail!(PlayerError::NoSink);
+        };
+        sink.pause();
+        Ok(())
     }
     /// Standard volume range is 0.0..=1.0
-    pub(crate) fn set_volume(&self, volume: f32) {
-        self.sink.set_volume(volume);
+    pub(crate) fn set_volume(&self, volume: f32) -> anyhow::Result<()> {
+        let Some(sink) = &self.sink else {
+            anyhow::bail!(PlayerError::NoSink);
+        };
+        sink.set_volume(volume);
+        Ok(())
     }
     /// Load currently selected midi & font and start playing
     pub(crate) fn start_playback(&mut self) -> anyhow::Result<()> {
@@ -72,32 +74,45 @@ impl AudioPlayer {
         let Some(path_mid) = &self.path_midifile else {
             anyhow::bail!(PlayerError::NoMidi);
         };
+        let Some(sink) = &self.sink else {
+            anyhow::bail!(PlayerError::NoSink);
+        };
 
         let soundfont = Arc::new(load_soundfont(path_sf)?);
         let midifile = Arc::new(load_midifile(path_mid)?);
         self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
 
         let source = MidiSource::new(&soundfont, &midifile);
-        self.sink.append(source);
-        self.sink.play();
+        sink.append(source);
+        sink.play();
         Ok(())
     }
     /// Full stop.
-    pub(crate) fn stop_playback(&mut self) {
+    pub(crate) fn stop_playback(&mut self) -> anyhow::Result<()> {
+        let Some(sink) = &self.sink else {
+            anyhow::bail!(PlayerError::NoSink);
+        };
         self.midifile_duration = None;
-        self.sink.clear();
-        self.sink.pause();
+        sink.clear();
+        sink.pause();
+        Ok(())
     }
 
     // --- Playback State
 
     /// Pause status. Fully stopped should also always be paused.
     pub(crate) fn is_paused(&self) -> bool {
-        self.sink.is_paused()
+        let Some(sink) = &self.sink else {
+            return true;
+        };
+        sink.is_paused()
     }
     /// Finished; nothing more to play.
     pub(crate) fn is_empty(&self) -> bool {
-        self.sink.empty()
+        let Some(sink) = &self.sink else {
+            return true;
+        };
+        sink.empty()
     }
     /// Current midi file duration, if midi file exists
     pub const fn get_midi_length(&self) -> Option<Duration> {
@@ -105,7 +120,10 @@ impl AudioPlayer {
     }
     /// Playback position. Zero if player is empty.
     pub(crate) fn get_midi_position(&self) -> Duration {
-        self.sink.get_pos()
+        let Some(sink) = &self.sink else {
+            return Duration::ZERO;
+        };
+        sink.get_pos()
     }
 }
 
