@@ -1,4 +1,8 @@
-use std::{sync::Arc, thread, time::Duration};
+use std::{
+    sync::Arc,
+    thread,
+    time::{Duration, Instant},
+};
 
 use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
@@ -110,11 +114,26 @@ fn handle_events(player: &mut Player, gui: &mut GuiState, ctx: &Context) {
 }
 
 const THREAD_SLEEP: Duration = Duration::from_millis(200);
+const FILELIST_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
 
-/// App logic update loop.
 fn update_thread(player: Arc<Mutex<Player>>) {
-    thread::spawn(move || loop {
-        player.lock().update();
-        thread::sleep(THREAD_SLEEP);
+    thread::spawn(move || {
+        let mut t_since_file_refresh = Duration::ZERO;
+        let mut prev_update = Instant::now();
+
+        loop {
+            player.lock().update();
+
+            let now = Instant::now();
+            t_since_file_refresh += now - prev_update;
+            if t_since_file_refresh >= FILELIST_REFRESH_INTERVAL {
+                t_since_file_refresh -= FILELIST_REFRESH_INTERVAL;
+                player.lock().get_workspace_mut().refresh_font_list();
+                player.lock().get_workspace_mut().refresh_song_list();
+            }
+
+            prev_update = now;
+            thread::sleep(THREAD_SLEEP);
+        }
     });
 }
