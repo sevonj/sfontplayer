@@ -461,6 +461,10 @@ impl Player {
     pub const fn get_workspaces(&self) -> &Vec<Workspace> {
         &self.workspaces
     }
+    /// Get a mutable reference to the workspace list
+    pub fn get_workspaces_mut(&mut self) -> &mut Vec<Workspace> {
+        &mut self.workspaces
+    }
     /// Get a reference to the currently open workspace
     pub fn get_workspace(&self) -> &Workspace {
         &self.workspaces[self.workspace_idx]
@@ -509,10 +513,9 @@ impl Player {
         self.workspace_idx += 1;
         Ok(())
     }
-    /// Create a new workspace and switch to it.
+    /// Create a new workspace
     pub fn new_workspace(&mut self) {
         self.workspaces.push(Workspace::default());
-        self.workspace_idx = self.workspaces.len() - 1;
     }
     /// Remove a workspace by index
     pub fn remove_workspace(&mut self, index: usize) -> anyhow::Result<()> {
@@ -566,6 +569,7 @@ impl Player {
     fn ensure_workspace_existence(&mut self) {
         if self.get_workspaces().is_empty() {
             self.new_workspace();
+            self.workspace_idx = 0;
         }
     }
 

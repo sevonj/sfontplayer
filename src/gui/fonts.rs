@@ -223,6 +223,43 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
                         let _ = open::that(filepath.parent().expect("Can't open parent"));
                         ui.close_menu();
                     }
+                    ui.menu_button("Add to workspace", |ui| {
+                        let filepath = player.get_workspace().get_fonts()[index].get_path();
+                        if ui.button("➕ New workspace").clicked() {
+                            player.new_workspace();
+                            let workspace_index = player.get_workspaces().len() - 1;
+                            player.get_workspaces_mut()[workspace_index].add_font(filepath.clone());
+                        }
+                        for i in 0..player.get_workspaces().len() {
+                            if i == player.get_workspace_idx() {
+                                continue;
+                            }
+                            let workspace = &player.get_workspaces_mut()[i];
+
+                            let already_contains = workspace.contains_font(&filepath);
+                            let dir_list = workspace.get_font_list_mode() != FileListMode::Manual;
+
+                            let hovertext = if dir_list {
+                                "Can't manually add files to directory list."
+                            } else if already_contains {
+                                "Workspace already contains this file."
+                            } else {
+                                ""
+                            };
+
+                            if ui
+                                .add_enabled(
+                                    !already_contains && !dir_list,
+                                    Button::new(&workspace.name),
+                                )
+                                .on_disabled_hover_text(hovertext)
+                                .clicked()
+                            {
+                                player.get_workspaces_mut()[i].add_font(filepath.clone());
+                                ui.close_menu();
+                            }
+                        }
+                    });
                 });
             },
         );

@@ -14,6 +14,7 @@ pub fn workspace_tabs(ui: &mut Ui, player: &mut Player) {
                 }
                 if ui.add(Button::new("➕").frame(false)).clicked() {
                     player.new_workspace();
+                    let _ = player.switch_to_workspace(player.get_workspaces().len() - 1);
                 }
             });
         });
