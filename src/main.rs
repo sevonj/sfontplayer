@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{thread, time::Duration};
 
 use eframe::egui::{Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
@@ -36,6 +36,8 @@ impl SfontPlayer {
         // Restore app state using cc.storage (requires the "persistence" feature).
         // Use the cc.gl (a glow::Context) to create graphics shaders and buffers that you can use
         // for e.g. egui::PaintCallback.
+
+        update_thread(cc.egui_ctx.clone());
 
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
@@ -83,10 +85,15 @@ impl eframe::App for SfontPlayer {
         if !self.player.is_paused() {
             ctx.request_repaint();
         }
-
-        // Repaint periodically because app logic needs to run.
-        if !ctx.has_requested_repaint() {
-            ctx.request_repaint_after(Duration::from_millis(500));
-        };
     }
+}
+
+const THREAD_SLEEP: Duration = Duration::from_millis(200);
+
+/// Request repaint periodically because app logic needs to run.
+fn update_thread(ctx: Context) {
+    thread::spawn(move || loop {
+        ctx.request_repaint();
+        thread::sleep(THREAD_SLEEP);
+    });
 }
