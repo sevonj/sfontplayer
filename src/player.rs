@@ -491,6 +491,8 @@ impl Player {
             bail!(PlayerError::InvalidWorkspaceIndex { index });
         }
         self.workspace_idx = index;
+        self.get_workspace_mut().refresh_font_list();
+        self.get_workspace_mut().refresh_song_list();
         Ok(())
     }
     pub fn switch_workspace_left(&mut self) -> anyhow::Result<()> {
