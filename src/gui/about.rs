@@ -47,13 +47,17 @@ fn info_self(ui: &mut Ui) {
         ui.vertical(|ui| {
             ui.add_space(12.);
             ui.heading(RichText::new("SfontPlayer").strong());
-            ui.label("by Sevonj");
+            ui.label("by Sevonj & Co.");
             ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
         });
     });
 
     ui.add_space(32.);
-
+    if desc_button(ui, "Contributors", "View full list of contributors.").clicked() {
+        ui.ctx().open_url(OpenUrl::new_tab(
+            "https://github.com/sevonj/sfontplayer/contributors",
+        ));
+    }
     // Repo
     if desc_button(
         ui,
@@ -66,12 +70,13 @@ fn info_self(ui: &mut Ui) {
             .open_url(OpenUrl::new_tab(env!("CARGO_PKG_REPOSITORY")));
     }
 
-    license_collapse(ui, "View license", include_str!("../../LICENSE.txt"));
+    license_collapse(ui, "Read license", include_str!("../../LICENSE.txt"));
 }
 
 /// List of all dependencies
 fn info_dependencies(ui: &mut Ui) {
     ui.heading(RichText::new("Dependencies").strong());
+    ui.label("(direct dependencies)");
     ui.add_space(2.);
     ui.label("This app relies on a number of other open-source projects:");
     ui.add_space(8.);
@@ -88,7 +93,8 @@ fn dependency_item(ui: &mut Ui, crate_info: &CrateInfo) {
 
         ui.label(RichText::new("Authors:").strong());
         for author in &crate_info.authors {
-            ui.label(author);
+            // Remove email
+            ui.label(author.split('<').take(1).collect::<Vec<_>>()[0]);
         }
         if crate_info.authors.is_empty() {
             ui.label("(this crate did not specify its authors!)");
