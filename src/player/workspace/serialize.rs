@@ -1,7 +1,7 @@
 //! Workspace (de)serialization Into / From JSON.
 //!
 
-use std::convert::Into;
+use std::{convert::Into, path::PathBuf};
 
 use super::{
     enums::{FileListMode, FontSort, SongSort},
@@ -9,26 +9,74 @@ use super::{
     midi_meta::MidiMeta,
     Workspace,
 };
+use relative_path::{PathExt, RelativePath};
 use serde_json::{json, Value};
 
 // Reference because we don't want to consume the workspace during autosave.
 impl From<&Workspace> for Value {
     fn from(workspace: &Workspace) -> Self {
-        json! ({
-             "name": workspace.name,
+        workspace.get_portable_path().map_or_else(
+            || {
+                // Normal workspace: save as is
+                json! ({"name": workspace.name,
 
-             "fonts": workspace.fonts,
-             "font_idx": workspace.font_idx,
-             "font_list_mode": workspace.font_list_mode as u8,
-             "font_dir": workspace.font_dir,
-             "font_sort": workspace.font_sort as u8,
+                     "fonts": workspace.fonts,
+                     "font_idx": workspace.font_idx,
+                     "font_list_mode": workspace.font_list_mode as u8,
+                     "font_dir": workspace.font_dir,
+                     "font_sort": workspace.font_sort as u8,
 
-             "songs": workspace.midis,
-             "song_idx": workspace.midi_idx,
-             "song_list_mode": workspace.midi_list_mode as u8,
-             "song_dir": workspace.midi_dir,
-             "song_sort": workspace.song_sort as u8
-            }
+                     "songs": workspace.midis,
+                     "song_idx": workspace.midi_idx,
+                     "song_list_mode": workspace.midi_list_mode as u8,
+                     "song_dir": workspace.midi_dir,
+                     "song_sort": workspace.song_sort as u8
+                    }
+                )
+            },
+            |root| {
+                // Portable file: translate all paths into relative
+
+                let mut fonts = workspace.fonts.clone();
+                for font in &mut fonts {
+                    let absolute_path = font.get_path();
+                    if let Ok(relative_path) = absolute_path.relative_to(&root) {
+                        font.set_path(relative_path.to_path("."));
+                    }
+                }
+                let mut songs = workspace.midis.clone();
+                for song in &mut songs {
+                    let absolute_path = song.get_path();
+                    if let Ok(relative_path) = absolute_path.relative_to(&root) {
+                        song.set_path(relative_path.to_path("."));
+                    }
+                }
+                let font_dir = workspace.font_dir.as_ref().and_then(|dir| {
+                    dir.relative_to(&root)
+                        .map_or(None, |relative_path| Some(relative_path.to_path(".")))
+                });
+                let song_dir = workspace.midi_dir.as_ref().and_then(|dir| {
+                    dir.relative_to(&root)
+                        .map_or(None, |relative_path| Some(relative_path.to_path(".")))
+                });
+
+                json! ({
+                     "name": workspace.name,
+
+                     "fonts": fonts,
+                     "font_idx": workspace.font_idx,
+                     "font_list_mode": workspace.font_list_mode as u8,
+                     "font_dir": font_dir,
+                     "font_sort": workspace.font_sort as u8,
+
+                     "songs": songs,
+                     "song_idx": workspace.midi_idx,
+                     "song_list_mode": workspace.midi_list_mode as u8,
+                     "song_dir": song_dir,
+                     "song_sort": workspace.song_sort as u8
+                    }
+                )
+            },
         )
     }
 }
@@ -133,6 +181,41 @@ impl From<Value> for Workspace {
         }
 
         workspace
+    }
+}
+
+impl Workspace {
+    pub fn open_portable(filepath: PathBuf) -> anyhow::Result<Self> {
+        let json_str = std::fs::read_to_string(&filepath)?;
+        let data: Value = serde_json::from_str(&json_str)?;
+        let mut workspace = Self::from(data);
+
+        // Make paths absolute
+        let root: &PathBuf = &filepath;
+        for font in &mut workspace.fonts {
+            if let Ok(relative_path) = RelativePath::from_path(&font.get_path()) {
+                font.set_path(relative_path.to_logical_path(root));
+            };
+        }
+        for song in &mut workspace.midis {
+            if let Ok(relative_path) = RelativePath::from_path(&song.get_path()) {
+                song.set_path(relative_path.to_logical_path(root));
+            };
+        }
+        if let Some(dir) = &workspace.font_dir {
+            if let Ok(relative_path) = RelativePath::from_path(dir) {
+                workspace.font_dir = Some(relative_path.to_logical_path(root));
+            };
+        }
+        if let Some(dir) = &workspace.midi_dir {
+            if let Ok(relative_path) = RelativePath::from_path(dir) {
+                workspace.midi_dir = Some(relative_path.to_logical_path(root));
+            };
+        }
+
+        workspace.portable_filepath = Some(filepath);
+
+        Ok(workspace)
     }
 }
 

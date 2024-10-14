@@ -155,7 +155,21 @@ impl Player {
             );
             let filepath = workspace_dir.join(filename);
             let mut file = File::create(&filepath)?;
-            file.write_all(Value::from(workspace).to_string().as_bytes())?;
+            if let Some(portable_path) = workspace.get_portable_path() {
+                let _ = file.write_all(
+                    json! ({
+                         "workspace_is_portable": true,
+                         "portable_filepath": workspace.get_portable_path()
+                        }
+                    )
+                    .to_string()
+                    .as_bytes(),
+                );
+                let mut portable_file = File::create(portable_path)?;
+                portable_file.write_all(Value::from(workspace).to_string().as_bytes())?;
+            } else {
+                file.write_all(Value::from(workspace).to_string().as_bytes())?;
+            }
             new_workspace_filepaths.push(filepath);
         }
         let workspace_paths = fs::read_dir(workspace_dir)?;
@@ -188,10 +202,19 @@ impl Player {
         workspace_paths.sort(); // filenames are number-prefixed.
 
         for filepath in workspace_paths {
-            println!("{filepath:?}");
+            println!("Loading workspace: {filepath:?}");
             let data_string = std::fs::read_to_string(filepath)?;
             let data: Value = serde_json::from_str(&data_string)?;
-            self.workspaces.push(Workspace::from(data));
+            if data["workspace_is_portable"].as_bool() == Some(true) {
+                let Some(portable_filepath) = data["portable_filepath"].as_str() else {
+                    self.workspaces.push(Workspace::default());
+                    continue;
+                };
+                self.workspaces
+                    .push(Workspace::open_portable(portable_filepath.into())?);
+            } else {
+                self.workspaces.push(Workspace::from(data));
+            }
         }
 
         let state_filepath = state_dir().join("state.json");
@@ -557,6 +580,43 @@ impl Player {
         }
         self.move_workspace(self.workspace_idx, self.workspace_idx + 1)
             .expect("move_workspace_right out of bounds?!");
+        Ok(())
+    }
+    pub fn open_portable_workspace(&mut self, filepath: PathBuf) -> anyhow::Result<()> {
+        let workspace = Workspace::open_portable(filepath)?;
+        self.workspaces.push(workspace);
+        self.workspace_idx = self.workspaces.len() - 1;
+        Ok(())
+    }
+    /// Copy workspace into a portable file with relative file paths.
+    pub fn copy_workspace_portable(
+        &mut self,
+        index: usize,
+        workspace_path: PathBuf,
+    ) -> anyhow::Result<()> {
+        if index >= self.workspaces.len() {
+            bail!(PlayerError::InvalidWorkspaceIndex { index });
+        }
+        let mut new_workspace = self.workspaces[index].clone();
+        new_workspace.set_portable_path(Some(workspace_path.clone()));
+
+        let mut file = File::create(workspace_path)?;
+        file.write_all(Value::from(&new_workspace).to_string().as_bytes())?;
+
+        self.workspaces.push(new_workspace);
+        let _ = self.switch_to_workspace(self.workspaces.len() - 1);
+        Ok(())
+    }
+    /// Copy portable file to app data.
+    pub fn copy_workspace_builtin(&mut self, index: usize) -> anyhow::Result<()> {
+        if index >= self.workspaces.len() {
+            bail!(PlayerError::InvalidWorkspaceIndex { index });
+        }
+        let mut new_workspace = self.workspaces[index].clone();
+        new_workspace.set_portable_path(None);
+
+        self.workspaces.push(new_workspace);
+        let _ = self.switch_to_workspace(self.workspaces.len() - 1);
         Ok(())
     }
     /// Make sure at least one workspace exists!

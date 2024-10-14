@@ -12,8 +12,11 @@ mod font_meta;
 mod midi_meta;
 mod serialize;
 
+#[derive(Clone)]
 pub struct Workspace {
     pub name: String,
+    /// If None, this is a normal workspace. If Some, this is a portable workspace.
+    portable_filepath: Option<PathBuf>,
 
     fonts: Vec<FontMeta>,
     font_idx: Option<usize>,
@@ -412,6 +415,16 @@ impl Workspace {
 
     // --- Misc.
 
+    pub const fn is_portable(&self) -> bool {
+        self.portable_filepath.is_some()
+    }
+    pub fn get_portable_path(&self) -> Option<PathBuf> {
+        self.portable_filepath.clone()
+    }
+    pub fn set_portable_path(&mut self, portable_filepath: Option<PathBuf>) {
+        self.portable_filepath = portable_filepath;
+    }
+
     /// Midis and fonts aren't deleted immediately. A queue is used instead.
     /// This handles the queues, call at the end of the frame.
     pub fn delete_queued(&mut self) {
@@ -455,6 +468,7 @@ impl Default for Workspace {
     fn default() -> Self {
         Self {
             name: "Workspace".to_owned(),
+            portable_filepath: None,
 
             fonts: vec![],
             font_idx: None,

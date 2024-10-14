@@ -27,6 +27,9 @@ fn workspace_tab(ui: &mut Ui, player: &mut Player, index: usize) {
     } else if !player.is_empty() && player.get_playing_workspace_idx() == index {
         workspace_title = "⏸ ".to_owned() + &workspace_title;
     }
+    if player.get_workspaces()[index].is_portable() {
+        workspace_title = "🖹 ".to_owned() + &workspace_title; // File icon
+    }
     let current_tab = player.get_workspace_idx() == index;
 
     let style = (*ui.ctx().style()).clone();
