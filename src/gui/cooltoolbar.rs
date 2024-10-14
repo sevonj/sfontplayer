@@ -14,20 +14,31 @@ use super::keyboard_shortcuts::{
 /// The topmost toolbar with File Menu
 pub fn toolbar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.horizontal(|ui| {
-        file_menu(ui);
+        file_menu(ui, player, gui);
 
         options_menu(ui, gui);
 
-        workspace_menu(ui, player);
+        workspace_menu(ui, player, gui);
 
         help_menu(ui, gui);
     });
 }
 
-fn file_menu(ui: &mut Ui) {
+fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.menu_button("File", |ui| {
         if ui.button("Exit").clicked() {
             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
+        }
+        if ui.button("Open Workspace file").clicked() {
+            if let Some(path) = FileDialog::new()
+                .add_filter("Workspace file", &["sfontspace"])
+                .pick_file()
+            {
+                if let Err(e) = player.open_portable_workspace(path) {
+                    gui.toast_error(e.to_string());
+                }
+            }
+            ui.close_menu();
         }
     });
 }
@@ -54,7 +65,7 @@ fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
 }
 
 #[allow(clippy::too_many_lines)]
-fn workspace_menu(ui: &mut Ui, player: &mut Player) {
+fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.menu_button("Workspace", |ui| {
         ui.menu_button("Rename Workspace", |ui| {
             if ui
@@ -67,6 +78,35 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player) {
                 ui.close_menu();
             }
         });
+        if player.get_workspace().is_portable() {
+            let hover_text = "Copy this workspace into builtin app storage.";
+            if ui
+                .button("Copy to app storage")
+                .on_hover_text(hover_text)
+                .clicked()
+            {
+                let _ = player.copy_workspace_builtin(player.get_workspace_idx());
+            };
+        } else {
+            let hover_text = "Copy this workspace into a portable file.";
+            if ui
+                .button("Make portable copy")
+                .on_hover_text(hover_text)
+                .clicked()
+            {
+                if let Some(save_path) = FileDialog::new()
+                    .add_filter("Workspace file", &["sfontspace"])
+                    .save_file()
+                {
+                    if let Err(e) =
+                        player.copy_workspace_portable(player.get_workspace_idx(), save_path)
+                    {
+                        gui.toast_error(e.to_string());
+                    }
+                    ui.close_menu();
+                }
+            }
+        }
         ui.menu_button("Soundfonts", |ui| {
             let mut list_mode = player.get_workspace().get_font_list_mode();
             ui.add_enabled_ui(list_mode == FileListMode::Manual, |ui| {

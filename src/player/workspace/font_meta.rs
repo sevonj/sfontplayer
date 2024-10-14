@@ -76,6 +76,9 @@ impl FontMeta {
     pub fn get_path(&self) -> PathBuf {
         self.filepath.clone()
     }
+    pub fn set_path(&mut self, filepath: PathBuf) {
+        self.filepath = filepath;
+    }
     pub fn get_name(&self) -> String {
         self.filepath
             .file_name()
