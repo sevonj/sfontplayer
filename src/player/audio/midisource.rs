@@ -26,7 +26,9 @@ impl MidiSource {
     #[allow(clippy::cast_possible_wrap)] // It's ok to cast here
     pub fn new(sf: &Arc<SoundFont>, midifile: &Arc<MidiFile>) -> Self {
         let settings = SynthesizerSettings::new(SAMPLERATE as i32);
-        let synthesizer = Synthesizer::new(sf, &settings).expect("Could not create synthesizer");
+        let mut synthesizer =
+            Synthesizer::new(sf, &settings).expect("Could not create synthesizer");
+        synthesizer.set_master_volume(1.0);
         let mut sequencer = MidiFileSequencer::new(synthesizer);
         sequencer.play(midifile, false);
 
