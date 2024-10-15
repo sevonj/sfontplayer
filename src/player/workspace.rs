@@ -8,9 +8,10 @@ use std::{fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
 
 pub mod enums;
+pub mod font_meta;
+pub mod midi_meta;
+
 mod error;
-mod font_meta;
-mod midi_meta;
 mod serialize;
 
 #[derive(Clone)]
@@ -68,13 +69,16 @@ impl Workspace {
         self.font_idx
     }
     pub fn set_font_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
-        if let Some(index) = value {
-            self.font_idx = if index < self.fonts.len() {
-                self.fonts[index].refresh();
-                Some(index)
-            } else {
-                bail!(WorkspaceError::InvalidFontIndex { index });
+        match value {
+            Some(index) => {
+                self.font_idx = if index < self.fonts.len() {
+                    self.fonts[index].refresh();
+                    Some(index)
+                } else {
+                    bail!(WorkspaceError::InvalidFontIndex { index });
+                }
             }
+            None => self.font_idx = None,
         }
         Ok(())
     }
@@ -259,13 +263,16 @@ impl Workspace {
         self.midi_idx
     }
     pub fn set_song_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
-        if let Some(index) = value {
-            self.midi_idx = if index < self.midis.len() {
-                self.midis[index].refresh();
-                Some(index)
-            } else {
-                bail!(WorkspaceError::InvalidSongIndex { index });
+        match value {
+            Some(index) => {
+                self.midi_idx = if index < self.midis.len() {
+                    self.midis[index].refresh();
+                    Some(index)
+                } else {
+                    bail!(WorkspaceError::InvalidSongIndex { index });
+                }
             }
+            None => self.midi_idx = None,
         }
         Ok(())
     }
