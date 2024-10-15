@@ -163,6 +163,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
                 let index = row.index() - 1;
                 let fontref = &player.get_workspace().get_fonts()[index];
                 let filename = fontref.get_name();
+                let filepath = fontref.get_path();
                 let filesize = fontref.get_size();
                 let status = fontref.get_status();
                 let manual_files =
@@ -192,7 +193,9 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
                             Label::new(filename)
                                 .wrap_mode(TextWrapMode::Truncate)
                                 .selectable(false),
-                        );
+                        )
+                        .on_hover_text(filepath.to_string_lossy())
+                        .on_disabled_hover_text(filepath.to_string_lossy());
                     });
                 });
                 // File size
@@ -308,12 +311,17 @@ fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Playe
                 .get_default_soundfont()
                 .map_or("None".into(), |font| font.get_name());
             let text = format!("None (use default: {filename})");
-            ui.add_enabled(
+            let filename_response = ui.add_enabled(
                 font_ok,
                 Label::new(RichText::new(text).weak())
                     .wrap_mode(TextWrapMode::Truncate)
                     .selectable(false),
             );
+            if let Some(font) = &player.get_default_soundfont() {
+                filename_response
+                    .on_hover_text(font.get_path().to_string_lossy())
+                    .on_disabled_hover_text(font.get_path().to_string_lossy());
+            }
         });
     });
     // File size

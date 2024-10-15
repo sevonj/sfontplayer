@@ -192,6 +192,7 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &GuiState) {
                 let index = row.index();
                 let midiref = &player.get_workspace().get_songs()[index];
                 let filename = midiref.get_name();
+                let filepath = midiref.get_path();
                 let filesize = midiref.get_size();
                 let status = midiref.get_status();
                 let manual_files =
@@ -225,7 +226,9 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &GuiState) {
                             Label::new(filename)
                                 .wrap_mode(TextWrapMode::Truncate)
                                 .selectable(false),
-                        );
+                        )
+                        .on_hover_text(filepath.to_string_lossy())
+                        .on_disabled_hover_text(filepath.to_string_lossy());
                     });
                 });
                 // Duration
