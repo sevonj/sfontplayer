@@ -7,7 +7,7 @@ use egui_extras::{Column, TableBuilder};
 use rfd::FileDialog;
 use size_format::SizeFormatterBinary;
 
-use super::TBL_ROW_H;
+use super::{GuiState, TBL_ROW_H};
 
 pub fn font_titlebar(ui: &mut Ui, player: &mut Player) {
     ui.horizontal(|ui| {
@@ -93,7 +93,7 @@ pub fn font_titlebar(ui: &mut Ui, player: &mut Player) {
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
+pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     let is_active_workspace =
         !player.is_playing() || player.get_workspace_idx() == player.get_playing_workspace_idx();
     if !is_active_workspace {
@@ -273,6 +273,11 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
                             }
                         }
                     });
+                    if ui.button("Copy path").clicked() {
+                        ui.output_mut(|o| o.copied_text = filepath.to_string_lossy().into());
+                        ui.close_menu();
+                        gui.toast_success("Copied");
+                    }
                     if ui.button("Make default").clicked() {
                         player.set_default_soundfont(Some(
                             player.get_workspace().get_fonts()[index].clone(),

@@ -93,7 +93,7 @@ pub fn song_titlebar(ui: &mut Ui, player: &mut Player) {
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &GuiState) {
+pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     let is_active_workspace =
         !player.is_playing() || player.get_workspace_idx() == player.get_playing_workspace_idx();
     if !is_active_workspace {
@@ -316,6 +316,11 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &GuiState) {
                             }
                         }
                     });
+                    if ui.button("Copy path").clicked() {
+                        ui.output_mut(|o| o.copied_text = filepath.to_string_lossy().into());
+                        ui.close_menu();
+                        gui.toast_success("Copied");
+                    }
                 });
             },
         );
