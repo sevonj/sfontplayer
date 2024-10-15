@@ -1,6 +1,6 @@
 //! Workspace errors
 
-use std::{error::Error, fmt};
+use std::{error::Error, fmt, path::PathBuf};
 
 use super::enums::FileListMode;
 
@@ -10,6 +10,7 @@ pub enum WorkspaceError {
     InvalidSongIndex { index: usize },
     ModifyAutoFontList { mode: FileListMode },
     ModifyAutoSongList { mode: FileListMode },
+    UnknownFileFormat { path: PathBuf },
 }
 
 impl Error for WorkspaceError {}
@@ -35,6 +36,7 @@ impl fmt::Display for WorkspaceError {
                     "Can't modify song list, it's in auto-managed mode: {mode:?}"
                 )
             }
+            Self::UnknownFileFormat { path } => write!(f, "Unknown file format: {path:?}"),
         }
     }
 }
