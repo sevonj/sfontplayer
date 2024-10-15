@@ -2,10 +2,14 @@
 
 use std::{error::Error, fmt};
 
+use super::enums::FileListMode;
+
 #[derive(Debug, Clone)]
 pub enum WorkspaceError {
     InvalidFontIndex { index: usize },
     InvalidSongIndex { index: usize },
+    ModifyAutoFontList { mode: FileListMode },
+    ModifyAutoSongList { mode: FileListMode },
 }
 
 impl Error for WorkspaceError {}
@@ -18,6 +22,18 @@ impl fmt::Display for WorkspaceError {
             }
             Self::InvalidSongIndex { index } => {
                 write!(f, "Song index out of range: {index}")
+            }
+            Self::ModifyAutoFontList { mode } => {
+                write!(
+                    f,
+                    "Can't modify font list, it's in auto-managed mode: {mode:?}"
+                )
+            }
+            Self::ModifyAutoSongList { mode } => {
+                write!(
+                    f,
+                    "Can't modify song list, it's in auto-managed mode: {mode:?}"
+                )
             }
         }
     }

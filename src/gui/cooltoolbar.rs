@@ -116,7 +116,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         .pick_files()
                     {
                         for path in paths {
-                            player.get_workspace_mut().add_font(path);
+                            let _ = player.get_workspace_mut().add_font(path);
                         }
                         ui.close_menu();
                     }
@@ -147,7 +147,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         .pick_files()
                     {
                         for path in paths {
-                            player.get_workspace_mut().add_song(path);
+                            let _ = player.get_workspace_mut().add_song(path);
                         }
                         ui.close_menu();
                     }

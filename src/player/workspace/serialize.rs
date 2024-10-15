@@ -346,7 +346,9 @@ mod tests {
         let mut workspace_69 = Workspace::default();
         let mut workspace_none = Workspace::default();
         for i in 0..=70 {
-            workspace_69.add_font(format!("Fakepath{i}").into());
+            workspace_69
+                .add_font(format!("Fakepath{i}").into())
+                .unwrap();
         }
         workspace_69.font_idx = Some(69);
         workspace_none.font_idx = None;
@@ -361,7 +363,9 @@ mod tests {
         let mut workspace_69 = Workspace::default();
         let mut workspace_none = Workspace::default();
         for i in 0..=70 {
-            workspace_69.add_song(format!("Fakepath{i}").into());
+            workspace_69
+                .add_song(format!("Fakepath{i}").into())
+                .unwrap();
         }
         workspace_69.midi_idx = Some(69);
         workspace_none.midi_idx = None;
@@ -375,7 +379,9 @@ mod tests {
     fn test_fontidx_outofbounds_becomes_none() {
         let mut workspace_69 = Workspace::default();
         for i in 0..=7 {
-            workspace_69.add_font(format!("Fakepath{i}").into());
+            workspace_69
+                .add_font(format!("Fakepath{i}").into())
+                .unwrap();
         }
         workspace_69.font_idx = Some(69);
         let new_workspace_69 = run_serialize(workspace_69);
@@ -386,7 +392,9 @@ mod tests {
     fn test_songidx_outofbounds_becomes_none() {
         let mut workspace_69 = Workspace::default();
         for i in 0..=7 {
-            workspace_69.add_song(format!("Fakepath{i}").into());
+            workspace_69
+                .add_song(format!("Fakepath{i}").into())
+                .unwrap();
         }
         workspace_69.midi_idx = Some(69);
         let new_workspace_69 = run_serialize(workspace_69);

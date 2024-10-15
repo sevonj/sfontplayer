@@ -23,7 +23,7 @@ pub fn song_titlebar(ui: &mut Ui, player: &mut Player) {
                     .pick_files()
                 {
                     for path in paths {
-                        player.get_workspace_mut().add_song(path);
+                        let _ = player.get_workspace_mut().add_song(path);
                     }
                 }
             }
@@ -275,7 +275,8 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &GuiState) {
                         if ui.button("➕ New workspace").clicked() {
                             player.new_workspace();
                             let workspace_index = player.get_workspaces().len() - 1;
-                            player.get_workspaces_mut()[workspace_index].add_song(filepath.clone());
+                            let _ = player.get_workspaces_mut()[workspace_index]
+                                .add_song(filepath.clone());
                         }
                         for i in 0..player.get_workspaces().len() {
                             if i == player.get_workspace_idx() {
@@ -302,7 +303,7 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &GuiState) {
                                 .on_disabled_hover_text(hovertext)
                                 .clicked()
                             {
-                                player.get_workspaces_mut()[i].add_song(filepath.clone());
+                                let _ = player.get_workspaces_mut()[i].add_song(filepath.clone());
                                 ui.close_menu();
                             }
                         }

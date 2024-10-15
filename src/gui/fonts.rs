@@ -23,7 +23,7 @@ pub fn font_titlebar(ui: &mut Ui, player: &mut Player) {
                     .pick_files()
                 {
                     for path in paths {
-                        player.get_workspace_mut().add_font(path);
+                        let _ = player.get_workspace_mut().add_font(path);
                     }
                 }
             }
@@ -228,7 +228,8 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
                         if ui.button("➕ New workspace").clicked() {
                             player.new_workspace();
                             let workspace_index = player.get_workspaces().len() - 1;
-                            player.get_workspaces_mut()[workspace_index].add_font(filepath.clone());
+                            let _ = player.get_workspaces_mut()[workspace_index]
+                                .add_font(filepath.clone());
                         }
                         for i in 0..player.get_workspaces().len() {
                             if i == player.get_workspace_idx() {
@@ -255,7 +256,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
                                 .on_disabled_hover_text(hovertext)
                                 .clicked()
                             {
-                                player.get_workspaces_mut()[i].add_font(filepath.clone());
+                                let _ = player.get_workspaces_mut()[i].add_font(filepath.clone());
                                 ui.close_menu();
                             }
                         }
