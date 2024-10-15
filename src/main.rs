@@ -68,7 +68,7 @@ impl SfontPlayer {
         let mut sfontplayer = cc.storage.map_or_else(Self::default, |storage| {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         });
-        sfontplayer.handle_launch_args(&args);
+        sfontplayer.handle_launch_args(args);
 
         let player_clone = Arc::clone(&sfontplayer.player);
         update_thread(player_clone);
