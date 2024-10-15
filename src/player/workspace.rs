@@ -35,6 +35,27 @@ pub struct Workspace {
     pub queue_idx: Option<usize>,
 }
 impl Workspace {
+    pub fn add_file(&mut self, path: PathBuf) -> Result<(), WorkspaceError> {
+        // Fast quess
+        if path.ends_with(".mid") {
+            let midimeta = MidiMeta::new(path.clone());
+            if midimeta.get_status().is_ok() {
+                return self.add_song(path);
+            }
+        }
+        // Try all types
+        let fontmeta = FontMeta::new(path.clone());
+        if fontmeta.get_status().is_ok() {
+            return self.add_font(path);
+        }
+        let midimeta = MidiMeta::new(path.clone());
+        if midimeta.get_status().is_ok() {
+            return self.add_song(path);
+        }
+
+        Err(WorkspaceError::UnknownFileFormat { path })
+    }
+
     // --- Soundfonts
 
     pub const fn get_fonts(&self) -> &Vec<FontMeta> {

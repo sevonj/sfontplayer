@@ -1,4 +1,5 @@
 use std::{
+    env,
     sync::Arc,
     thread,
     time::{Duration, Instant},
@@ -6,13 +7,15 @@ use std::{
 
 use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
-use player::Player;
+use player::{workspace::Workspace, Player};
 use rodio::{OutputStream, Sink};
 
 mod gui;
 mod player;
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
     let native_options = eframe::NativeOptions {
         viewport: ViewportBuilder::default()
             .with_app_id("jyls_sfontplayer")
@@ -23,7 +26,7 @@ fn main() {
     let _ = eframe::run_native(
         "SfontPlayer",
         native_options,
-        Box::new(|cc| Ok(Box::new(SfontPlayer::new(cc)))),
+        Box::new(|cc| Ok(Box::new(SfontPlayer::new(cc, &args)))),
     );
 }
 
@@ -56,20 +59,45 @@ impl Default for SfontPlayer {
 }
 
 impl SfontPlayer {
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    fn new(cc: &eframe::CreationContext<'_>, args: &[String]) -> Self {
         // Customize egui here with cc.egui_ctx.set_fonts and cc.egui_ctx.set_visuals.
         // Restore app state using cc.storage (requires the "persistence" feature).
         // Use the cc.gl (a glow::Context) to create graphics shaders and buffers that you can use
         // for e.g. egui::PaintCallback.
 
-        let sfontplayer = cc.storage.map_or_else(Self::default, |storage| {
+        let mut sfontplayer = cc.storage.map_or_else(Self::default, |storage| {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         });
+        sfontplayer.handle_launch_args(args);
 
         let player_clone = Arc::clone(&sfontplayer.player);
         update_thread(player_clone);
 
         sfontplayer
+    }
+    fn handle_launch_args(&mut self, args: &[String]) {
+        let mut player = self.player.lock();
+
+        let mut new_workspace = Workspace::default();
+        new_workspace.name = "Opened files".into();
+
+        for (i, arg) in args.iter().enumerate() {
+            if i == 0 {
+                continue;
+            }
+            if arg.ends_with(".sfontspace") {
+                if let Err(e) = player.open_portable_workspace(arg.into()) {
+                    self.gui_state.toast_error(e.to_string());
+                }
+            } else if let Err(e) = new_workspace.add_file(arg.into()) {
+                self.gui_state.toast_error(e.to_string());
+            }
+        }
+        if !new_workspace.get_fonts().is_empty() || !new_workspace.get_songs().is_empty() {
+            player.get_workspaces_mut().push(new_workspace);
+            let index = player.get_workspaces().len() - 1;
+            player.switch_to_workspace(index).expect("unreachable");
+        }
     }
 }
 
