@@ -204,7 +204,7 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
     ctx.input_mut(|input| {
         // --- Playback
 
-        if input.consume_shortcut(&PLAYBACK_PLAYPAUSE) {
+        if !gui.update_flags.disable_play_shortcut && input.consume_shortcut(&PLAYBACK_PLAYPAUSE) {
             if !player.is_paused() {
                 player.pause();
             } else if !player.is_empty() {

@@ -43,15 +43,23 @@ impl GuiState {
             .set_show_progress_bar(false)
             .set_closable(true);
     }
+
+    /// Keyboard shortcut won't be consumed at the end of this frame.
+    /// To avoid involuntary pausing by spacebar while typing in a text box.
+    pub fn disable_play_shortcut(&mut self) {
+        self.update_flags.disable_play_shortcut = true;
+    }
 }
 
 #[derive(Default)]
 pub struct UpdateFlags {
-    scroll_to_song: bool,
+    pub scroll_to_song: bool,
+    pub disable_play_shortcut: bool,
 }
 impl UpdateFlags {
     pub fn clear(&mut self) {
         self.scroll_to_song = false;
+        self.disable_play_shortcut = false;
     }
 }
 
@@ -59,9 +67,6 @@ impl UpdateFlags {
 pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     about_modal(ctx, gui);
     shortcut_modal(ctx, gui);
-    gui.toasts.show(ctx);
-    consume_shortcuts(ctx, player, gui);
-    handle_dropped_files(ctx);
 
     TopBottomPanel::top("top_bar")
         .resizable(false)
@@ -101,6 +106,10 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         disable_if_modal(ui, gui);
         song_table(ui, player, gui);
     });
+
+    gui.toasts.show(ctx);
+    consume_shortcuts(ctx, player, gui);
+    handle_dropped_files(ctx);
 }
 
 /// TODO: Drag files into the window to add them
