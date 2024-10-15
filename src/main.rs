@@ -93,10 +93,16 @@ impl SfontPlayer {
                 self.gui_state.toast_error(e.to_string());
             }
         }
-        if !new_workspace.get_fonts().is_empty() || !new_workspace.get_songs().is_empty() {
+        let has_fonts = !new_workspace.get_fonts().is_empty();
+        let has_songs = !new_workspace.get_songs().is_empty();
+
+        if has_fonts || has_songs {
             player.get_workspaces_mut().push(new_workspace);
             let index = player.get_workspaces().len() - 1;
             player.switch_to_workspace(index).expect("unreachable");
+        }
+        if has_songs {
+            player.start();
         }
     }
 }
