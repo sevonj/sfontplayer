@@ -19,7 +19,7 @@ use std::{
     time::Duration,
     vec,
 };
-use workspace::Workspace;
+use workspace::{font_meta::FontMeta, Workspace};
 
 pub mod audio;
 mod mediacontrols;
@@ -72,7 +72,7 @@ impl fmt::Display for PlayerError {
             Self::CantMoveWorkspace => write!(f, "Can't move this workspace further."),
             Self::CantSwitchWorkspace => write!(f, "Can't switch workspaces further."),
             Self::NoQueueIndex => write!(f, "No queue index!"),
-            Self::NoSoundfont => write!(f, "No soundfont selected!"),
+            Self::NoSoundfont => write!(f, "No soundfont!"),
         }
     }
 }
@@ -83,6 +83,8 @@ pub struct Player {
     audioplayer: AudioPlayer,
     /// Is there playback going on? Paused playback also counts.
     is_playing: bool,
+    /// Used when workspace has no soundfont selected.
+    default_soundfont: Option<FontMeta>,
 
     // -- Control
     /// Ranges 0.0..=100.0 as in percentage.
@@ -119,6 +121,7 @@ impl Default for Player {
         Self {
             audioplayer: AudioPlayer::default(),
             is_playing: false,
+            default_soundfont: None,
 
             volume: 100.,
             #[cfg(not(target_os = "windows"))]
@@ -180,11 +183,14 @@ impl Player {
             }
         }
 
-        let data = json! ({
+        let mut data = json! ({
             "shuffle": self.shuffle,
             "repeat": self.repeat,
             "workspace_idx": self.workspace_idx,
         });
+        if let Some(default) = &self.default_soundfont {
+            data["default_soundfont_path"] = Value::from(default.get_path().to_str());
+        }
 
         let config_file = state_dir.join("state.json");
 
@@ -231,12 +237,23 @@ impl Player {
             _ => 0,
         };
 
+        self.default_soundfont = data["default_soundfont_path"]
+            .as_str()
+            .map(|filepath| FontMeta::new(filepath.into()));
+
         Ok(())
     }
 
     /// You need to give the audio player a sink before it can do anything.
     pub fn set_sink(&mut self, value: Option<Sink>) {
         self.audioplayer.set_sink(value);
+    }
+
+    pub fn get_default_soundfont(&self) -> Option<FontMeta> {
+        self.default_soundfont.clone()
+    }
+    pub fn set_default_soundfont(&mut self, value: Option<FontMeta>) {
+        self.default_soundfont = value;
     }
 
     /// GUI frame update
@@ -278,34 +295,41 @@ impl Player {
             self.push_error(e.to_string());
         }
     }
+
+    fn get_soundfont(&mut self) -> anyhow::Result<&mut FontMeta> {
+        if let Some(font_index) = self.get_playing_workspace().get_font_idx() {
+            return Ok(&mut self.get_playing_workspace_mut().get_fonts_mut()[font_index]);
+        }
+        let Some(default) = &mut self.default_soundfont else {
+            bail!(PlayerError::NoSoundfont);
+        };
+        Ok(default)
+    }
+
     /// Load currently selected song & font from workspace and start playing
     fn play_selected_song(&mut self) -> anyhow::Result<()> {
         self.audioplayer.stop_playback()?;
-        let workspace = self.get_playing_workspace_mut();
-
-        let Some(font_index) = workspace.get_font_idx() else {
-            bail!(PlayerError::NoSoundfont);
-        };
-        let Some(queue_index) = workspace.queue_idx else {
+        let Some(queue_index) = self.get_playing_workspace().queue_idx else {
             bail!(PlayerError::NoQueueIndex);
         };
-        let midi_index = workspace.queue[queue_index];
+        let midi_index = self.get_playing_workspace().queue[queue_index];
 
+        let sf = self.get_soundfont()?;
+        let sf_path = sf.get_path();
+        sf.refresh();
+        sf.get_status()?;
+
+        let mid = &mut self.get_playing_workspace_mut().get_songs_mut()[midi_index];
+        let mid_path = mid.get_path();
+        mid.refresh();
+        mid.get_status()?;
+
+        let workspace = self.get_playing_workspace_mut();
         workspace.set_song_idx(Some(midi_index))?;
 
-        // Font Error Guard
-        workspace.get_fonts_mut()[font_index].refresh();
-        workspace.get_fonts()[font_index].get_status()?;
-
-        // Midi Error Guard
-        workspace.get_songs_mut()[midi_index].refresh();
-        workspace.get_songs()[midi_index].get_status()?;
-
         // Play
-        let sf = workspace.get_fonts()[font_index].get_path();
-        let mid = workspace.get_songs()[midi_index].get_path();
-        self.audioplayer.set_soundfont(sf);
-        self.audioplayer.set_midifile(mid);
+        self.audioplayer.set_soundfont(sf_path);
+        self.audioplayer.set_midifile(mid_path);
         self.is_playing = true;
 
         self.update_volume();

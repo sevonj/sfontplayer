@@ -154,9 +154,13 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
     table.body(|body| {
         body.rows(
             TBL_ROW_H,
-            player.get_workspace().get_fonts().len(),
+            player.get_workspace().get_fonts().len() + 1,
             |mut row| {
-                let index = row.index();
+                if row.index() == 0 {
+                    default_font_item(&mut row, player);
+                    return;
+                }
+                let index = row.index() - 1;
                 let fontref = &player.get_workspace().get_fonts()[index];
                 let filename = fontref.get_name();
                 let filesize = fontref.get_size();
@@ -266,8 +270,57 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player) {
                             }
                         }
                     });
+                    if ui.button("Make default").clicked() {
+                        player.set_default_soundfont(Some(
+                            player.get_workspace().get_fonts()[index].clone(),
+                        ));
+                        ui.close_menu();
+                    }
                 });
             },
         );
     });
+}
+
+fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Player) {
+    row.set_selected(player.get_workspace().get_font_idx().is_none());
+
+    // Remove button
+    row.col(|_| {});
+    // Filename
+    row.col(|ui| {
+        ui.horizontal(|ui| {
+            let font_ok;
+            if player.get_default_soundfont().is_none() {
+                ui.label(RichText::new("？"))
+                    .on_hover_text("No default soundfont set.");
+                font_ok = false;
+            } else if let Err(e) = &player
+                .get_default_soundfont()
+                .map_or_else(|| Ok(()), |font| font.get_status())
+            {
+                ui.label(RichText::new("？")).on_hover_text(e.to_string());
+                font_ok = false;
+            } else {
+                font_ok = true;
+            }
+            let filename = player
+                .get_default_soundfont()
+                .map_or("None".into(), |font| font.get_name());
+            let text = format!("None (use default: {filename})");
+            ui.add_enabled(
+                font_ok,
+                Label::new(RichText::new(text).weak())
+                    .wrap_mode(TextWrapMode::Truncate)
+                    .selectable(false),
+            );
+        });
+    });
+    // File size
+    row.col(|_| {});
+
+    // Select
+    if row.response().clicked() {
+        let _ = player.get_workspace_mut().set_font_idx(None);
+    }
 }
