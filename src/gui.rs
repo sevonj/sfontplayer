@@ -43,6 +43,12 @@ impl GuiState {
             .set_show_progress_bar(false)
             .set_closable(true);
     }
+    pub fn toast_success<S: AsRef<str>>(&mut self, caption: S) {
+        self.toasts
+            .success(caption.as_ref())
+            .set_show_progress_bar(false)
+            .set_closable(true);
+    }
 
     /// Keyboard shortcut won't be consumed at the end of this frame.
     /// To avoid involuntary pausing by spacebar while typing in a text box.
@@ -91,7 +97,7 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             .resizable(true)
             .show(ctx, |ui| {
                 disable_if_modal(ui, gui);
-                soundfont_table(ui, player);
+                soundfont_table(ui, player, gui);
             });
     }
 
