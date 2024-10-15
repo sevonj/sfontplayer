@@ -26,6 +26,8 @@ pub fn toolbar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.menu_button("File", |ui| {
+        gui.disable_play_shortcut();
+
         if ui.button("Exit").clicked() {
             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
         }
@@ -45,6 +47,8 @@ fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
     ui.menu_button("Options", |ui| {
+        gui.disable_play_shortcut();
+
         if ui.ctx().theme() == Theme::Light {
             if ui.button("🌙 Toggle theme").clicked() {
                 ui.ctx().set_theme(ThemePreference::Dark);
@@ -67,6 +71,8 @@ fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
 #[allow(clippy::too_many_lines)]
 fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.menu_button("Workspace", |ui| {
+        gui.disable_play_shortcut();
+
         ui.menu_button("Rename Workspace", |ui| {
             if ui
                 .add(TextEdit::singleline(&mut player.get_workspace_mut().name).desired_width(128.))
@@ -239,6 +245,8 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn help_menu(ui: &mut Ui, gui: &mut GuiState) {
     ui.menu_button("Help", |ui| {
+        gui.disable_play_shortcut();
+
         if ui.button("About").clicked() {
             gui.show_about_modal = true;
             ui.close_menu();
