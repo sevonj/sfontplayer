@@ -261,10 +261,15 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &GuiState) {
                         player.get_workspace_mut().get_songs_mut()[index].refresh();
                         ui.close_menu();
                     }
-                    if ui.button("Remove").clicked() {
-                        let _ = player.get_workspace_mut().remove_song(index);
-                        ui.close_menu();
-                    }
+                    ui.add_enabled_ui(
+                        player.get_workspace().get_song_list_mode() == FileListMode::Manual,
+                        |ui| {
+                            if ui.button("Remove").clicked() {
+                                let _ = player.get_workspace_mut().remove_song(index);
+                                ui.close_menu();
+                            }
+                        },
+                    );
                     if ui.button("Go to directory").clicked() {
                         let filepath = player.get_workspace().get_songs()[index].get_path();
                         let _ = open::that(filepath.parent().expect("Can't open parent"));
