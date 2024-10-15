@@ -1,3 +1,4 @@
+use anyhow::bail;
 use enums::{FileListMode, FontSort, SongSort};
 use error::WorkspaceError;
 use font_meta::FontMeta;
@@ -51,20 +52,39 @@ impl Workspace {
                 self.fonts[index].refresh();
                 Some(index)
             } else {
-                anyhow::bail!(WorkspaceError::InvalidFontIndex { index });
+                bail!(WorkspaceError::InvalidFontIndex { index });
             }
         }
         Ok(())
     }
-    pub fn add_font(&mut self, path: PathBuf) {
+    pub fn add_font(&mut self, path: PathBuf) -> Result<(), WorkspaceError> {
+        if self.font_list_mode != FileListMode::Manual {
+            return Err(WorkspaceError::ModifyAutoFontList {
+                mode: self.font_list_mode,
+            });
+        }
+        self.force_add_font(path);
+        self.refresh_font_list();
+        Ok(())
+    }
+    /// Bypasses extra correctness checks meant for gui.
+    fn force_add_font(&mut self, path: PathBuf) {
         if !self.contains_font(&path) {
             self.fonts.push(FontMeta::new(path));
-            self.refresh_font_list();
         }
     }
-    pub fn remove_font(&mut self, index: usize) -> anyhow::Result<()> {
+    pub fn remove_font(&mut self, index: usize) -> Result<(), WorkspaceError> {
+        if self.font_list_mode != FileListMode::Manual {
+            return Err(WorkspaceError::ModifyAutoFontList {
+                mode: self.font_list_mode,
+            });
+        }
+        self.force_remove_font(index)
+    }
+    /// Bypasses extra correctness checks meant for gui.
+    fn force_remove_font(&mut self, index: usize) -> Result<(), WorkspaceError> {
         if index >= self.fonts.len() {
-            anyhow::bail!(WorkspaceError::InvalidFontIndex { index });
+            return Err(WorkspaceError::InvalidFontIndex { index });
         }
         self.fonts[index].is_queued_for_deletion = true;
         Ok(())
@@ -110,20 +130,20 @@ impl Workspace {
             let filepath = self.fonts[i].get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.remove_font(i).expect("refresh: Font rm failed‽");
+                self.force_remove_font(i).expect("refresh: Font rm failed‽");
             }
             match self.font_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.font_dir.as_deref() {
-                        self.remove_font(i).expect("refresh: Font rm failed‽");
+                        self.force_remove_font(i).expect("refresh: Font rm failed‽");
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.font_dir {
                         if !filepath.starts_with(dir) {
-                            self.remove_font(i).expect("refresh: Font rm failed‽");
+                            self.force_remove_font(i).expect("refresh: Font rm failed‽");
                         }
                     }
                 }
@@ -146,7 +166,7 @@ impl Workspace {
                             continue;
                         }
                         if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
-                            self.add_font(path);
+                            self.force_add_font(path);
                         }
                     }
                 }
@@ -158,7 +178,7 @@ impl Workspace {
                 {
                     let path = entry.path();
                     if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
-                        self.add_font(path.into());
+                        self.force_add_font(path.into());
                     }
                 }
             }
@@ -223,20 +243,39 @@ impl Workspace {
                 self.midis[index].refresh();
                 Some(index)
             } else {
-                anyhow::bail!(WorkspaceError::InvalidSongIndex { index });
+                bail!(WorkspaceError::InvalidSongIndex { index });
             }
         }
         Ok(())
     }
-    pub fn add_song(&mut self, path: PathBuf) {
+    pub fn add_song(&mut self, path: PathBuf) -> Result<(), WorkspaceError> {
+        if self.midi_list_mode != FileListMode::Manual {
+            return Err(WorkspaceError::ModifyAutoSongList {
+                mode: self.midi_list_mode,
+            });
+        }
+        self.force_add_song(path);
+        self.refresh_song_list();
+        Ok(())
+    }
+    /// Bypasses extra correctness checks meant for gui.
+    fn force_add_song(&mut self, path: PathBuf) {
         if !self.contains_song(&path) {
             self.midis.push(MidiMeta::new(path));
-            self.refresh_song_list();
         }
     }
-    pub fn remove_song(&mut self, index: usize) -> anyhow::Result<()> {
+    pub fn remove_song(&mut self, index: usize) -> Result<(), WorkspaceError> {
+        if self.midi_list_mode != FileListMode::Manual {
+            return Err(WorkspaceError::ModifyAutoSongList {
+                mode: self.midi_list_mode,
+            });
+        }
+        self.force_remove_song(index)
+    }
+    /// Bypasses extra correctness checks meant for gui.
+    fn force_remove_song(&mut self, index: usize) -> Result<(), WorkspaceError> {
         if index >= self.midis.len() {
-            anyhow::bail!(WorkspaceError::InvalidSongIndex { index });
+            return Err(WorkspaceError::InvalidSongIndex { index });
         }
         self.midis[index].is_queued_for_deletion = true;
         Ok(())
@@ -282,20 +321,20 @@ impl Workspace {
             let filepath = self.midis[i].get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.remove_song(i).expect("refresh: Song rm failed‽");
+                self.force_remove_song(i).expect("refresh: Song rm failed‽");
             }
             match self.midi_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.midi_dir.as_deref() {
-                        self.remove_song(i).expect("refresh: Song rm failed‽");
+                        self.force_remove_song(i).expect("refresh: Song rm failed‽");
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.midi_dir {
                         if !filepath.starts_with(dir) {
-                            self.remove_song(i).expect("refresh: Song rm failed‽");
+                            self.force_remove_song(i).expect("refresh: Song rm failed‽");
                         }
                     }
                 }
@@ -318,7 +357,7 @@ impl Workspace {
                             continue;
                         }
                         if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
-                            self.add_song(path);
+                            self.force_add_song(path);
                         }
                     }
                 }
@@ -330,7 +369,7 @@ impl Workspace {
                 {
                     let path = entry.path();
                     if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
-                        self.add_song(path.into());
+                        self.force_add_song(path.into());
                     }
                 }
             }
@@ -485,5 +524,128 @@ impl Default for Workspace {
             queue: vec![],
             queue_idx: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_addfont_listmodes() {
+        let mut workspace_man = Workspace::default();
+        let mut workspace_dir = Workspace::default();
+        let mut workspace_sub = Workspace::default();
+        workspace_man.font_list_mode = FileListMode::Manual;
+        workspace_dir.font_list_mode = FileListMode::Directory;
+        workspace_sub.font_list_mode = FileListMode::Subdirectories;
+        workspace_man.add_font("fakepath".into()).unwrap();
+        assert!(matches!(
+            workspace_dir.add_font("fakepath".into()).unwrap_err(),
+            WorkspaceError::ModifyAutoFontList {
+                mode: FileListMode::Directory
+            }
+        ));
+        assert!(matches!(
+            workspace_sub.add_font("fakepath".into()).unwrap_err(),
+            WorkspaceError::ModifyAutoFontList {
+                mode: FileListMode::Subdirectories
+            }
+        ));
+        assert_eq!(workspace_man.fonts.len(), 1);
+        assert_eq!(workspace_dir.fonts.len(), 0);
+        assert_eq!(workspace_sub.fonts.len(), 0);
+    }
+    #[test]
+    fn test_rmfont_listmodes() {
+        let mut workspace_man = Workspace::default();
+        let mut workspace_dir = Workspace::default();
+        let mut workspace_sub = Workspace::default();
+        workspace_man.add_font("fakepath".into()).unwrap();
+        workspace_dir.add_font("fakepath".into()).unwrap();
+        workspace_sub.add_font("fakepath".into()).unwrap();
+        workspace_man.font_list_mode = FileListMode::Manual;
+        workspace_dir.font_list_mode = FileListMode::Directory;
+        workspace_sub.font_list_mode = FileListMode::Subdirectories;
+
+        workspace_man.remove_font(0).unwrap();
+        assert!(matches!(
+            workspace_dir.remove_font(0).unwrap_err(),
+            WorkspaceError::ModifyAutoFontList {
+                mode: FileListMode::Directory
+            }
+        ));
+        assert!(matches!(
+            workspace_sub.remove_font(0).unwrap_err(),
+            WorkspaceError::ModifyAutoFontList {
+                mode: FileListMode::Subdirectories
+            }
+        ));
+        workspace_man.delete_queued();
+        workspace_dir.delete_queued();
+        workspace_sub.delete_queued();
+
+        assert_eq!(workspace_man.fonts.len(), 0);
+        assert_eq!(workspace_dir.fonts.len(), 1);
+        assert_eq!(workspace_sub.fonts.len(), 1);
+    }
+    #[test]
+    fn test_addsong_listmodes() {
+        let mut workspace_man = Workspace::default();
+        let mut workspace_dir = Workspace::default();
+        let mut workspace_sub = Workspace::default();
+        workspace_man.midi_list_mode = FileListMode::Manual;
+        workspace_dir.midi_list_mode = FileListMode::Directory;
+        workspace_sub.midi_list_mode = FileListMode::Subdirectories;
+        workspace_man.add_song("fakepath".into()).unwrap();
+        assert!(matches!(
+            workspace_dir.add_song("fakepath".into()).unwrap_err(),
+            WorkspaceError::ModifyAutoSongList {
+                mode: FileListMode::Directory
+            }
+        ));
+        assert!(matches!(
+            workspace_sub.add_song("fakepath".into()).unwrap_err(),
+            WorkspaceError::ModifyAutoSongList {
+                mode: FileListMode::Subdirectories
+            }
+        ));
+        assert_eq!(workspace_man.midis.len(), 1);
+        assert_eq!(workspace_dir.midis.len(), 0);
+        assert_eq!(workspace_sub.midis.len(), 0);
+    }
+    #[test]
+    fn test_rmsong_listmodes() {
+        let mut workspace_man = Workspace::default();
+        let mut workspace_dir = Workspace::default();
+        let mut workspace_sub = Workspace::default();
+        workspace_man.add_song("fakepath".into()).unwrap();
+        workspace_dir.add_song("fakepath".into()).unwrap();
+        workspace_sub.add_song("fakepath".into()).unwrap();
+        workspace_man.midi_list_mode = FileListMode::Manual;
+        workspace_dir.midi_list_mode = FileListMode::Directory;
+        workspace_sub.midi_list_mode = FileListMode::Subdirectories;
+
+        workspace_man.remove_song(0).unwrap();
+        assert!(matches!(
+            workspace_dir.remove_song(0).unwrap_err(),
+            WorkspaceError::ModifyAutoSongList {
+                mode: FileListMode::Directory
+            }
+        ));
+        assert!(matches!(
+            workspace_sub.remove_song(0).unwrap_err(),
+            WorkspaceError::ModifyAutoSongList {
+                mode: FileListMode::Subdirectories
+            }
+        ));
+        workspace_man.delete_queued();
+        workspace_dir.delete_queued();
+        workspace_sub.delete_queued();
+
+        assert_eq!(workspace_man.midis.len(), 0);
+        assert_eq!(workspace_dir.midis.len(), 1);
+        assert_eq!(workspace_sub.midis.len(), 1);
     }
 }
