@@ -225,7 +225,11 @@ impl Player {
         if let Some(repeat) = data["repeat"].as_u64() {
             self.repeat = RepeatMode::try_from(repeat as u8).unwrap_or_default();
         }
-        self.workspace_idx = data["workspace_idx"].as_u64().unwrap_or(0) as usize;
+
+        self.workspace_idx = match data["workspace_idx"].as_u64() {
+            Some(x) if (x as usize) < self.workspaces.len() => x as usize,
+            _ => 0,
+        };
 
         Ok(())
     }
