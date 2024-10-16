@@ -78,7 +78,7 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         .resizable(false)
         .show(ctx, |ui| {
             toolbar(ui, player, gui);
-            workspace_tabs(ui, player);
+            workspace_tabs(ui, player, gui);
         });
 
     TopBottomPanel::bottom("playback_panel").show(ctx, |ui| {

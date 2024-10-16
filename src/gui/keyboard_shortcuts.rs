@@ -25,6 +25,7 @@ pub const WORKSPACE_MOVERIGHT: KeyboardShortcut =
     KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowRight);
 pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
 pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
+pub const WORKSPACE_REFRESH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
 
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
 
@@ -167,6 +168,14 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_REMOVE));
                             });
                         });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Refresh workspace content");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_REFRESH));
+                            });
+                        });
 
                         // --- GUI
 
@@ -264,6 +273,10 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
         }
         if input.consume_shortcut(&WORKSPACE_REMOVE) {
             let _ = player.remove_workspace(player.get_workspace_idx());
+        }
+        if input.consume_shortcut(&WORKSPACE_REFRESH) {
+            player.get_workspace_mut().refresh_font_list();
+            player.get_workspace_mut().refresh_song_list();
         }
 
         // --- GUI

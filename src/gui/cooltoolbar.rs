@@ -7,8 +7,8 @@ use crate::{
 };
 
 use super::keyboard_shortcuts::{
-    GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REMOVE,
-    WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+    GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH,
+    WORKSPACE_REMOVE, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
 };
 
 /// The topmost toolbar with File Menu
@@ -84,19 +84,32 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 ui.close_menu();
             }
         });
+        let can_refresh = player.get_workspace().get_font_list_mode() != FileListMode::Manual
+            || player.get_workspace().get_song_list_mode() != FileListMode::Manual;
+        if ui
+            .add_enabled(
+                can_refresh,
+                Button::new("Refresh directory content")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_REFRESH)),
+            )
+            .clicked()
+        {
+            player.get_workspace_mut().refresh_font_list();
+            player.get_workspace_mut().refresh_song_list();
+        }
         if player.get_workspace().is_portable() {
-            let hover_text = "Copy this workspace into builtin app storage.";
+            let hover_text = "Copy this workspace into builtin app storage";
             if ui
-                .button("Copy to app storage")
+                .button("Store in app")
                 .on_hover_text(hover_text)
                 .clicked()
             {
                 let _ = player.copy_workspace_builtin(player.get_workspace_idx());
             };
         } else {
-            let hover_text = "Copy this workspace into a portable file.";
+            let hover_text = "Save a copy of this workspace into a portable file";
             if ui
-                .button("Make portable copy")
+                .button("Save to file")
                 .on_hover_text(hover_text)
                 .clicked()
             {
