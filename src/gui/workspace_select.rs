@@ -2,7 +2,7 @@ use super::GuiState;
 use crate::player::{workspace::enums::FileListMode, Player};
 use eframe::egui::{
     scroll_area::ScrollBarVisibility, vec2, Button, Color32, Frame, Label, Response, RichText,
-    ScrollArea, Sense, Stroke, TextEdit, Ui, UiBuilder,
+    ScrollArea, Sense, Shadow, Stroke, TextEdit, Ui, UiBuilder,
 };
 use rfd::FileDialog;
 
@@ -12,21 +12,24 @@ pub fn workspace_tabs(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         .drag_to_scroll(true)
         .enable_scrolling(true)
         .show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.style_mut().spacing.item_spacing.x = 0.0;
-                ui.allocate_space(vec2(0.0, 26.0));
-                for i in 0..player.get_workspaces().len() {
-                    workspace_tab(ui, player, i, gui);
-                }
-                ui.add_space(6.0);
-                if ui
-                    .add(Button::new("➕").frame(false))
-                    .on_hover_text("Create new workspace")
-                    .clicked()
-                {
-                    player.new_workspace();
-                    let _ = player.switch_to_workspace(player.get_workspaces().len() - 1);
-                }
+            ui.vertical(|ui| {
+                ui.style_mut().spacing.item_spacing = vec2(0.0, 0.0);
+                ui.horizontal(|ui| {
+                    ui.allocate_space(vec2(0.0, 26.0));
+                    for i in 0..player.get_workspaces().len() {
+                        workspace_tab(ui, player, i, gui);
+                    }
+                    ui.add_space(6.0);
+                    if ui
+                        .add(Button::new("➕").frame(false))
+                        .on_hover_text("Create new workspace")
+                        .clicked()
+                    {
+                        player.new_workspace();
+                        let _ = player.switch_to_workspace(player.get_workspaces().len() - 1);
+                    }
+                });
+                ui.add_space(1.0);
             });
         });
 }
@@ -57,12 +60,22 @@ fn workspace_tab(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiSt
         } else {
             style.visuals.faint_bg_color
         };
+        let shadow = Shadow {
+            offset: [0.0, 2.0].into(),
+            color: if current_tab {
+                style.visuals.selection.bg_fill
+            } else {
+                fill
+            },
+            ..Default::default()
+        };
         Frame::group(&style)
             .inner_margin(4.)
             .outer_margin(0.)
             .rounding(0.)
             .stroke(Stroke::NONE)
             .fill(fill)
+            .shadow(shadow)
             .show(ui, |ui| {
                 ui.style_mut().spacing.item_spacing.x = 0.0;
                 ui.add_space(4.0);
