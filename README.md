@@ -19,7 +19,7 @@ Prebuilt binaries are available for Linux and Windows.
 ## Development
 [➜ Project management](https://github.com/users/sevonj/projects/12)
 
-Check out the linked project for an overview of issues.
+Check out the linked project for an organized overview of issues.
 
 ### Build
 - Clone the repo
