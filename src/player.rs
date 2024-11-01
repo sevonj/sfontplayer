@@ -511,6 +511,9 @@ impl Player {
         Ok(())
     }
     pub fn open_portable_workspace(&mut self, filepath: PathBuf) -> anyhow::Result<()> {
+        if self.is_portable_workspace_open(&filepath) {
+            bail!("Workspace is already open")
+        }
         let workspace = Workspace::open_portable(filepath)?;
         self.workspaces.push(workspace);
         self.workspace_idx = self.workspaces.len() - 1;
@@ -553,6 +556,17 @@ impl Player {
             self.new_workspace();
             self.workspace_idx = 0;
         }
+    }
+    fn is_portable_workspace_open(&self, filepath: &PathBuf) -> bool {
+        for workspace in &self.workspaces {
+            let Some(workspace_path) = workspace.get_portable_path() else {
+                continue;
+            };
+            if workspace_path == *filepath {
+                return true;
+            }
+        }
+        false
     }
 
     // --- Other
