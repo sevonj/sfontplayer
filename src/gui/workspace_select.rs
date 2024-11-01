@@ -1,10 +1,9 @@
-use super::GuiState;
+use super::{file_dialogs, GuiState};
 use crate::player::{workspace::enums::FileListMode, Player};
 use eframe::egui::{
     scroll_area::ScrollBarVisibility, vec2, Button, Color32, Frame, Label, Response, RichText,
     ScrollArea, Sense, Shadow, Stroke, TextEdit, Ui, UiBuilder,
 };
-use rfd::FileDialog;
 
 pub fn workspace_tabs(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ScrollArea::horizontal()
@@ -127,23 +126,6 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
             {
                 let _ = player.copy_workspace_builtin(index);
             };
-        } else {
-            let hover_text = "Save a copy of this workspace into a portable file";
-            if ui
-                .button("Save to file")
-                .on_hover_text(hover_text)
-                .clicked()
-            {
-                if let Some(save_path) = FileDialog::new()
-                    .add_filter("Workspace file", &["sfontspace"])
-                    .save_file()
-                {
-                    if let Err(e) = player.copy_workspace_portable(index, save_path) {
-                        gui.toast_error(e.to_string());
-                    }
-                    ui.close_menu();
-                }
-            }
         }
         ui.add_enabled_ui(player.get_workspaces()[index].is_portable(), |ui| {
             let hover_text = if player.get_workspaces()[index].is_portable() {
@@ -152,7 +134,7 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
                 "This workspace is stored in app data. App data is saved automatically."
             };
             if ui
-                .add(Button::new("Save changes"))
+                .add(Button::new("Save"))
                 .on_hover_text(hover_text)
                 .on_disabled_hover_text(hover_text)
                 .clicked()
@@ -160,6 +142,13 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
                 let _ = player.get_workspaces()[index].save_portable();
             }
         });
+        if ui
+            .add(Button::new("Save as"))
+            .on_hover_text("Save a copy to a new file")
+            .clicked()
+        {
+            file_dialogs::save_workspace_as(player, gui);
+        }
 
         let workspace = &mut player.get_workspaces_mut()[index];
         let can_refresh = workspace.get_font_list_mode() != FileListMode::Manual

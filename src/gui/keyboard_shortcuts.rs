@@ -4,7 +4,7 @@ use eframe::egui::{
 };
 use egui_extras::{Column, TableBuilder};
 
-use crate::{player::Player, GuiState};
+use crate::{gui::file_dialogs, player::Player, GuiState};
 
 const CTRL_SHIFT: Modifiers = Modifiers::CTRL.plus(Modifiers::SHIFT);
 
@@ -27,6 +27,7 @@ pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::
 pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
 pub const WORKSPACE_REFRESH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
 pub const WORKSPACE_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
+pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
 
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
 
@@ -185,6 +186,14 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_SAVE));
                             });
                         });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Save workspace to a new file.");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_SAVEAS));
+                            });
+                        });
 
                         // --- GUI
 
@@ -286,6 +295,9 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
         if input.consume_shortcut(&WORKSPACE_REFRESH) {
             player.get_workspace_mut().refresh_font_list();
             player.get_workspace_mut().refresh_song_list();
+        }
+        if input.consume_shortcut(&WORKSPACE_SAVEAS) {
+            file_dialogs::save_workspace_as(player, gui);
         }
         if input.consume_shortcut(&WORKSPACE_SAVE) {
             let _ = player.get_workspace().save_portable();
