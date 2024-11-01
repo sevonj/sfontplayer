@@ -8,7 +8,7 @@ use crate::{
 
 use super::keyboard_shortcuts::{
     GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH,
-    WORKSPACE_REMOVE, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+    WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
 };
 
 /// The topmost toolbar with File Menu
@@ -126,6 +126,24 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 }
             }
         }
+        ui.add_enabled_ui(player.get_workspace().is_portable(), |ui| {
+            let hover_text = if player.get_workspace().is_portable() {
+                "Save unsaved changes to this workspace."
+            } else {
+                "This workspace is stored in app data. App data is saved automatically."
+            };
+            if ui
+                .add(
+                    Button::new("Save workspace")
+                        .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVE)),
+                )
+                .on_hover_text(hover_text)
+                .on_disabled_hover_text(hover_text)
+                .clicked()
+            {
+                let _ = player.get_workspace().save_portable();
+            }
+        });
         ui.menu_button("Soundfonts", |ui| {
             let mut list_mode = player.get_workspace().get_font_list_mode();
             ui.add_enabled_ui(list_mode == FileListMode::Manual, |ui| {

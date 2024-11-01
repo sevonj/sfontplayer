@@ -145,6 +145,22 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
                 }
             }
         }
+        ui.add_enabled_ui(player.get_workspaces()[index].is_portable(), |ui| {
+            let hover_text = if player.get_workspaces()[index].is_portable() {
+                "Save unsaved changes."
+            } else {
+                "This workspace is stored in app data. App data is saved automatically."
+            };
+            if ui
+                .add(Button::new("Save changes"))
+                .on_hover_text(hover_text)
+                .on_disabled_hover_text(hover_text)
+                .clicked()
+            {
+                let _ = player.get_workspaces()[index].save_portable();
+            }
+        });
+
         let workspace = &mut player.get_workspaces_mut()[index];
         let can_refresh = workspace.get_font_list_mode() != FileListMode::Manual
             || workspace.get_song_list_mode() != FileListMode::Manual;

@@ -1,7 +1,7 @@
 //! Workspace (de)serialization Into / From JSON.
 //!
 
-use std::{convert::Into, path::PathBuf};
+use std::{convert::Into, fs::File, io::Write, path::PathBuf};
 
 use super::{
     enums::{FileListMode, FontSort, SongSort},
@@ -9,6 +9,7 @@ use super::{
     midi_meta::MidiMeta,
     Workspace,
 };
+use anyhow::bail;
 use relative_path::{PathExt, RelativePath};
 use serde_json::{json, Value};
 
@@ -216,6 +217,19 @@ impl Workspace {
         workspace.portable_filepath = Some(filepath);
 
         Ok(workspace)
+    }
+
+    /// Save function for portable workspaces.
+    pub fn save_portable(&self) -> anyhow::Result<()> {
+        let Some(filepath) = self.get_portable_path() else {
+            let name = &self.name;
+            bail!("Can't save non-portable workspace as a portable file. Make it portable first! name:{name}")
+        };
+
+        let mut workspace_file = File::create(&filepath)?;
+        workspace_file.write_all(Value::from(self).to_string().as_bytes())?;
+
+        Ok(())
     }
 }
 
