@@ -113,7 +113,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 .on_disabled_hover_text(hover_text)
                 .clicked()
             {
-                let _ = player.get_workspace().save_portable();
+                let _ = player.get_workspace_mut().save_portable();
             }
         });
         if ui
@@ -161,7 +161,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 "Subdirectories",
             );
             if response1.clicked() || response2.clicked() || response3.clicked() {
-                player.get_workspace_mut().set_font_list_type(list_mode);
+                player.get_workspace_mut().set_font_list_mode(list_mode);
             }
         });
         ui.menu_button("Songs", |ui| {

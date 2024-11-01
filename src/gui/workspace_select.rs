@@ -88,11 +88,13 @@ fn workspace_tab(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiSt
 
                 ui.add_space(6.0);
 
-                if !(response.hovered() || current_tab) {
+                let unsaved = player.get_workspaces()[index].has_unsaved_changes();
+                if !(response.hovered() || current_tab || unsaved) {
                     ui.style_mut().visuals.widgets.inactive.fg_stroke.color = Color32::TRANSPARENT;
                 }
+                let close_symbol = if unsaved { "⊗" } else { "❌" };
                 if ui
-                    .add(Button::new(RichText::new("❌").size(14.0)).frame(false))
+                    .add(Button::new(RichText::new(close_symbol).size(14.0)).frame(false))
                     .on_hover_text("Close this workspace")
                     .clicked()
                 {
@@ -129,7 +131,7 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
                 .on_disabled_hover_text(hover_text)
                 .clicked()
             {
-                let _ = player.get_workspaces()[index].save_portable();
+                let _ = player.get_workspaces_mut()[index].save_portable();
             }
         });
         if ui

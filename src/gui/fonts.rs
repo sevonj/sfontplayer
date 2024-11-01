@@ -86,7 +86,7 @@ pub fn font_titlebar(ui: &mut Ui, player: &mut Player) {
                     );
                 });
             if list_mode != player.get_workspace().get_font_list_mode() {
-                player.get_workspace_mut().set_font_list_type(list_mode);
+                player.get_workspace_mut().set_font_list_mode(list_mode);
             }
         });
     });
