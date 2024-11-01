@@ -585,11 +585,22 @@ impl Player {
         // Update current workspace index if it was affected by the move
         if old_index == self.workspace_idx {
             self.workspace_idx = new_index;
-        } else if old_index > self.workspace_idx && self.workspace_idx <= new_index {
+        } else if old_index < self.workspace_idx && self.workspace_idx <= new_index {
+            self.workspace_idx -= 1;
+        } else if new_index <= self.workspace_idx && self.workspace_idx < old_index {
+            self.workspace_idx += 1;
+        }
+        // Update playing workspace index if it was affected by the move
+        if old_index == self.playing_workspace_idx {
+            self.playing_workspace_idx = new_index;
+        } else if old_index < self.playing_workspace_idx && self.playing_workspace_idx <= new_index
+        {
             self.playing_workspace_idx -= 1;
-        } else if new_index > self.workspace_idx && self.workspace_idx <= old_index {
+        } else if new_index <= self.playing_workspace_idx && self.playing_workspace_idx < old_index
+        {
             self.playing_workspace_idx += 1;
         }
+
         Ok(())
     }
     /// Move current workspace left
@@ -682,4 +693,143 @@ fn state_dir() -> PathBuf {
 fn project_dirs() -> ProjectDirs {
     ProjectDirs::from("fi", "sevonj", env!("CARGO_PKG_NAME"))
         .expect("Failed to create project dirs.")
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::usize;
+
+    use super::*;
+
+    #[test]
+    fn test_rearrange_workspaces_cur_wksp_index() {
+        let mut player = Player::default();
+        player.new_workspace();
+        player.new_workspace();
+        player.new_workspace();
+
+        player.switch_to_workspace(1).unwrap();
+        assert_eq!(player.workspace_idx, 1);
+        player.move_workspace_left().unwrap();
+        assert_eq!(player.workspace_idx, 0);
+        player.move_workspace_left().unwrap_err();
+        assert_eq!(player.workspace_idx, 0);
+        player.move_workspace_right().unwrap();
+        assert_eq!(player.workspace_idx, 1);
+        player.move_workspace_right().unwrap();
+        assert_eq!(player.workspace_idx, 2);
+        player.move_workspace_right().unwrap_err();
+        assert_eq!(player.workspace_idx, 2);
+
+        player.move_workspace(0, 1).unwrap();
+        assert_eq!(player.workspace_idx, 2);
+
+        player.move_workspace(0, 2).unwrap();
+        assert_eq!(player.workspace_idx, 1);
+
+        player.move_workspace(1, 2).unwrap();
+        assert_eq!(player.workspace_idx, 2);
+
+        player.move_workspace(2, 2).unwrap();
+        assert_eq!(player.workspace_idx, 2);
+
+        player.move_workspace(2, 0).unwrap();
+        assert_eq!(player.workspace_idx, 0);
+
+        player.move_workspace(0, 1).unwrap();
+        assert_eq!(player.workspace_idx, 1);
+    }
+
+    #[test]
+    fn test_rearrange_workspaces_cur_wksp_index_outofbounds() {
+        let mut player = Player::default();
+        player.new_workspace();
+        player.new_workspace();
+        player.new_workspace();
+
+        player.switch_to_workspace(0).unwrap();
+        assert_eq!(player.workspace_idx, 0);
+        player.move_workspace_left().unwrap_err();
+        assert_eq!(player.workspace_idx, 0);
+
+        player.switch_to_workspace(2).unwrap();
+        assert_eq!(player.workspace_idx, 2);
+        player.move_workspace_right().unwrap_err();
+        assert_eq!(player.workspace_idx, 2);
+
+        player.move_workspace(0, 3).unwrap_err();
+        assert_eq!(player.workspace_idx, 2);
+        player.move_workspace(2, 3).unwrap_err();
+        assert_eq!(player.workspace_idx, 2);
+        player.move_workspace(2, usize::MAX).unwrap_err();
+        assert_eq!(player.workspace_idx, 2);
+    }
+
+    #[test]
+    fn test_rearrange_workspaces_playing_wksp_index() {
+        let mut player = Player::default();
+        player.new_workspace();
+        player.new_workspace();
+        player.new_workspace();
+
+        player.switch_to_workspace(1).unwrap();
+        player.playing_workspace_idx = 1;
+        assert_eq!(player.playing_workspace_idx, 1);
+        player.move_workspace_left().unwrap();
+        assert_eq!(player.playing_workspace_idx, 0);
+        player.move_workspace_left().unwrap_err();
+        assert_eq!(player.playing_workspace_idx, 0);
+        player.move_workspace_right().unwrap();
+        assert_eq!(player.playing_workspace_idx, 1);
+        player.move_workspace_right().unwrap();
+        assert_eq!(player.playing_workspace_idx, 2);
+        player.move_workspace_right().unwrap_err();
+        assert_eq!(player.playing_workspace_idx, 2);
+
+        player.move_workspace(0, 1).unwrap();
+        assert_eq!(player.playing_workspace_idx, 2);
+
+        player.move_workspace(0, 2).unwrap();
+        assert_eq!(player.playing_workspace_idx, 1);
+
+        player.move_workspace(1, 2).unwrap();
+        assert_eq!(player.playing_workspace_idx, 2);
+
+        player.move_workspace(2, 2).unwrap();
+        assert_eq!(player.playing_workspace_idx, 2);
+
+        player.move_workspace(2, 0).unwrap();
+        assert_eq!(player.playing_workspace_idx, 0);
+
+        player.move_workspace(0, 1).unwrap();
+        assert_eq!(player.playing_workspace_idx, 1);
+    }
+
+    #[test]
+    fn test_rearrange_workspaces_playing_wksp_index_outofbounds() {
+        let mut player = Player::default();
+        player.new_workspace();
+        player.new_workspace();
+        player.new_workspace();
+
+        player.switch_to_workspace(0).unwrap();
+        player.playing_workspace_idx = 0;
+        assert_eq!(player.playing_workspace_idx, 0);
+        player.move_workspace_left().unwrap_err();
+        assert_eq!(player.playing_workspace_idx, 0);
+
+        player.switch_to_workspace(2).unwrap();
+        player.playing_workspace_idx = 2;
+        assert_eq!(player.playing_workspace_idx, 2);
+        player.move_workspace_right().unwrap_err();
+        assert_eq!(player.playing_workspace_idx, 2);
+
+        player.move_workspace(0, 3).unwrap_err();
+        assert_eq!(player.playing_workspace_idx, 2);
+        player.move_workspace(2, 3).unwrap_err();
+        assert_eq!(player.playing_workspace_idx, 2);
+        player.move_workspace(2, usize::MAX).unwrap_err();
+        assert_eq!(player.playing_workspace_idx, 2);
+    }
 }
