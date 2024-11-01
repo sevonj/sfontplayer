@@ -12,7 +12,7 @@ pub mod font_meta;
 pub mod midi_meta;
 
 mod error;
-mod serialize;
+mod serialize_workspace;
 
 #[derive(Clone)]
 pub struct Workspace {

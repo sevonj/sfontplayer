@@ -2,27 +2,19 @@
 
 use anyhow::bail;
 use audio::AudioPlayer;
-use directories::ProjectDirs;
 use eframe::egui::mutex::Mutex;
 #[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
 use rodio::Sink;
-use serde_json::{json, Value};
+use serde_json::Value;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use souvlaki::{MediaControlEvent, MediaControls};
-use std::{
-    error, fmt,
-    fs::{self, remove_file, File},
-    io::Write,
-    path::PathBuf,
-    sync::Arc,
-    time::Duration,
-    vec,
-};
+use std::{error, fmt, fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
 use workspace::{font_meta::FontMeta, Workspace};
 
 pub mod audio;
 mod mediacontrols;
+mod serialize_player;
 pub mod workspace;
 
 /// To be handled in gui
@@ -141,109 +133,6 @@ impl Default for Player {
 }
 
 impl Player {
-    pub fn save_state(&self) -> anyhow::Result<()> {
-        let state_dir = state_dir();
-        let workspace_dir = workspace_dir();
-        fs::create_dir_all(&state_dir)?;
-        fs::create_dir_all(&workspace_dir)?;
-
-        let mut new_workspace_filepaths: Vec<PathBuf> = vec![];
-        for (i, workspace) in self.workspaces.iter().enumerate() {
-            let filename = format!(
-                "{i:02}_{}.json",
-                workspace
-                    .name
-                    .replace(|c: char| !c.is_ascii_alphanumeric(), "")
-                    .to_lowercase()
-            );
-            let filepath = workspace_dir.join(filename);
-            let mut file = File::create(&filepath)?;
-            if let Some(portable_path) = workspace.get_portable_path() {
-                let _ = file.write_all(
-                    json! ({
-                         "workspace_is_portable": true,
-                         "portable_filepath": workspace.get_portable_path()
-                        }
-                    )
-                    .to_string()
-                    .as_bytes(),
-                );
-                let mut portable_file = File::create(portable_path)?;
-                portable_file.write_all(Value::from(workspace).to_string().as_bytes())?;
-            } else {
-                file.write_all(Value::from(workspace).to_string().as_bytes())?;
-            }
-            new_workspace_filepaths.push(filepath);
-        }
-        let workspace_paths = fs::read_dir(workspace_dir)?;
-        for file in workspace_paths {
-            let filepath = file?.path();
-            if !new_workspace_filepaths.contains(&filepath) {
-                remove_file(filepath)?;
-            }
-        }
-
-        let mut data = json! ({
-            "shuffle": self.shuffle,
-            "repeat": self.repeat,
-            "workspace_idx": self.workspace_idx,
-        });
-        if let Some(default) = &self.default_soundfont {
-            data["default_soundfont_path"] = Value::from(default.get_path().to_str());
-        }
-
-        let config_file = state_dir.join("state.json");
-
-        let mut file = File::create(config_file)?;
-        file.write_all(data.to_string().as_bytes())?;
-
-        Ok(())
-    }
-
-    pub fn load_state(&mut self) -> anyhow::Result<()> {
-        let mut workspace_paths = fs::read_dir(workspace_dir())?
-            .filter_map(std::result::Result::ok)
-            .map(|e| e.path())
-            .collect::<Vec<_>>();
-        workspace_paths.sort(); // filenames are number-prefixed.
-
-        for filepath in workspace_paths {
-            println!("Loading workspace: {filepath:?}");
-            let data_string = std::fs::read_to_string(filepath)?;
-            let data: Value = serde_json::from_str(&data_string)?;
-            if data["workspace_is_portable"].as_bool() == Some(true) {
-                let Some(portable_filepath) = data["portable_filepath"].as_str() else {
-                    self.workspaces.push(Workspace::default());
-                    continue;
-                };
-                self.workspaces
-                    .push(Workspace::open_portable(portable_filepath.into())?);
-            } else {
-                self.workspaces.push(Workspace::from(data));
-            }
-        }
-
-        let state_filepath = state_dir().join("state.json");
-        let data_string = std::fs::read_to_string(state_filepath)?;
-        let data: Value = serde_json::from_str(&data_string)?;
-
-        self.shuffle = data["shuffle"].as_bool().is_some_and(|value| value);
-        if let Some(repeat) = data["repeat"].as_u64() {
-            self.repeat = RepeatMode::try_from(repeat as u8).unwrap_or_default();
-        }
-
-        self.workspace_idx = match data["workspace_idx"].as_u64() {
-            Some(x) if (x as usize) < self.workspaces.len() => x as usize,
-            _ => 0,
-        };
-
-        self.default_soundfont = data["default_soundfont_path"]
-            .as_str()
-            .map(|filepath| FontMeta::new(filepath.into()));
-
-        Ok(())
-    }
-
     /// You need to give the audio player a sink before it can do anything.
     pub fn set_sink(&mut self, value: Option<Sink>) {
         self.audioplayer.set_sink(value);
@@ -676,29 +565,8 @@ impl Player {
     }
 }
 
-fn workspace_dir() -> PathBuf {
-    project_dirs().data_dir().join("workspaces")
-}
-
-fn state_dir() -> PathBuf {
-    project_dirs()
-        .state_dir()
-        .map(std::borrow::ToOwned::to_owned)
-        .map_or_else(
-            || project_dirs().data_dir().join("fallback_state_dir"),
-            |path| path,
-        )
-}
-
-fn project_dirs() -> ProjectDirs {
-    ProjectDirs::from("fi", "sevonj", env!("CARGO_PKG_NAME"))
-        .expect("Failed to create project dirs.")
-}
-
 #[cfg(test)]
 mod tests {
-
-    use std::usize;
 
     use super::*;
 
