@@ -6,9 +6,13 @@ use crate::{
     GuiState,
 };
 
-use super::keyboard_shortcuts::{
-    GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH,
-    WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+use super::{
+    file_dialogs::save_workspace_as,
+    keyboard_shortcuts::{
+        GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT,
+        WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
+        WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+    },
 };
 
 /// The topmost toolbar with File Menu
@@ -106,37 +110,15 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             {
                 let _ = player.copy_workspace_builtin(player.get_workspace_idx());
             };
-        } else {
-            let hover_text = "Save a copy of this workspace into a portable file";
-            if ui
-                .button("Save to file")
-                .on_hover_text(hover_text)
-                .clicked()
-            {
-                if let Some(save_path) = FileDialog::new()
-                    .add_filter("Workspace file", &["sfontspace"])
-                    .save_file()
-                {
-                    if let Err(e) =
-                        player.copy_workspace_portable(player.get_workspace_idx(), save_path)
-                    {
-                        gui.toast_error(e.to_string());
-                    }
-                    ui.close_menu();
-                }
-            }
         }
         ui.add_enabled_ui(player.get_workspace().is_portable(), |ui| {
             let hover_text = if player.get_workspace().is_portable() {
-                "Save unsaved changes to this workspace."
+                "Save unsaved changes."
             } else {
                 "This workspace is stored in app data. App data is saved automatically."
             };
             if ui
-                .add(
-                    Button::new("Save workspace")
-                        .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVE)),
-                )
+                .add(Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVE)))
                 .on_hover_text(hover_text)
                 .on_disabled_hover_text(hover_text)
                 .clicked()
@@ -144,6 +126,13 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 let _ = player.get_workspace().save_portable();
             }
         });
+        if ui
+            .add(Button::new("Save as").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVEAS)))
+            .on_hover_text("Save a copy to a new file")
+            .clicked()
+        {
+            save_workspace_as(player, gui);
+        }
         ui.menu_button("Soundfonts", |ui| {
             let mut list_mode = player.get_workspace().get_font_list_mode();
             ui.add_enabled_ui(list_mode == FileListMode::Manual, |ui| {

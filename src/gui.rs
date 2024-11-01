@@ -1,6 +1,7 @@
 mod about;
 pub mod conversions;
 mod cooltoolbar;
+pub mod file_dialogs;
 mod fonts;
 mod keyboard_shortcuts;
 mod playback_controls;
