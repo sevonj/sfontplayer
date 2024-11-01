@@ -519,7 +519,7 @@ impl Player {
         self.workspace_idx = self.workspaces.len() - 1;
         Ok(())
     }
-    /// Copy workspace into a portable file.
+    /// Save workspace into a portable file.
     pub fn save_workspace_as(&mut self, index: usize, filepath: PathBuf) -> anyhow::Result<()> {
         if index >= self.workspaces.len() {
             bail!(PlayerError::InvalidWorkspaceIndex { index });
@@ -545,13 +545,14 @@ impl Player {
         let _ = self.switch_to_workspace(self.workspaces.len() - 1);
         Ok(())
     }
-    /// Copy portable file to app data.
-    pub fn copy_workspace_builtin(&mut self, index: usize) -> anyhow::Result<()> {
+    /// New workspace is stored to app data.
+    pub fn duplicate_workspace(&mut self, index: usize) -> anyhow::Result<()> {
         if index >= self.workspaces.len() {
             bail!(PlayerError::InvalidWorkspaceIndex { index });
         }
         let mut new_workspace = self.workspaces[index].clone();
         new_workspace.set_portable_path(None);
+        new_workspace.name = format!("{} (Copy)", self.workspaces[index].name);
 
         self.workspaces.push(new_workspace);
         let _ = self.switch_to_workspace(self.workspaces.len() - 1);
