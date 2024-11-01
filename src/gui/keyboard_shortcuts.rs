@@ -310,7 +310,7 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
             file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
         }
         if input.consume_shortcut(&WORKSPACE_SAVE) {
-            let _ = player.get_workspace().save_portable();
+            let _ = player.get_workspace_mut().save_portable();
         }
         if input.consume_shortcut(&WORKSPACE_DUPLICATE) {
             let _ = player.duplicate_workspace(player.get_workspace_idx());
