@@ -28,6 +28,7 @@ pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::
 pub const WORKSPACE_REFRESH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
 pub const WORKSPACE_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
 pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
+pub const WORKSPACE_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
 
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
 
@@ -194,6 +195,14 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_SAVEAS));
                             });
                         });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Duplicate current workspace.");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_DUPLICATE));
+                            });
+                        });
 
                         // --- GUI
 
@@ -228,6 +237,7 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
         return;
     }
 
+    #[allow(clippy::cognitive_complexity)]
     ctx.input_mut(|input| {
         // --- Playback
 
@@ -297,10 +307,13 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
             player.get_workspace_mut().refresh_song_list();
         }
         if input.consume_shortcut(&WORKSPACE_SAVEAS) {
-            file_dialogs::save_workspace_as(player, gui);
+            file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
         }
         if input.consume_shortcut(&WORKSPACE_SAVE) {
             let _ = player.get_workspace().save_portable();
+        }
+        if input.consume_shortcut(&WORKSPACE_DUPLICATE) {
+            let _ = player.duplicate_workspace(player.get_workspace_idx());
         }
 
         // --- GUI

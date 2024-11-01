@@ -9,8 +9,8 @@ use crate::{
 use super::{
     file_dialogs::save_workspace_as,
     keyboard_shortcuts::{
-        GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT,
-        WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
+        GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
+        WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
         WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
     },
 };
@@ -101,21 +101,11 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             player.get_workspace_mut().refresh_font_list();
             player.get_workspace_mut().refresh_song_list();
         }
-        if player.get_workspace().is_portable() {
-            let hover_text = "Copy this workspace into builtin app storage";
-            if ui
-                .button("Store in app")
-                .on_hover_text(hover_text)
-                .clicked()
-            {
-                let _ = player.copy_workspace_builtin(player.get_workspace_idx());
-            };
-        }
         ui.add_enabled_ui(player.get_workspace().is_portable(), |ui| {
             let hover_text = if player.get_workspace().is_portable() {
                 "Save unsaved changes."
             } else {
-                "This workspace is stored in app data. App data is saved automatically."
+                "Current workspace is stored in app data. App data is saved automatically."
             };
             if ui
                 .add(Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVE)))
@@ -131,7 +121,17 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             .on_hover_text("Save a copy to a new file")
             .clicked()
         {
-            save_workspace_as(player, gui);
+            save_workspace_as(player, player.get_workspace_idx(), gui);
+        }
+        if ui
+            .add(
+                Button::new("Duplicate")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_DUPLICATE)),
+            )
+            .on_hover_text("Create a copy of current workspace")
+            .clicked()
+        {
+            let _ = player.duplicate_workspace(player.get_workspace_idx());
         }
         ui.menu_button("Soundfonts", |ui| {
             let mut list_mode = player.get_workspace().get_font_list_mode();

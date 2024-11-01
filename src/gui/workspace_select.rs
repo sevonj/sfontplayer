@@ -117,16 +117,6 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
             TextEdit::singleline(&mut player.get_workspaces_mut()[index].name).desired_width(128.),
         );
 
-        if player.get_workspaces()[index].is_portable() {
-            let hover_text = "Copy this workspace into builtin app storage";
-            if ui
-                .button("Store in app")
-                .on_hover_text(hover_text)
-                .clicked()
-            {
-                let _ = player.copy_workspace_builtin(index);
-            };
-        }
         ui.add_enabled_ui(player.get_workspaces()[index].is_portable(), |ui| {
             let hover_text = if player.get_workspaces()[index].is_portable() {
                 "Save unsaved changes."
@@ -147,7 +137,14 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
             .on_hover_text("Save a copy to a new file")
             .clicked()
         {
-            file_dialogs::save_workspace_as(player, gui);
+            file_dialogs::save_workspace_as(player, index, gui);
+        }
+        if ui
+            .add(Button::new("Duplicate"))
+            .on_hover_text("Create a copy of this workspace")
+            .clicked()
+        {
+            let _ = player.duplicate_workspace(index);
         }
 
         let workspace = &mut player.get_workspaces_mut()[index];
