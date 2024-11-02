@@ -7,8 +7,8 @@ use crate::{
 };
 
 use super::{
-    file_dialogs::save_workspace_as,
-    keyboard_shortcuts::{
+    modals::file_dialogs,
+    modals::shortcuts::{
         GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
         WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
         WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
@@ -121,7 +121,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             .on_hover_text("Save a copy to a new file")
             .clicked()
         {
-            save_workspace_as(player, player.get_workspace_idx(), gui);
+            file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
         }
         if ui
             .add(

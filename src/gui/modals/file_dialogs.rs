@@ -1,5 +1,4 @@
-use super::GuiState;
-use crate::player::Player;
+use crate::{gui::GuiState, player::Player};
 use rfd::FileDialog;
 
 pub fn save_workspace_as(player: &mut Player, idx: usize, gui: &mut GuiState) {

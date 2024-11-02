@@ -4,9 +4,10 @@ use eframe::egui::{
 };
 use egui_extras::{Column, TableBuilder};
 
-use crate::{gui::file_dialogs, player::Player, GuiState};
+use crate::{gui::modals::file_dialogs, player::Player, GuiState};
 
 const CTRL_SHIFT: Modifiers = Modifiers::CTRL.plus(Modifiers::SHIFT);
+const CTRL_ALT: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
 
 pub const PLAYBACK_PLAYPAUSE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Space);
 pub const PLAYBACK_STARTSTOP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Space);
@@ -28,6 +29,7 @@ pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::
 pub const WORKSPACE_REFRESH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
 pub const WORKSPACE_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
 pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
+pub const WORKSPACE_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::S);
 pub const WORKSPACE_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
 
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
@@ -189,6 +191,14 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
+                                add_shortcut_title(ui, "Save all loose workspaces");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_SAVEALL));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
                                 add_shortcut_title(ui, "Save workspace to a new file.");
                             });
                             row.col(|ui| {
@@ -308,6 +318,9 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
         }
         if input.consume_shortcut(&WORKSPACE_SAVEAS) {
             file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
+        }
+        if input.consume_shortcut(&WORKSPACE_SAVEALL) {
+            player.save_all_portable_workspaces();
         }
         if input.consume_shortcut(&WORKSPACE_SAVE) {
             let _ = player.get_workspace_mut().save_portable();
