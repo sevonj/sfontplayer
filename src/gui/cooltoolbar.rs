@@ -7,12 +7,12 @@ use crate::{
 };
 
 use super::{
-    modals::file_dialogs,
-    modals::shortcuts::{
+    keyboard_shortcuts::{
         GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
         WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
         WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
     },
+    modals::file_dialogs,
 };
 
 /// The topmost toolbar with File Menu

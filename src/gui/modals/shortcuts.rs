@@ -1,38 +1,16 @@
-use eframe::egui::{
-    vec2, Align2, Context, Key, KeyboardShortcut, Label, Modifiers, RichText, ScrollArea,
-    TextWrapMode, Ui, Window,
-};
+use eframe::egui::{vec2, Align2, Context, Label, RichText, ScrollArea, TextWrapMode, Ui, Window};
 use egui_extras::{Column, TableBuilder};
 
-use crate::{gui::modals::file_dialogs, player::Player, GuiState};
-
-const CTRL_SHIFT: Modifiers = Modifiers::CTRL.plus(Modifiers::SHIFT);
-const CTRL_ALT: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
-
-pub const PLAYBACK_PLAYPAUSE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Space);
-pub const PLAYBACK_STARTSTOP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Space);
-pub const PLAYBACK_SKIP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Period);
-pub const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Comma);
-pub const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::S);
-pub const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
-pub const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
-
-pub const WORKSPACE_SWITCHLEFT: KeyboardShortcut =
-    KeyboardShortcut::new(Modifiers::ALT, Key::ArrowLeft);
-pub const WORKSPACE_SWITCHRIGHT: KeyboardShortcut =
-    KeyboardShortcut::new(Modifiers::ALT, Key::ArrowRight);
-pub const WORKSPACE_MOVELEFT: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowLeft);
-pub const WORKSPACE_MOVERIGHT: KeyboardShortcut =
-    KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowRight);
-pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
-pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
-pub const WORKSPACE_REFRESH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
-pub const WORKSPACE_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
-pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
-pub const WORKSPACE_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::S);
-pub const WORKSPACE_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
-
-pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
+use crate::{
+    gui::keyboard_shortcuts::{
+        GUI_SHOWFONTS, PLAYBACK_PLAYPAUSE, PLAYBACK_SHUFFLE, PLAYBACK_SKIP, PLAYBACK_SKIPBACK,
+        PLAYBACK_STARTSTOP, PLAYBACK_VOLDN, PLAYBACK_VOLUP, WORKSPACE_CREATE, WORKSPACE_DUPLICATE,
+        WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH, WORKSPACE_REMOVE,
+        WORKSPACE_SAVE, WORKSPACE_SAVEALL, WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT,
+        WORKSPACE_SWITCHRIGHT,
+    },
+    GuiState,
+};
 
 /// Modal window that shows keyboard shortcuts
 #[allow(clippy::too_many_lines)]
@@ -239,100 +217,4 @@ fn add_shortcut_title(ui: &mut Ui, text: &str) {
     // Slightly less intense color than Strong.
     let color = ui.visuals().widgets.open.text_color();
     ui.add(Label::new(RichText::new(text).color(color)));
-}
-
-/// Check and act on shortcuts
-pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
-    if ctx.is_context_menu_open() {
-        return;
-    }
-
-    #[allow(clippy::cognitive_complexity)]
-    ctx.input_mut(|input| {
-        // --- Playback
-
-        if !gui.update_flags.disable_play_shortcut && input.consume_shortcut(&PLAYBACK_PLAYPAUSE) {
-            if !player.is_paused() {
-                player.pause();
-            } else if !player.is_empty() {
-                player.play();
-            }
-        }
-        if input.consume_shortcut(&PLAYBACK_STARTSTOP) {
-            if player.is_empty() {
-                player.start();
-            } else {
-                player.stop();
-            }
-        }
-        if input.consume_shortcut(&PLAYBACK_SKIP) {
-            player.skip();
-        }
-        if input.consume_shortcut(&PLAYBACK_SKIPBACK) {
-            player.skip_back();
-        }
-        if input.consume_shortcut(&PLAYBACK_SHUFFLE) {
-            player.toggle_shuffle();
-        }
-        if input.consume_shortcut(&PLAYBACK_VOLUP) {
-            let volume = player.get_volume();
-            player.set_volume(volume + 5.);
-        }
-        if input.consume_shortcut(&PLAYBACK_VOLDN) {
-            let volume = player.get_volume();
-            player.set_volume(volume - 5.);
-        }
-
-        // --- Workspaces
-
-        if input.consume_shortcut(&WORKSPACE_SWITCHLEFT) {
-            if let Err(e) = player.switch_workspace_left() {
-                gui.toast_error(e.to_string());
-            }
-        }
-        if input.consume_shortcut(&WORKSPACE_SWITCHRIGHT) {
-            if let Err(e) = player.switch_workspace_right() {
-                gui.toast_error(e.to_string());
-            }
-        }
-        if input.consume_shortcut(&WORKSPACE_MOVELEFT) {
-            if let Err(e) = player.move_workspace_left() {
-                gui.toast_error(e.to_string());
-            }
-        }
-        if input.consume_shortcut(&WORKSPACE_MOVERIGHT) {
-            if let Err(e) = player.move_workspace_right() {
-                gui.toast_error(e.to_string());
-            }
-        }
-        if input.consume_shortcut(&WORKSPACE_CREATE) {
-            player.new_workspace();
-            let _ = player.switch_to_workspace(player.get_workspaces().len() - 1);
-        }
-        if input.consume_shortcut(&WORKSPACE_REMOVE) {
-            let _ = player.remove_workspace(player.get_workspace_idx());
-        }
-        if input.consume_shortcut(&WORKSPACE_REFRESH) {
-            player.get_workspace_mut().refresh_font_list();
-            player.get_workspace_mut().refresh_song_list();
-        }
-        if input.consume_shortcut(&WORKSPACE_SAVEAS) {
-            file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
-        }
-        if input.consume_shortcut(&WORKSPACE_SAVEALL) {
-            player.save_all_portable_workspaces();
-        }
-        if input.consume_shortcut(&WORKSPACE_SAVE) {
-            let _ = player.get_workspace_mut().save_portable();
-        }
-        if input.consume_shortcut(&WORKSPACE_DUPLICATE) {
-            let _ = player.duplicate_workspace(player.get_workspace_idx());
-        }
-
-        // --- GUI
-
-        if input.consume_shortcut(&GUI_SHOWFONTS) {
-            gui.show_soundfonts = !gui.show_soundfonts;
-        }
-    });
 }
