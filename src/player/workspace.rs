@@ -21,6 +21,7 @@ pub struct Workspace {
     portable_filepath: Option<PathBuf>,
     /// Only applicable to portable file
     unsaved_changes: bool,
+    pub is_queued_for_deletion: bool,
 
     fonts: Vec<FontMeta>,
     font_idx: Option<usize>,
@@ -557,6 +558,7 @@ impl Default for Workspace {
             name: "Workspace".to_owned(),
             portable_filepath: None,
             unsaved_changes: true,
+            is_queued_for_deletion: false,
 
             fonts: vec![],
             font_idx: None,

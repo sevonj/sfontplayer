@@ -96,8 +96,6 @@ pub struct Player {
     workspace_idx: usize,
     /// Which workspace was last playing music
     playing_workspace_idx: usize,
-    /// Queued, because deletion will be requested in a loop.
-    workspace_delet_queue: Vec<usize>,
 
     // -- settings
     shuffle: bool,
@@ -124,7 +122,6 @@ impl Default for Player {
             workspaces: vec![],
             workspace_idx: 0,
             playing_workspace_idx: 0,
-            workspace_delet_queue: vec![],
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
@@ -155,11 +152,13 @@ impl Player {
             }
         }
 
-        // Deletion queues
         self.get_workspace_mut().delete_queued();
-        for index in self.workspace_delet_queue.clone() {
-            self.workspaces.remove(index);
 
+        for index in (0..self.workspaces.len()).rev() {
+            if !self.workspaces[index].is_queued_for_deletion {
+                continue;
+            }
+            self.workspaces.remove(index);
             // Deletion affected index. Note that we don't go below zero.
             if index <= self.workspace_idx && self.workspace_idx > 0 {
                 self.workspace_idx -= 1;
@@ -168,7 +167,7 @@ impl Player {
                 self.playing_workspace_idx -= 1;
             }
         }
-        self.workspace_delet_queue.clear();
+        self.ensure_workspace_existence();
 
         self.mediacontrol_handle_events();
     }
@@ -456,8 +455,7 @@ impl Player {
         if index >= self.workspaces.len() {
             bail!(PlayerError::InvalidWorkspaceIndex { index });
         }
-        self.workspace_delet_queue.push(index);
-        self.ensure_workspace_existence();
+        self.workspaces[index].is_queued_for_deletion = true;
         Ok(())
     }
     /// Rearrange workspaces
