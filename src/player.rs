@@ -519,6 +519,13 @@ impl Player {
         self.workspace_idx = self.workspaces.len() - 1;
         Ok(())
     }
+    pub fn save_all_portable_workspaces(&mut self) {
+        for workspace in &mut self.workspaces {
+            if workspace.is_portable() {
+                let _ = workspace.save_portable();
+            }
+        }
+    }
     /// Save workspace into a portable file.
     pub fn save_workspace_as(&mut self, index: usize, filepath: PathBuf) -> anyhow::Result<()> {
         if index >= self.workspaces.len() {

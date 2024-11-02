@@ -1,20 +1,19 @@
-mod about;
 pub mod conversions;
 mod cooltoolbar;
-pub mod file_dialogs;
 mod fonts;
-mod keyboard_shortcuts;
+pub mod modals;
 mod playback_controls;
 mod songs;
 mod workspace_select;
 
 use crate::player::Player;
-use about::about_modal;
 use cooltoolbar::toolbar;
 use eframe::egui::{CentralPanel, Context, TopBottomPanel, Ui};
 use egui_notify::Toasts;
 use fonts::{font_titlebar, soundfont_table};
-use keyboard_shortcuts::{consume_shortcuts, shortcut_modal};
+use modals::about_modal::about_modal;
+use modals::shortcuts::{consume_shortcuts, shortcut_modal};
+use modals::unsaved_exit_dialog;
 use playback_controls::playback_panel;
 use songs::{song_table, song_titlebar};
 use workspace_select::workspace_tabs;
@@ -30,6 +29,11 @@ pub struct GuiState {
     pub show_about_modal: bool,
     #[serde(skip)]
     pub show_shortcut_modal: bool,
+    #[serde(skip)]
+    pub show_unsaved_exit_modal: bool,
+    /// Bypass unsaved files check on close.
+    #[serde(skip)]
+    pub force_exit: bool,
     /// Frame update flags. Acted on and cleared at the end of frame update.
     #[serde(skip)]
     pub update_flags: UpdateFlags,
@@ -74,6 +78,7 @@ impl UpdateFlags {
 pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     about_modal(ctx, gui);
     shortcut_modal(ctx, gui);
+    unsaved_exit_dialog(ctx, player, gui);
 
     TopBottomPanel::top("top_bar")
         .resizable(false)
@@ -131,10 +136,7 @@ fn handle_dropped_files(ctx: &Context) {
 
 /// This will disable the UI if a modal window is open
 fn disable_if_modal(ui: &mut Ui, gui: &GuiState) {
-    if gui.show_about_modal {
-        ui.disable();
-    }
-    if gui.show_shortcut_modal {
+    if gui.show_about_modal || gui.show_shortcut_modal || gui.show_unsaved_exit_modal {
         ui.disable();
     }
 }

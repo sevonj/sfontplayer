@@ -1,4 +1,4 @@
-use super::{file_dialogs, GuiState};
+use super::{modals::file_dialogs, GuiState};
 use crate::player::{workspace::enums::FileListMode, Player};
 use eframe::egui::{
     scroll_area::ScrollBarVisibility, vec2, Button, Color32, Frame, Label, Response, RichText,
