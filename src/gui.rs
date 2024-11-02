@@ -1,6 +1,7 @@
 pub mod conversions;
 mod cooltoolbar;
 mod fonts;
+pub mod keyboard_shortcuts;
 pub mod modals;
 mod playback_controls;
 mod songs;
@@ -11,8 +12,9 @@ use cooltoolbar::toolbar;
 use eframe::egui::{CentralPanel, Context, TopBottomPanel, Ui};
 use egui_notify::Toasts;
 use fonts::{font_titlebar, soundfont_table};
+use keyboard_shortcuts::consume_shortcuts;
 use modals::about_modal::about_modal;
-use modals::shortcuts::{consume_shortcuts, shortcut_modal};
+use modals::shortcuts::shortcut_modal;
 use modals::unsaved_exit_dialog;
 use playback_controls::playback_panel;
 use songs::{song_table, song_titlebar};
