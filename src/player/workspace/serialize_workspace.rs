@@ -1,7 +1,7 @@
 //! Workspace (de)serialization Into / From JSON.
 //!
 
-use std::{convert::Into, path::PathBuf};
+use std::{convert::Into, fs::File, io::Write, path::PathBuf};
 
 use super::{
     enums::{FileListMode, FontSort, SongSort},
@@ -9,6 +9,7 @@ use super::{
     midi_meta::MidiMeta,
     Workspace,
 };
+use anyhow::bail;
 use relative_path::{PathExt, RelativePath};
 use serde_json::{json, Value};
 
@@ -28,7 +29,7 @@ impl From<&Workspace> for Value {
 
                      "songs": workspace.midis,
                      "song_idx": workspace.midi_idx,
-                     "song_list_mode": workspace.midi_list_mode as u8,
+                     "song_list_mode": workspace.song_list_mode as u8,
                      "song_dir": workspace.midi_dir,
                      "song_sort": workspace.song_sort as u8
                     }
@@ -71,7 +72,7 @@ impl From<&Workspace> for Value {
 
                      "songs": songs,
                      "song_idx": workspace.midi_idx,
-                     "song_list_mode": workspace.midi_list_mode as u8,
+                     "song_list_mode": workspace.song_list_mode as u8,
                      "song_dir": song_dir,
                      "song_sort": workspace.song_sort as u8
                     }
@@ -103,7 +104,7 @@ impl From<Value> for Workspace {
 
             midis: vec![],
             midi_idx: value["song_idx"].as_u64().map(|idx| idx as usize),
-            midi_list_mode: value["song_list_mode"]
+            song_list_mode: value["song_list_mode"]
                 .as_u64()
                 .map_or_else(FileListMode::default, |int| {
                     FileListMode::try_from(int as u8).unwrap_or_default()
@@ -214,14 +215,32 @@ impl Workspace {
         }
 
         workspace.portable_filepath = Some(filepath);
+        workspace.unsaved_changes = false;
 
         Ok(workspace)
+    }
+
+    /// Save function for portable workspaces.
+    pub fn save_portable(&mut self) -> anyhow::Result<()> {
+        let Some(filepath) = self.get_portable_path() else {
+            let name = &self.name;
+            bail!("Can't save non-portable workspace as a portable file. Make it portable first! name:{name}")
+        };
+
+        let mut workspace_file = File::create(&filepath)?;
+        let self_immutable = &*self;
+        workspace_file.write_all(Value::from(self_immutable).to_string().as_bytes())?;
+
+        self.unsaved_changes = false;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     //! These tests convert data into JSON and back, and then assert that it's unchanged.
+
+    use std::fs;
 
     use super::*;
 
@@ -253,16 +272,16 @@ mod tests {
         let mut workspace_man = Workspace::default();
         let mut workspace_dir = Workspace::default();
         let mut workspace_sub = Workspace::default();
-        workspace_man.midi_list_mode = FileListMode::Manual;
-        workspace_dir.midi_list_mode = FileListMode::Directory;
-        workspace_sub.midi_list_mode = FileListMode::Subdirectories;
+        workspace_man.song_list_mode = FileListMode::Manual;
+        workspace_dir.song_list_mode = FileListMode::Directory;
+        workspace_sub.song_list_mode = FileListMode::Subdirectories;
         let new_workspace_man = run_serialize(workspace_man);
         let new_workspace_dir = run_serialize(workspace_dir);
         let new_workspace_sub = run_serialize(workspace_sub);
-        assert_eq!(new_workspace_man.midi_list_mode, FileListMode::Manual);
-        assert_eq!(new_workspace_dir.midi_list_mode, FileListMode::Directory);
+        assert_eq!(new_workspace_man.song_list_mode, FileListMode::Manual);
+        assert_eq!(new_workspace_dir.song_list_mode, FileListMode::Directory);
         assert_eq!(
-            new_workspace_sub.midi_list_mode,
+            new_workspace_sub.song_list_mode,
             FileListMode::Subdirectories
         );
     }
@@ -399,5 +418,15 @@ mod tests {
         workspace_69.midi_idx = Some(69);
         let new_workspace_69 = run_serialize(workspace_69);
         assert_eq!(new_workspace_69.midi_idx, None);
+    }
+
+    #[test]
+    fn test_save_portable_unchecks_flag() {
+        fs::create_dir_all("temp").unwrap();
+        let mut workspace = Workspace::default();
+        workspace.set_portable_path(Some(PathBuf::from("temp/testfile.sfontspace")));
+        assert!(workspace.has_unsaved_changes());
+        workspace.save_portable().unwrap();
+        assert!(!workspace.has_unsaved_changes());
     }
 }

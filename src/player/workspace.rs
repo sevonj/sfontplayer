@@ -19,6 +19,8 @@ pub struct Workspace {
     pub name: String,
     /// If None, this is a normal workspace. If Some, this is a portable workspace.
     portable_filepath: Option<PathBuf>,
+    /// Only applicable to portable file
+    unsaved_changes: bool,
 
     fonts: Vec<FontMeta>,
     font_idx: Option<usize>,
@@ -28,7 +30,7 @@ pub struct Workspace {
 
     midis: Vec<MidiMeta>,
     midi_idx: Option<usize>,
-    midi_list_mode: FileListMode,
+    song_list_mode: FileListMode,
     midi_dir: Option<PathBuf>,
     song_sort: SongSort,
 
@@ -80,6 +82,7 @@ impl Workspace {
             }
             None => self.font_idx = None,
         }
+        self.unsaved_changes = true;
         Ok(())
     }
     pub fn add_font(&mut self, path: PathBuf) -> Result<(), WorkspaceError> {
@@ -97,6 +100,7 @@ impl Workspace {
         if !self.contains_font(&path) {
             self.fonts.push(FontMeta::new(path));
         }
+        self.unsaved_changes = true;
     }
     pub fn remove_font(&mut self, index: usize) -> Result<(), WorkspaceError> {
         if self.font_list_mode != FileListMode::Manual {
@@ -112,11 +116,13 @@ impl Workspace {
             return Err(WorkspaceError::InvalidFontIndex { index });
         }
         self.fonts[index].is_queued_for_deletion = true;
+        self.unsaved_changes = true;
         Ok(())
     }
     pub fn clear_fonts(&mut self) {
         self.fonts.clear();
         self.font_idx = None;
+        self.unsaved_changes = true;
     }
     pub fn contains_font(&self, filepath: &PathBuf) -> bool {
         for i in 0..self.fonts.len() {
@@ -138,10 +144,12 @@ impl Workspace {
         }
         self.font_dir = Some(path);
         self.refresh_font_list();
+        self.unsaved_changes = true;
     }
-    pub fn set_font_list_type(&mut self, mode: FileListMode) {
+    pub fn set_font_list_mode(&mut self, mode: FileListMode) {
         self.font_list_mode = mode;
         self.refresh_font_list();
+        self.unsaved_changes = true;
     }
     /// Refresh font file list
     pub fn refresh_font_list(&mut self) {
@@ -249,6 +257,7 @@ impl Workspace {
     pub fn set_font_sort(&mut self, sort: FontSort) {
         self.font_sort = sort;
         self.refresh_font_list();
+        self.unsaved_changes = true;
     }
 
     // --- Midi files
@@ -274,12 +283,13 @@ impl Workspace {
             }
             None => self.midi_idx = None,
         }
+        self.unsaved_changes = true;
         Ok(())
     }
     pub fn add_song(&mut self, path: PathBuf) -> Result<(), WorkspaceError> {
-        if self.midi_list_mode != FileListMode::Manual {
+        if self.song_list_mode != FileListMode::Manual {
             return Err(WorkspaceError::ModifyAutoSongList {
-                mode: self.midi_list_mode,
+                mode: self.song_list_mode,
             });
         }
         self.force_add_song(path);
@@ -291,11 +301,12 @@ impl Workspace {
         if !self.contains_song(&path) {
             self.midis.push(MidiMeta::new(path));
         }
+        self.unsaved_changes = true;
     }
     pub fn remove_song(&mut self, index: usize) -> Result<(), WorkspaceError> {
-        if self.midi_list_mode != FileListMode::Manual {
+        if self.song_list_mode != FileListMode::Manual {
             return Err(WorkspaceError::ModifyAutoSongList {
-                mode: self.midi_list_mode,
+                mode: self.song_list_mode,
             });
         }
         self.force_remove_song(index)
@@ -306,11 +317,13 @@ impl Workspace {
             return Err(WorkspaceError::InvalidSongIndex { index });
         }
         self.midis[index].is_queued_for_deletion = true;
+        self.unsaved_changes = true;
         Ok(())
     }
     pub fn clear_songs(&mut self) {
         self.midis.clear();
         self.midi_idx = None;
+        self.unsaved_changes = true;
     }
     pub fn contains_song(&self, filepath: &PathBuf) -> bool {
         for i in 0..self.midis.len() {
@@ -321,25 +334,27 @@ impl Workspace {
         false
     }
     pub const fn get_song_list_mode(&self) -> FileListMode {
-        self.midi_list_mode
+        self.song_list_mode
     }
     pub const fn get_song_dir(&self) -> &Option<PathBuf> {
         &self.midi_dir
     }
     pub fn set_song_dir(&mut self, path: PathBuf) {
-        if self.midi_list_mode == FileListMode::Manual {
+        if self.song_list_mode == FileListMode::Manual {
             return;
         }
         self.midi_dir = Some(path);
         self.refresh_song_list();
+        self.unsaved_changes = true;
     }
     pub fn set_song_list_mode(&mut self, mode: FileListMode) {
-        self.midi_list_mode = mode;
+        self.song_list_mode = mode;
         self.refresh_song_list();
+        self.unsaved_changes = true;
     }
     /// Refresh midi file list
     pub fn refresh_song_list(&mut self) {
-        if self.midi_list_mode == FileListMode::Manual {
+        if self.song_list_mode == FileListMode::Manual {
             self.sort_songs();
             return;
         }
@@ -351,7 +366,7 @@ impl Workspace {
             if !filepath.exists() {
                 self.force_remove_song(i).expect("refresh: Song rm failed‽");
             }
-            match self.midi_list_mode {
+            match self.song_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.midi_dir.as_deref() {
@@ -376,7 +391,7 @@ impl Workspace {
             self.clear_songs();
             return;
         };
-        match self.midi_list_mode {
+        match self.song_list_mode {
             FileListMode::Directory => {
                 if let Ok(paths) = fs::read_dir(dir) {
                     for entry in paths.filter_map(std::result::Result::ok) {
@@ -450,6 +465,7 @@ impl Workspace {
     pub fn set_song_sort(&mut self, sort: SongSort) {
         self.song_sort = sort;
         self.refresh_song_list();
+        self.unsaved_changes = true;
     }
 
     // --- Playback Queue
@@ -490,6 +506,10 @@ impl Workspace {
     }
     pub fn set_portable_path(&mut self, portable_filepath: Option<PathBuf>) {
         self.portable_filepath = portable_filepath;
+        self.unsaved_changes = true;
+    }
+    pub const fn has_unsaved_changes(&self) -> bool {
+        self.is_portable() && self.unsaved_changes
     }
 
     /// Midis and fonts aren't deleted immediately. A queue is used instead.
@@ -536,6 +556,7 @@ impl Default for Workspace {
         Self {
             name: "Workspace".to_owned(),
             portable_filepath: None,
+            unsaved_changes: true,
 
             fonts: vec![],
             font_idx: None,
@@ -545,7 +566,7 @@ impl Default for Workspace {
 
             midis: vec![],
             midi_idx: None,
-            midi_list_mode: FileListMode::Manual,
+            song_list_mode: FileListMode::Manual,
             midi_dir: None,
             song_sort: SongSort::default(),
 
@@ -623,9 +644,9 @@ mod tests {
         let mut workspace_man = Workspace::default();
         let mut workspace_dir = Workspace::default();
         let mut workspace_sub = Workspace::default();
-        workspace_man.midi_list_mode = FileListMode::Manual;
-        workspace_dir.midi_list_mode = FileListMode::Directory;
-        workspace_sub.midi_list_mode = FileListMode::Subdirectories;
+        workspace_man.song_list_mode = FileListMode::Manual;
+        workspace_dir.song_list_mode = FileListMode::Directory;
+        workspace_sub.song_list_mode = FileListMode::Subdirectories;
         workspace_man.add_song("fakepath".into()).unwrap();
         assert!(matches!(
             workspace_dir.add_song("fakepath".into()).unwrap_err(),
@@ -651,9 +672,9 @@ mod tests {
         workspace_man.add_song("fakepath".into()).unwrap();
         workspace_dir.add_song("fakepath".into()).unwrap();
         workspace_sub.add_song("fakepath".into()).unwrap();
-        workspace_man.midi_list_mode = FileListMode::Manual;
-        workspace_dir.midi_list_mode = FileListMode::Directory;
-        workspace_sub.midi_list_mode = FileListMode::Subdirectories;
+        workspace_man.song_list_mode = FileListMode::Manual;
+        workspace_dir.song_list_mode = FileListMode::Directory;
+        workspace_sub.song_list_mode = FileListMode::Subdirectories;
 
         workspace_man.remove_song(0).unwrap();
         assert!(matches!(
@@ -675,5 +696,112 @@ mod tests {
         assert_eq!(workspace_man.midis.len(), 0);
         assert_eq!(workspace_dir.midis.len(), 1);
         assert_eq!(workspace_sub.midis.len(), 1);
+    }
+
+    #[test]
+    fn test_set_unsaved_flag() {
+        // Set index
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.set_font_idx(None).unwrap();
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.set_song_idx(None).unwrap();
+        assert!(workspace.unsaved_changes);
+
+        // Add / Remove
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.add_font("fakepath".into()).unwrap();
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.remove_font(0).unwrap();
+        assert!(workspace.unsaved_changes);
+        workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.add_song("fakepath".into()).unwrap();
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.remove_song(0).unwrap();
+        assert!(workspace.unsaved_changes);
+
+        // Force add / Force remove
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.force_add_font("fakepath".into());
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.force_remove_font(0).unwrap();
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.force_add_song("fakepath".into());
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.force_remove_song(0).unwrap();
+        assert!(workspace.unsaved_changes);
+
+        // Clear
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.clear_fonts();
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.clear_songs();
+        assert!(workspace.unsaved_changes);
+
+        // Set list mode
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.set_font_list_mode(FileListMode::Manual);
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.set_song_list_mode(FileListMode::Manual);
+        assert!(workspace.unsaved_changes);
+
+        // Set list dir
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.set_font_dir("fakepath".into());
+        assert!(!workspace.unsaved_changes);
+        workspace.font_list_mode = FileListMode::Directory;
+        workspace.set_font_dir("fakepath".into());
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.set_song_dir("fakepath".into());
+        assert!(!workspace.unsaved_changes);
+        workspace.song_list_mode = FileListMode::Directory;
+        workspace.set_song_dir("fakepath".into());
+        assert!(workspace.unsaved_changes);
+
+        // Refresh list
+        // (Doesn't count, refreshed automatically)
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.refresh_font_list();
+        workspace.refresh_song_list();
+        assert!(!workspace.unsaved_changes);
+
+        // Sort
+        // (Doesn't count, refreshed automatically)
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.sort_fonts();
+        workspace.sort_songs();
+        assert!(!workspace.unsaved_changes);
+
+        // Set sort mode
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.set_font_sort(FontSort::NameAsc);
+        assert!(workspace.unsaved_changes);
+        workspace.unsaved_changes = false;
+        workspace.set_song_sort(SongSort::NameAsc);
+        assert!(workspace.unsaved_changes);
+
+        // Set portable
+        let mut workspace = Workspace::default();
+        workspace.unsaved_changes = false;
+        workspace.set_portable_path(None);
+        assert!(workspace.unsaved_changes);
     }
 }

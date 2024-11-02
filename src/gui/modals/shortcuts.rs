@@ -4,15 +4,16 @@ use eframe::egui::{
 };
 use egui_extras::{Column, TableBuilder};
 
-use crate::{player::Player, GuiState};
+use crate::{gui::modals::file_dialogs, player::Player, GuiState};
 
 const CTRL_SHIFT: Modifiers = Modifiers::CTRL.plus(Modifiers::SHIFT);
+const CTRL_ALT: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
 
 pub const PLAYBACK_PLAYPAUSE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Space);
 pub const PLAYBACK_STARTSTOP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Space);
 pub const PLAYBACK_SKIP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Period);
 pub const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Comma);
-pub const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
+pub const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::S);
 pub const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
 pub const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
 
@@ -26,6 +27,10 @@ pub const WORKSPACE_MOVERIGHT: KeyboardShortcut =
 pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
 pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
 pub const WORKSPACE_REFRESH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
+pub const WORKSPACE_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
+pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
+pub const WORKSPACE_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::S);
+pub const WORKSPACE_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
 
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
 
@@ -176,6 +181,38 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_REFRESH));
                             });
                         });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Save workspace (loose file only)");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_SAVE));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Save all loose workspaces");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_SAVEALL));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Save workspace to a new file.");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_SAVEAS));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Duplicate current workspace.");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_DUPLICATE));
+                            });
+                        });
 
                         // --- GUI
 
@@ -210,6 +247,7 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
         return;
     }
 
+    #[allow(clippy::cognitive_complexity)]
     ctx.input_mut(|input| {
         // --- Playback
 
@@ -277,6 +315,18 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
         if input.consume_shortcut(&WORKSPACE_REFRESH) {
             player.get_workspace_mut().refresh_font_list();
             player.get_workspace_mut().refresh_song_list();
+        }
+        if input.consume_shortcut(&WORKSPACE_SAVEAS) {
+            file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
+        }
+        if input.consume_shortcut(&WORKSPACE_SAVEALL) {
+            player.save_all_portable_workspaces();
+        }
+        if input.consume_shortcut(&WORKSPACE_SAVE) {
+            let _ = player.get_workspace_mut().save_portable();
+        }
+        if input.consume_shortcut(&WORKSPACE_DUPLICATE) {
+            let _ = player.duplicate_workspace(player.get_workspace_idx());
         }
 
         // --- GUI

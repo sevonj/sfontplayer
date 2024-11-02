@@ -113,11 +113,13 @@ impl Player {
                 portable: workspace.is_portable(),
             });
 
-            let abs_path = workspace
-                .get_portable_path()
-                .unwrap_or_else(|| workspace_dir.join(filename));
-            let mut workspace_file = File::create(&abs_path)?;
-            workspace_file.write_all(Value::from(workspace).to_string().as_bytes())?;
+            if !workspace.is_portable() {
+                let abs_path = workspace
+                    .get_portable_path()
+                    .unwrap_or_else(|| workspace_dir.join(filename));
+                let mut workspace_file = File::create(&abs_path)?;
+                workspace_file.write_all(Value::from(workspace).to_string().as_bytes())?;
+            }
         }
 
         let filepath = data_dir.join("workspaces.json");

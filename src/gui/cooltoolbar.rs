@@ -6,9 +6,13 @@ use crate::{
     GuiState,
 };
 
-use super::keyboard_shortcuts::{
-    GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH,
-    WORKSPACE_REMOVE, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+use super::{
+    modals::file_dialogs,
+    modals::shortcuts::{
+        GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
+        WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
+        WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+    },
 };
 
 /// The topmost toolbar with File Menu
@@ -97,34 +101,37 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             player.get_workspace_mut().refresh_font_list();
             player.get_workspace_mut().refresh_song_list();
         }
-        if player.get_workspace().is_portable() {
-            let hover_text = "Copy this workspace into builtin app storage";
-            if ui
-                .button("Store in app")
-                .on_hover_text(hover_text)
-                .clicked()
-            {
-                let _ = player.copy_workspace_builtin(player.get_workspace_idx());
+        ui.add_enabled_ui(player.get_workspace().is_portable(), |ui| {
+            let hover_text = if player.get_workspace().is_portable() {
+                "Save unsaved changes."
+            } else {
+                "Current workspace is stored in app data. App data is saved automatically."
             };
-        } else {
-            let hover_text = "Save a copy of this workspace into a portable file";
             if ui
-                .button("Save to file")
+                .add(Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVE)))
                 .on_hover_text(hover_text)
+                .on_disabled_hover_text(hover_text)
                 .clicked()
             {
-                if let Some(save_path) = FileDialog::new()
-                    .add_filter("Workspace file", &["sfontspace"])
-                    .save_file()
-                {
-                    if let Err(e) =
-                        player.copy_workspace_portable(player.get_workspace_idx(), save_path)
-                    {
-                        gui.toast_error(e.to_string());
-                    }
-                    ui.close_menu();
-                }
+                let _ = player.get_workspace_mut().save_portable();
             }
+        });
+        if ui
+            .add(Button::new("Save as").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVEAS)))
+            .on_hover_text("Save a copy to a new file")
+            .clicked()
+        {
+            file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
+        }
+        if ui
+            .add(
+                Button::new("Duplicate")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_DUPLICATE)),
+            )
+            .on_hover_text("Create a copy of current workspace")
+            .clicked()
+        {
+            let _ = player.duplicate_workspace(player.get_workspace_idx());
         }
         ui.menu_button("Soundfonts", |ui| {
             let mut list_mode = player.get_workspace().get_font_list_mode();
@@ -154,7 +161,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 "Subdirectories",
             );
             if response1.clicked() || response2.clicked() || response3.clicked() {
-                player.get_workspace_mut().set_font_list_type(list_mode);
+                player.get_workspace_mut().set_font_list_mode(list_mode);
             }
         });
         ui.menu_button("Songs", |ui| {

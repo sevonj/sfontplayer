@@ -105,6 +105,24 @@ impl SfontPlayer {
             player.start();
         }
     }
+
+    /// Cancels app exit if needed
+    fn exit_check(&mut self, ctx: &Context) {
+        if !ctx.input(|i| i.viewport().close_requested()) {
+            return;
+        }
+        if self.gui_state.force_exit {
+            return;
+        }
+
+        let player = self.player.lock();
+        for workspace in player.get_workspaces() {
+            if workspace.has_unsaved_changes() {
+                self.gui_state.show_unsaved_exit_modal = true;
+                ctx.send_viewport_cmd(ViewportCommand::CancelClose);
+            }
+        }
+    }
 }
 
 impl eframe::App for SfontPlayer {
@@ -119,21 +137,24 @@ impl eframe::App for SfontPlayer {
     }
 
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        let mut player = self.player.lock();
+        {
+            let mut player = self.player.lock();
 
-        // Run app logic
-        player.update();
-        handle_events(&mut player, &mut self.gui_state, ctx);
+            // Run app logic
+            player.update();
+            handle_events(&mut player, &mut self.gui_state, ctx);
 
-        // Draw gui
-        egui_extras::install_image_loaders(ctx);
-        draw_gui(ctx, &mut player, &mut self.gui_state);
-        self.gui_state.update_flags.clear();
+            // Draw gui
+            egui_extras::install_image_loaders(ctx);
+            draw_gui(ctx, &mut player, &mut self.gui_state);
+            self.gui_state.update_flags.clear();
 
-        // Repaint continuously while playing
-        if !player.is_paused() {
-            ctx.request_repaint();
+            // Repaint continuously while playing
+            if !player.is_paused() {
+                ctx.request_repaint();
+            }
         }
+        self.exit_check(ctx);
     }
 }
 

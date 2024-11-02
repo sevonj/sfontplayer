@@ -519,32 +519,47 @@ impl Player {
         self.workspace_idx = self.workspaces.len() - 1;
         Ok(())
     }
-    /// Copy workspace into a portable file with relative file paths.
-    pub fn copy_workspace_portable(
-        &mut self,
-        index: usize,
-        workspace_path: PathBuf,
-    ) -> anyhow::Result<()> {
+    pub fn save_all_portable_workspaces(&mut self) {
+        for workspace in &mut self.workspaces {
+            if workspace.is_portable() {
+                let _ = workspace.save_portable();
+            }
+        }
+    }
+    /// Save workspace into a portable file.
+    pub fn save_workspace_as(&mut self, index: usize, filepath: PathBuf) -> anyhow::Result<()> {
         if index >= self.workspaces.len() {
             bail!(PlayerError::InvalidWorkspaceIndex { index });
         }
+        if self.is_portable_workspace_open(&filepath) {
+            bail!("Workspace is already open")
+        }
         let mut new_workspace = self.workspaces[index].clone();
-        new_workspace.set_portable_path(Some(workspace_path.clone()));
+        new_workspace.set_portable_path(Some(filepath.clone()));
+        new_workspace.name = filepath.file_stem().map_or_else(
+            || format!("{} (Copy)", self.workspaces[index].name),
+            |stem| {
+                stem.to_str()
+                    .expect("save_workspace_as(): stem.to_str()")
+                    .to_owned()
+            },
+        );
 
-        let mut file = File::create(workspace_path)?;
+        let mut file = File::create(filepath)?;
         file.write_all(Value::from(&new_workspace).to_string().as_bytes())?;
 
         self.workspaces.push(new_workspace);
         let _ = self.switch_to_workspace(self.workspaces.len() - 1);
         Ok(())
     }
-    /// Copy portable file to app data.
-    pub fn copy_workspace_builtin(&mut self, index: usize) -> anyhow::Result<()> {
+    /// New workspace is stored to app data.
+    pub fn duplicate_workspace(&mut self, index: usize) -> anyhow::Result<()> {
         if index >= self.workspaces.len() {
             bail!(PlayerError::InvalidWorkspaceIndex { index });
         }
         let mut new_workspace = self.workspaces[index].clone();
         new_workspace.set_portable_path(None);
+        new_workspace.name = format!("{} (Copy)", self.workspaces[index].name);
 
         self.workspaces.push(new_workspace);
         let _ = self.switch_to_workspace(self.workspaces.len() - 1);
