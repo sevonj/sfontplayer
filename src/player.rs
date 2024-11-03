@@ -133,7 +133,7 @@ impl Default for Player {
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
-            autosave: false,
+            autosave: true,
             debug_block_saving: false,
         }
     }
