@@ -131,7 +131,9 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
                 .on_disabled_hover_text(hover_text)
                 .clicked()
             {
-                let _ = player.get_workspaces_mut()[index].save_portable();
+                if let Err(e) = player.save_portable_workspace(index) {
+                    gui.toast_error(e.to_string());
+                }
             }
         });
         if ui

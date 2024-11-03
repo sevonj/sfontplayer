@@ -13,9 +13,8 @@ use eframe::egui::{CentralPanel, Context, TopBottomPanel, Ui};
 use egui_notify::Toasts;
 use fonts::{font_titlebar, soundfont_table};
 use keyboard_shortcuts::consume_shortcuts;
-use modals::about_modal::about_modal;
-use modals::shortcuts::shortcut_modal;
 use modals::unsaved_exit_dialog;
+use modals::{about_modal::about_modal, settings::settings_modal, shortcuts::shortcut_modal};
 use playback_controls::playback_panel;
 use songs::{song_table, song_titlebar};
 use workspace_select::workspace_tabs;
@@ -30,9 +29,12 @@ pub struct GuiState {
     #[serde(skip)]
     pub show_about_modal: bool,
     #[serde(skip)]
+    pub show_settings_modal: bool,
+    #[serde(skip)]
     pub show_shortcut_modal: bool,
     #[serde(skip)]
     pub show_unsaved_exit_modal: bool,
+    pub show_developer_options: bool,
     /// Bypass unsaved files check on close.
     #[serde(skip)]
     pub force_exit: bool,
@@ -79,6 +81,7 @@ impl UpdateFlags {
 #[allow(clippy::too_many_lines)]
 pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     about_modal(ctx, gui);
+    settings_modal(ctx, player, gui);
     shortcut_modal(ctx, gui);
     unsaved_exit_dialog(ctx, player, gui);
 
@@ -138,7 +141,11 @@ fn handle_dropped_files(ctx: &Context) {
 
 /// This will disable the UI if a modal window is open
 fn disable_if_modal(ui: &mut Ui, gui: &GuiState) {
-    if gui.show_about_modal || gui.show_shortcut_modal || gui.show_unsaved_exit_modal {
+    if gui.show_about_modal
+        || gui.show_settings_modal
+        || gui.show_shortcut_modal
+        || gui.show_unsaved_exit_modal
+    {
         ui.disable();
     }
 }

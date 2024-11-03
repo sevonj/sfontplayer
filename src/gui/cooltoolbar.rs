@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     keyboard_shortcuts::{
-        GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
+        GUI_SETTINGS, GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
         WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
         WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
     },
@@ -69,6 +69,13 @@ fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
         {
             gui.show_soundfonts = !gui.show_soundfonts;
         }
+        if ui
+            .add(Button::new("Settings").shortcut_text(ui.ctx().format_shortcut(&GUI_SETTINGS)))
+            .clicked()
+        {
+            gui.show_settings_modal = true;
+            ui.close_menu();
+        }
     });
 }
 
@@ -113,7 +120,9 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 .on_disabled_hover_text(hover_text)
                 .clicked()
             {
-                let _ = player.get_workspace_mut().save_portable();
+                if let Err(e) = player.save_portable_workspace(player.get_workspace_idx()) {
+                    gui.toast_error(e.to_string());
+                }
             }
         });
         if ui

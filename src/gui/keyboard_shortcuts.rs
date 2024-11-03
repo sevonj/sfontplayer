@@ -9,8 +9,8 @@ const CTRL_ALT: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
 
 pub const PLAYBACK_PLAYPAUSE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Space);
 pub const PLAYBACK_STARTSTOP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Space);
-pub const PLAYBACK_SKIP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Period);
-pub const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Comma);
+pub const PLAYBACK_SKIP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Period);
+pub const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Comma);
 pub const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::S);
 pub const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
 pub const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
@@ -31,6 +31,7 @@ pub const WORKSPACE_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, 
 pub const WORKSPACE_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
 
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
+pub const GUI_SETTINGS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Comma);
 
 /// Check and act on shortcuts
 pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
@@ -55,7 +56,9 @@ fn consume_2_modifiers(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
         }
         if input.consume_shortcut(&WORKSPACE_SAVEALL) {
-            player.save_all_portable_workspaces();
+            if let Err(e) = player.save_all_portable_workspaces() {
+                gui.toast_error(e.to_string());
+            }
         }
         if input.consume_shortcut(&WORKSPACE_DUPLICATE) {
             let _ = player.duplicate_workspace(player.get_workspace_idx());
@@ -71,12 +74,6 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             } else {
                 player.stop();
             }
-        }
-        if input.consume_shortcut(&PLAYBACK_SKIP) {
-            player.skip();
-        }
-        if input.consume_shortcut(&PLAYBACK_SKIPBACK) {
-            player.skip_back();
         }
         if input.consume_shortcut(&PLAYBACK_VOLUP) {
             let volume = player.get_volume();
@@ -105,11 +102,16 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             let _ = player.remove_workspace(player.get_workspace_idx());
         }
         if input.consume_shortcut(&WORKSPACE_SAVE) {
-            let _ = player.get_workspace_mut().save_portable();
+            if let Err(e) = player.save_portable_workspace(player.get_workspace_idx()) {
+                gui.toast_error(e.to_string());
+            }
         }
 
         if input.consume_shortcut(&GUI_SHOWFONTS) {
             gui.show_soundfonts = !gui.show_soundfonts;
+        }
+        if input.consume_shortcut(&GUI_SETTINGS) {
+            gui.show_settings_modal = true;
         }
     });
 }
@@ -122,6 +124,12 @@ fn consume_no_modifiers(ctx: &Context, player: &mut Player, gui: &GuiState) {
             } else if !player.is_empty() {
                 player.play();
             }
+        }
+        if input.consume_shortcut(&PLAYBACK_SKIP) {
+            player.skip();
+        }
+        if input.consume_shortcut(&PLAYBACK_SKIPBACK) {
+            player.skip_back();
         }
         if input.consume_shortcut(&PLAYBACK_SHUFFLE) {
             player.toggle_shuffle();

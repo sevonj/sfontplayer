@@ -221,7 +221,8 @@ impl Workspace {
     }
 
     /// Save function for portable workspaces.
-    pub fn save_portable(&mut self) -> anyhow::Result<()> {
+    // The weird scope is here to block accidentally calling it form gui.
+    pub(in super::super) fn save_portable(&mut self) -> anyhow::Result<()> {
         let Some(filepath) = self.get_portable_path() else {
             let name = &self.name;
             bail!("Can't save non-portable workspace as a portable file. Make it portable first! name:{name}")

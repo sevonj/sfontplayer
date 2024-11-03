@@ -16,6 +16,7 @@ use super::{
     workspace::{font_meta::FontMeta, Workspace},
     Player, RepeatMode,
 };
+use crate::player::PlayerError;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WorkspaceListEntry {
@@ -25,6 +26,9 @@ struct WorkspaceListEntry {
 
 impl Player {
     pub fn save_state(&self) -> anyhow::Result<()> {
+        if self.debug_block_saving {
+            bail!(PlayerError::DebugBlockSaving)
+        }
         if let Err(e) = self.save_workspaces() {
             bail!(format!("save_workspaces(): {e}"))
         }

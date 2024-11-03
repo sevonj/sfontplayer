@@ -46,13 +46,16 @@ impl TryFrom<u8> for RepeatMode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PlayerError {
     InvalidWorkspaceIndex { index: usize },
     CantMoveWorkspace,
     CantSwitchWorkspace,
     NoQueueIndex,
     NoSoundfont,
+    WorkspaceAlreadyOpen,
+    WorkspaceSaveFailed,
+    DebugBlockSaving,
 }
 impl error::Error for PlayerError {}
 impl fmt::Display for PlayerError {
@@ -65,6 +68,9 @@ impl fmt::Display for PlayerError {
             Self::CantSwitchWorkspace => write!(f, "Can't switch workspaces further."),
             Self::NoQueueIndex => write!(f, "No queue index!"),
             Self::NoSoundfont => write!(f, "No soundfont!"),
+            Self::WorkspaceAlreadyOpen => write!(f, "Workspace is already open."),
+            Self::WorkspaceSaveFailed => write!(f, "Failed to save workspace."),
+            Self::DebugBlockSaving => write!(f, "debug_block_saving == true"),
         }
     }
 }
@@ -100,6 +106,8 @@ pub struct Player {
     // -- settings
     shuffle: bool,
     repeat: RepeatMode,
+    pub autosave: bool,
+    pub debug_block_saving: bool,
 }
 
 impl Default for Player {
@@ -125,6 +133,8 @@ impl Default for Player {
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
+            autosave: false,
+            debug_block_saving: false,
         }
     }
 }
@@ -517,20 +527,43 @@ impl Player {
         self.workspace_idx = self.workspaces.len() - 1;
         Ok(())
     }
-    pub fn save_all_portable_workspaces(&mut self) {
+    pub fn save_portable_workspace(&mut self, index: usize) -> Result<(), PlayerError> {
+        if index >= self.workspaces.len() {
+            return Err(PlayerError::InvalidWorkspaceIndex { index });
+        }
+        if self.debug_block_saving {
+            return Err(PlayerError::DebugBlockSaving);
+        }
+        if self.workspaces[index].save_portable().is_err() {
+            return Err(PlayerError::WorkspaceSaveFailed);
+        }
+        Ok(())
+    }
+    pub fn save_all_portable_workspaces(&mut self) -> Result<(), PlayerError> {
+        if self.debug_block_saving {
+            return Err(PlayerError::DebugBlockSaving);
+        }
         for workspace in &mut self.workspaces {
-            if workspace.is_portable() {
-                let _ = workspace.save_portable();
+            if workspace.is_portable() && workspace.save_portable().is_err() {
+                return Err(PlayerError::WorkspaceSaveFailed);
             }
         }
+        Ok(())
     }
     /// Save workspace into a portable file.
-    pub fn save_workspace_as(&mut self, index: usize, filepath: PathBuf) -> anyhow::Result<()> {
+    pub fn save_workspace_as(
+        &mut self,
+        index: usize,
+        filepath: PathBuf,
+    ) -> Result<(), PlayerError> {
         if index >= self.workspaces.len() {
-            bail!(PlayerError::InvalidWorkspaceIndex { index });
+            return Err(PlayerError::InvalidWorkspaceIndex { index });
+        }
+        if self.debug_block_saving {
+            return Err(PlayerError::DebugBlockSaving);
         }
         if self.is_portable_workspace_open(&filepath) {
-            bail!("Workspace is already open")
+            return Err(PlayerError::WorkspaceAlreadyOpen);
         }
         let mut new_workspace = self.workspaces[index].clone();
         new_workspace.set_portable_path(Some(filepath.clone()));
@@ -543,8 +576,15 @@ impl Player {
             },
         );
 
-        let mut file = File::create(filepath)?;
-        file.write_all(Value::from(&new_workspace).to_string().as_bytes())?;
+        let Ok(mut file) = File::create(filepath) else {
+            return Err(PlayerError::WorkspaceSaveFailed);
+        };
+        if file
+            .write_all(Value::from(&new_workspace).to_string().as_bytes())
+            .is_err()
+        {
+            return Err(PlayerError::WorkspaceSaveFailed);
+        };
 
         self.workspaces.push(new_workspace);
         let _ = self.switch_to_workspace(self.workspaces.len() - 1);
@@ -726,5 +766,34 @@ mod tests {
         assert_eq!(player.playing_workspace_idx, 2);
         player.move_workspace(2, usize::MAX).unwrap_err();
         assert_eq!(player.playing_workspace_idx, 2);
+    }
+
+    #[test]
+    fn test_debug_block_saving() {
+        let mut player = Player::default();
+        player.debug_block_saving = true;
+
+        player.new_workspace();
+        player.new_workspace();
+        player.new_workspace();
+
+        player.workspaces[0].set_portable_path(Some("fakepath".into()));
+
+        assert_eq!(
+            player.save_portable_workspace(0).unwrap_err(),
+            PlayerError::DebugBlockSaving
+        );
+        assert_eq!(
+            player.save_all_portable_workspaces().unwrap_err(),
+            PlayerError::DebugBlockSaving
+        );
+        assert_eq!(
+            player.save_workspace_as(0, "fakepath2".into()).unwrap_err(),
+            PlayerError::DebugBlockSaving
+        );
+        assert_eq!(
+            player.save_state().unwrap_err().to_string(),
+            PlayerError::DebugBlockSaving.to_string()
+        );
     }
 }

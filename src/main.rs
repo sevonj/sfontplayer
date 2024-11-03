@@ -128,6 +128,9 @@ impl SfontPlayer {
 impl eframe::App for SfontPlayer {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         let player = self.player.lock();
+        if player.debug_block_saving {
+            return;
+        }
         eframe::set_value(storage, eframe::APP_KEY, self);
 
         if let Err(e) = player.save_state() {
