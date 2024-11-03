@@ -102,6 +102,9 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             let _ = player.remove_workspace(player.get_workspace_idx());
         }
         if input.consume_shortcut(&WORKSPACE_SAVE) {
+            if player.autosave {
+                return;
+            }
             if let Err(e) = player.save_portable_workspace(player.get_workspace_idx()) {
                 gui.toast_error(e.to_string());
             }
