@@ -16,6 +16,7 @@ use super::{
     workspace::{font_meta::FontMeta, Workspace},
     Player, RepeatMode,
 };
+use crate::player::PlayerError;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WorkspaceListEntry {
@@ -24,7 +25,10 @@ struct WorkspaceListEntry {
 }
 
 impl Player {
-    pub fn save_state(&self) -> anyhow::Result<()> {
+    pub fn save_state(&mut self) -> anyhow::Result<()> {
+        if self.debug_block_saving {
+            bail!(PlayerError::DebugBlockSaving)
+        }
         if let Err(e) = self.save_workspaces() {
             bail!(format!("save_workspaces(): {e}"))
         }
@@ -54,6 +58,7 @@ impl Player {
             "shuffle": self.shuffle,
             "repeat": self.repeat,
             "workspace_idx": self.workspace_idx,
+            "autosave": self.autosave,
         });
         if let Some(default) = &self.default_soundfont {
             data["default_soundfont_path"] = Value::from(default.get_path().to_str());
@@ -77,6 +82,7 @@ impl Player {
             Some(x) if (x as usize) < self.workspaces.len() => x as usize,
             _ => 0,
         };
+        self.autosave = data["autosave"].as_bool().is_some_and(|value| value);
 
         self.default_soundfont = data["default_soundfont_path"]
             .as_str()
@@ -85,7 +91,7 @@ impl Player {
         Ok(())
     }
 
-    fn save_workspaces(&self) -> anyhow::Result<()> {
+    fn save_workspaces(&mut self) -> anyhow::Result<()> {
         let project_dirs = project_dirs();
         let data_dir = project_dirs.data_dir();
         let workspace_dir = data_dir.join("workspaces");
@@ -98,7 +104,8 @@ impl Player {
         }
 
         let mut workspace_list = vec![];
-        for (i, workspace) in self.workspaces.iter().enumerate() {
+        for i in 0..self.workspaces.len() {
+            let workspace = &mut self.workspaces[i];
             let filename = generate_workspace_filename(workspace, i);
 
             // Relative if builtin storage ("./workspaces/filename.json"), absolute if portable
@@ -118,7 +125,9 @@ impl Player {
                     .get_portable_path()
                     .unwrap_or_else(|| workspace_dir.join(filename));
                 let mut workspace_file = File::create(&abs_path)?;
-                workspace_file.write_all(Value::from(workspace).to_string().as_bytes())?;
+                workspace_file.write_all(Value::from(&*workspace).to_string().as_bytes())?;
+            } else if self.autosave {
+                let _ = workspace.save_portable();
             }
         }
 

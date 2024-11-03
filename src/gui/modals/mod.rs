@@ -7,6 +7,7 @@ use eframe::egui::{
 
 pub mod about_modal;
 pub mod file_dialogs;
+pub mod settings;
 pub mod shortcuts;
 
 enum DialogButtonStyle {
@@ -47,12 +48,14 @@ pub fn unsaved_exit_dialog(ctx: &Context, player: &mut Player, gui: &mut GuiStat
                         gui.force_exit = true;
                         ui.ctx().send_viewport_cmd(ViewportCommand::Close);
                     };
-                    if add_dialog_button(ui, "Save all and exit", &DialogButtonStyle::Suggested)
-                        .clicked()
-                    {
-                        player.save_all_portable_workspaces();
-                        ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-                    };
+                    ui.add_enabled_ui(!player.debug_block_saving, |ui| {
+                        if add_dialog_button(ui, "Save all and exit", &DialogButtonStyle::Suggested)
+                            .clicked()
+                        {
+                            let _ = player.save_all_portable_workspaces();
+                            ui.ctx().send_viewport_cmd(ViewportCommand::Close);
+                        };
+                    });
                     if add_dialog_button(ui, "Cancel", &DialogButtonStyle::None).clicked() {
                         gui.show_unsaved_exit_modal = false;
                     };

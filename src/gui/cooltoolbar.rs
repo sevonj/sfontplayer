@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     keyboard_shortcuts::{
-        GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
+        GUI_SETTINGS, GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
         WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
         WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
     },
@@ -69,6 +69,13 @@ fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
         {
             gui.show_soundfonts = !gui.show_soundfonts;
         }
+        if ui
+            .add(Button::new("Settings").shortcut_text(ui.ctx().format_shortcut(&GUI_SETTINGS)))
+            .clicked()
+        {
+            gui.show_settings_modal = true;
+            ui.close_menu();
+        }
     });
 }
 
@@ -101,21 +108,31 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             player.get_workspace_mut().refresh_font_list();
             player.get_workspace_mut().refresh_song_list();
         }
-        ui.add_enabled_ui(player.get_workspace().is_portable(), |ui| {
-            let hover_text = if player.get_workspace().is_portable() {
-                "Save unsaved changes."
-            } else {
-                "Current workspace is stored in app data. App data is saved automatically."
-            };
-            if ui
-                .add(Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVE)))
-                .on_hover_text(hover_text)
-                .on_disabled_hover_text(hover_text)
-                .clicked()
-            {
-                let _ = player.get_workspace_mut().save_portable();
-            }
-        });
+        ui.add_enabled_ui(
+            player.get_workspace().is_portable() && !player.autosave,
+            |ui| {
+                let hover_text = if !player.get_workspace().is_portable() {
+                    "Internal workspaces are saved automatically."
+                } else if player.autosave {
+                    "Autosave is enabled."
+                } else {
+                    "Save unsaved changes."
+                };
+                if ui
+                    .add(
+                        Button::new("Save")
+                            .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVE)),
+                    )
+                    .on_hover_text(hover_text)
+                    .on_disabled_hover_text(hover_text)
+                    .clicked()
+                {
+                    if let Err(e) = player.save_portable_workspace(player.get_workspace_idx()) {
+                        gui.toast_error(e.to_string());
+                    }
+                }
+            },
+        );
         if ui
             .add(Button::new("Save as").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVEAS)))
             .on_hover_text("Save a copy to a new file")

@@ -111,11 +111,14 @@ impl SfontPlayer {
         if !ctx.input(|i| i.viewport().close_requested()) {
             return;
         }
+        let player = self.player.lock();
+        if player.autosave {
+            return;
+        }
         if self.gui_state.force_exit {
             return;
         }
 
-        let player = self.player.lock();
         for workspace in player.get_workspaces() {
             if workspace.has_unsaved_changes() {
                 self.gui_state.show_unsaved_exit_modal = true;
@@ -127,7 +130,10 @@ impl SfontPlayer {
 
 impl eframe::App for SfontPlayer {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        let player = self.player.lock();
+        let mut player = self.player.lock();
+        if player.debug_block_saving {
+            return;
+        }
         eframe::set_value(storage, eframe::APP_KEY, self);
 
         if let Err(e) = player.save_state() {

@@ -92,7 +92,11 @@ fn workspace_tab(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiSt
                 if !(response.hovered() || current_tab || unsaved) {
                     ui.style_mut().visuals.widgets.inactive.fg_stroke.color = Color32::TRANSPARENT;
                 }
-                let close_symbol = if unsaved { "⊗" } else { "❌" };
+                let close_symbol = if unsaved && !player.autosave {
+                    "⊗"
+                } else {
+                    "❌"
+                };
                 if ui
                     .add(Button::new(RichText::new(close_symbol).size(14.0)).frame(false))
                     .on_hover_text("Close this workspace")
@@ -119,21 +123,28 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
             TextEdit::singleline(&mut player.get_workspaces_mut()[index].name).desired_width(128.),
         );
 
-        ui.add_enabled_ui(player.get_workspaces()[index].is_portable(), |ui| {
-            let hover_text = if player.get_workspaces()[index].is_portable() {
-                "Save unsaved changes."
-            } else {
-                "This workspace is stored in app data. App data is saved automatically."
-            };
-            if ui
-                .add(Button::new("Save"))
-                .on_hover_text(hover_text)
-                .on_disabled_hover_text(hover_text)
-                .clicked()
-            {
-                let _ = player.get_workspaces_mut()[index].save_portable();
-            }
-        });
+        ui.add_enabled_ui(
+            player.get_workspaces()[index].is_portable() && !player.autosave,
+            |ui| {
+                let hover_text = if !player.get_workspaces()[index].is_portable() {
+                    "Internal workspaces are saved automatically."
+                } else if player.autosave {
+                    "Autosave is enabled."
+                } else {
+                    "Save unsaved changes."
+                };
+                if ui
+                    .add(Button::new("Save"))
+                    .on_hover_text(hover_text)
+                    .on_disabled_hover_text(hover_text)
+                    .clicked()
+                {
+                    if let Err(e) = player.save_portable_workspace(index) {
+                        gui.toast_error(e.to_string());
+                    }
+                }
+            },
+        );
         if ui
             .add(Button::new("Save as"))
             .on_hover_text("Save a copy to a new file")
