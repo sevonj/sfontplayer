@@ -3,10 +3,10 @@ use egui_extras::{Column, TableBuilder};
 
 use crate::{
     gui::keyboard_shortcuts::{
-        GUI_SETTINGS, GUI_SHOWFONTS, PLAYBACK_PLAYPAUSE, PLAYBACK_SHUFFLE, PLAYBACK_SKIP,
-        PLAYBACK_SKIPBACK, PLAYBACK_STARTSTOP, PLAYBACK_VOLDN, PLAYBACK_VOLUP, WORKSPACE_CREATE,
-        WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH,
-        WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEALL, WORKSPACE_SAVEAS,
+        GUI_SETTINGS, GUI_SHOWFONTS, PLAYBACK_PLAYPAUSE, PLAYBACK_REPEAT, PLAYBACK_SHUFFLE,
+        PLAYBACK_SKIP, PLAYBACK_SKIPBACK, PLAYBACK_STARTSTOP, PLAYBACK_VOLDN, PLAYBACK_VOLUP,
+        WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT,
+        WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEALL, WORKSPACE_SAVEAS,
         WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
     },
     GuiState,
@@ -72,10 +72,18 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Toggle Shuffle");
+                                add_shortcut_title(ui, "Toggle shuffle");
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&PLAYBACK_SHUFFLE));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Cycle repeat");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&PLAYBACK_REPEAT));
                             });
                         });
                         body.row(16., |mut row| {

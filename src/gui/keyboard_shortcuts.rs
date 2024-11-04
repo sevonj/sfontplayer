@@ -11,6 +11,7 @@ pub const PLAYBACK_PLAYPAUSE: KeyboardShortcut = KeyboardShortcut::new(Modifiers
 pub const PLAYBACK_STARTSTOP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Space);
 pub const PLAYBACK_SKIP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Period);
 pub const PLAYBACK_SKIPBACK: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::Comma);
+pub const PLAYBACK_REPEAT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::R);
 pub const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::S);
 pub const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
 pub const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
@@ -136,6 +137,9 @@ fn consume_no_modifiers(ctx: &Context, player: &mut Player, gui: &GuiState) {
         }
         if input.consume_shortcut(&PLAYBACK_SHUFFLE) {
             player.toggle_shuffle();
+        }
+        if input.consume_shortcut(&PLAYBACK_REPEAT) {
+            player.cycle_repeat();
         }
         if input.consume_shortcut(&WORKSPACE_REFRESH) {
             player.get_workspace_mut().refresh_font_list();
