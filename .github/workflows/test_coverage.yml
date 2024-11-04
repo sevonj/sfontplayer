@@ -10,7 +10,9 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install dependencies
-        run: sudo apt install -y libasound2-dev gcc-mingw-w64-x86-64 libdbus-1-dev pkg-config
+        run: |
+          sudo apt install -y libasound2-dev gcc-mingw-w64-x86-64 libdbus-1-dev pkg-config
+          cargo install cargo-tarpaulin
 
       - name: Generate code coverage
         run: |
