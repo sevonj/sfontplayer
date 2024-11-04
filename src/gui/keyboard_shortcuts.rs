@@ -26,6 +26,7 @@ pub const WORKSPACE_MOVERIGHT: KeyboardShortcut =
 pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
 pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
 pub const WORKSPACE_REFRESH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
+pub const WORKSPACE_OPEN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::O);
 pub const WORKSPACE_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
 pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
 pub const WORKSPACE_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::S);
@@ -101,6 +102,9 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         }
         if input.consume_shortcut(&WORKSPACE_REMOVE) {
             let _ = player.remove_workspace(player.get_workspace_idx());
+        }
+        if input.consume_shortcut(&WORKSPACE_OPEN) {
+            file_dialogs::open_workspace(player, gui);
         }
         if input.consume_shortcut(&WORKSPACE_SAVE) {
             if player.autosave {
