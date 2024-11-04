@@ -9,8 +9,8 @@ use crate::{
 use super::{
     keyboard_shortcuts::{
         GUI_SETTINGS, GUI_SHOWFONTS, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
-        WORKSPACE_MOVERIGHT, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
-        WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+        WORKSPACE_MOVERIGHT, WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE,
+        WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
     },
     modals::file_dialogs,
 };
@@ -35,15 +35,15 @@ fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         if ui.button("Exit").clicked() {
             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
         }
-        if ui.button("Open Workspace file").clicked() {
-            if let Some(path) = FileDialog::new()
-                .add_filter("Workspace file", &["sfontspace"])
-                .pick_file()
-            {
-                if let Err(e) = player.open_portable_workspace(path) {
-                    gui.toast_error(e.to_string());
-                }
-            }
+        if ui
+            .add(
+                Button::new("Open workspace")
+                    .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_OPEN)),
+            )
+            .on_hover_text("Open a workspace file")
+            .clicked()
+        {
+            file_dialogs::open_workspace(player, gui);
             ui.close_menu();
         }
     });
