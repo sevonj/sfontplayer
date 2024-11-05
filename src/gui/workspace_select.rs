@@ -127,7 +127,7 @@ fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui:
             player.get_workspaces()[index].is_portable() && !player.autosave,
             |ui| {
                 let hover_text = if !player.get_workspaces()[index].is_portable() {
-                    "Internal workspaces are saved automatically."
+                    "Workspaces in app memory are saved automatically."
                 } else if player.autosave {
                     "Autosave is enabled."
                 } else {

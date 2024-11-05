@@ -112,7 +112,7 @@ fn workspace_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             player.get_workspace().is_portable() && !player.autosave,
             |ui| {
                 let hover_text = if !player.get_workspace().is_portable() {
-                    "Internal workspaces are saved automatically."
+                    "Workspaces in app memory are saved automatically."
                 } else if player.autosave {
                     "Autosave is enabled."
                 } else {
