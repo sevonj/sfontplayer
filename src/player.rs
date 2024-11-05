@@ -169,11 +169,16 @@ impl Player {
                 continue;
             }
             self.workspaces.remove(index);
-            // Deletion affected index. Note that we don't go below zero.
-            if index <= self.workspace_idx && self.workspace_idx > 0 {
+
+            let last_selected = self.workspace_idx == self.workspaces.len();
+            // First selected: Never decrement
+            // Between: Decrement if smaller
+            // Last selected: Always decrement (unless last == first)
+            if 0 < self.workspace_idx && (index < self.workspace_idx || last_selected) {
                 self.workspace_idx -= 1;
             }
-            if index <= self.playing_workspace_idx && self.playing_workspace_idx > 0 {
+            // Doesn't really matter what we do with stale playing index, as long as it's in bounds.
+            if 0 < self.playing_workspace_idx && index <= self.playing_workspace_idx {
                 self.playing_workspace_idx -= 1;
             }
         }
@@ -766,6 +771,45 @@ mod tests {
         assert_eq!(player.playing_workspace_idx, 2);
         player.move_workspace(2, usize::MAX).unwrap_err();
         assert_eq!(player.playing_workspace_idx, 2);
+    }
+
+    #[test]
+    fn test_remove_last_workspace_decreases_index() {
+        let mut player = Player::default();
+        player.new_workspace();
+        player.new_workspace();
+        player.new_workspace();
+
+        player.workspace_idx = 2;
+        player.remove_workspace(2).unwrap();
+        player.update();
+        assert_eq!(player.workspace_idx, 1)
+    }
+
+    #[test]
+    fn test_remove_last_workspace_decreases_playing_index() {
+        let mut player = Player::default();
+        player.new_workspace();
+        player.new_workspace();
+        player.new_workspace();
+
+        player.playing_workspace_idx = 2;
+        player.remove_workspace(2).unwrap();
+        player.update();
+        assert_eq!(player.playing_workspace_idx, 1)
+    }
+
+    #[test]
+    fn test_remove_nonlast_workspace_keeps_index() {
+        let mut player = Player::default();
+        player.new_workspace();
+        player.new_workspace();
+        player.new_workspace();
+
+        player.workspace_idx = 1;
+        player.remove_workspace(1).unwrap();
+        player.update();
+        assert_eq!(player.workspace_idx, 1)
     }
 
     #[test]
