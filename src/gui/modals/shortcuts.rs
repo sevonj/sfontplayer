@@ -3,11 +3,11 @@ use egui_extras::{Column, TableBuilder};
 
 use crate::{
     gui::keyboard_shortcuts::{
-        GUI_SETTINGS, GUI_SHOWFONTS, PLAYBACK_PLAYPAUSE, PLAYBACK_REPEAT, PLAYBACK_SHUFFLE,
-        PLAYBACK_SKIP, PLAYBACK_SKIPBACK, PLAYBACK_STARTSTOP, PLAYBACK_VOLDN, PLAYBACK_VOLUP,
-        WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT,
-        WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEALL,
-        WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+        GUI_QUIT, GUI_SETTINGS, GUI_SHORTCUTS, GUI_SHOWFONTS, PLAYBACK_PLAYPAUSE, PLAYBACK_REPEAT,
+        PLAYBACK_SHUFFLE, PLAYBACK_SKIP, PLAYBACK_SKIPBACK, PLAYBACK_STARTSTOP, PLAYBACK_VOLDN,
+        PLAYBACK_VOLUP, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
+        WORKSPACE_MOVERIGHT, WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE,
+        WORKSPACE_SAVEALL, WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
     },
     GuiState,
 };
@@ -230,6 +230,22 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&GUI_SETTINGS));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Show shortcut list");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&GUI_SHORTCUTS));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Quit the app");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&GUI_QUIT));
                             });
                         });
                     });

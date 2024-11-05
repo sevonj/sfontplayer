@@ -14,7 +14,7 @@ use eframe::egui::{CentralPanel, Context, TopBottomPanel, Ui};
 use egui_notify::Toasts;
 use fonts::{font_titlebar, soundfont_table};
 use keyboard_shortcuts::consume_shortcuts;
-use modals::unsaved_exit_dialog;
+use modals::unsaved_quit_dialog;
 use modals::{about_modal::about_modal, settings::settings_modal, shortcuts::shortcut_modal};
 use playback_controls::playback_panel;
 use songs::{song_table, song_titlebar};
@@ -34,11 +34,11 @@ pub struct GuiState {
     #[serde(skip)]
     pub show_shortcut_modal: bool,
     #[serde(skip)]
-    pub show_unsaved_exit_modal: bool,
+    pub show_unsaved_quit_modal: bool,
     pub show_developer_options: bool,
     /// Bypass unsaved files check on close.
     #[serde(skip)]
-    pub force_exit: bool,
+    pub force_quit: bool,
     /// Frame update flags. Acted on and cleared at the end of frame update.
     #[serde(skip)]
     pub update_flags: UpdateFlags,
@@ -84,7 +84,7 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     about_modal(ctx, gui);
     settings_modal(ctx, player, gui);
     shortcut_modal(ctx, gui);
-    unsaved_exit_dialog(ctx, player, gui);
+    unsaved_quit_dialog(ctx, player, gui);
 
     TopBottomPanel::top("top_bar")
         .resizable(false)
@@ -145,7 +145,7 @@ fn disable_if_modal(ui: &mut Ui, gui: &GuiState) {
     if gui.show_about_modal
         || gui.show_settings_modal
         || gui.show_shortcut_modal
-        || gui.show_unsaved_exit_modal
+        || gui.show_unsaved_quit_modal
     {
         ui.disable();
     }

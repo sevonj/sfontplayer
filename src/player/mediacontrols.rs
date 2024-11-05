@@ -119,7 +119,7 @@ impl Player {
                     | MediaControlEvent::SetPosition(_) => self.push_error("Todo".into()),
 
                     MediaControlEvent::Raise => self.player_events.push(PlayerEvent::Raise),
-                    MediaControlEvent::Quit => self.player_events.push(PlayerEvent::Exit),
+                    MediaControlEvent::Quit => self.player_events.push(PlayerEvent::Quit),
 
                     MediaControlEvent::OpenUri(_) => {
                         self.push_error("SfontPlayer doesn't support opening URIs.".into());
