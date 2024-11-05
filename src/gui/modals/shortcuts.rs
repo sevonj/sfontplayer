@@ -177,7 +177,7 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Save workspace (loose file only)");
+                                add_shortcut_title(ui, "Save workspace");
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_SAVE));
@@ -185,7 +185,7 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Save all loose workspaces");
+                                add_shortcut_title(ui, "Save all workspaces");
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_SAVEALL));
@@ -193,7 +193,7 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Save workspace to a new file.");
+                                add_shortcut_title(ui, "Save workspace to a new file");
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_SAVEAS));
@@ -201,7 +201,7 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Duplicate current workspace.");
+                                add_shortcut_title(ui, "Duplicate current workspace");
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_DUPLICATE));
