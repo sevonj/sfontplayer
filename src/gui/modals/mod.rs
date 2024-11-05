@@ -17,8 +17,8 @@ enum DialogButtonStyle {
 }
 
 /// Modal window that shows "About"
-pub fn unsaved_exit_dialog(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
-    if gui.show_unsaved_exit_modal {
+pub fn unsaved_quit_dialog(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
+    if gui.show_unsaved_quit_modal {
         Window::new("Unsaved changes")
             .collapsible(false)
             .title_bar(false)
@@ -35,21 +35,21 @@ pub fn unsaved_exit_dialog(ctx: &Context, player: &mut Player, gui: &mut GuiStat
                     ui.vertical(|ui| {
                         ui.add_space(10.);
                         ui.heading("Unsaved changes");
-                        ui.label("You have unsaved changes. Are you sure you want to exit?");
+                        ui.label("You have unsaved changes. Are you sure you want to quit?");
                     });
                     ui.add_space(16.);
                 });
 
                 ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
                     ui.add_space(12.);
-                    if add_dialog_button(ui, "Discard and exit", &DialogButtonStyle::Destructive)
+                    if add_dialog_button(ui, "Discard and quit", &DialogButtonStyle::Destructive)
                         .clicked()
                     {
-                        gui.force_exit = true;
+                        gui.force_quit = true;
                         ui.ctx().send_viewport_cmd(ViewportCommand::Close);
                     };
                     ui.add_enabled_ui(!player.debug_block_saving, |ui| {
-                        if add_dialog_button(ui, "Save all and exit", &DialogButtonStyle::Suggested)
+                        if add_dialog_button(ui, "Save all and quit", &DialogButtonStyle::Suggested)
                             .clicked()
                         {
                             let _ = player.save_all_portable_workspaces();
@@ -57,7 +57,7 @@ pub fn unsaved_exit_dialog(ctx: &Context, player: &mut Player, gui: &mut GuiStat
                         };
                     });
                     if add_dialog_button(ui, "Cancel", &DialogButtonStyle::None).clicked() {
-                        gui.show_unsaved_exit_modal = false;
+                        gui.show_unsaved_quit_modal = false;
                     };
                 });
                 ui.add_space(4.);

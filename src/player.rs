@@ -21,7 +21,7 @@ pub mod workspace;
 pub enum PlayerEvent {
     /// Bring window to focus
     Raise,
-    Exit,
+    Quit,
     NotifyError(String),
 }
 

@@ -2,7 +2,7 @@ use eframe::egui::{Button, Ui, ViewportCommand};
 
 use super::{
     actions,
-    keyboard_shortcuts::{GUI_SETTINGS, GUI_SHOWFONTS},
+    keyboard_shortcuts::{GUI_QUIT, GUI_SETTINGS, GUI_SHORTCUTS, GUI_SHOWFONTS},
 };
 use crate::{player::Player, GuiState};
 
@@ -44,7 +44,10 @@ fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
         ui.separator();
 
-        if ui.button("Exit").clicked() {
+        if ui
+            .add(Button::new("Quit").shortcut_text(ui.ctx().format_shortcut(&GUI_QUIT)))
+            .clicked()
+        {
             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
         }
     });
@@ -81,7 +84,13 @@ fn help_menu(ui: &mut Ui, gui: &mut GuiState) {
             gui.show_about_modal = true;
             ui.close_menu();
         }
-        if ui.button("Keyboard shortcuts").clicked() {
+        if ui
+            .add(
+                Button::new("Keyboard shortcuts")
+                    .shortcut_text(ui.ctx().format_shortcut(&GUI_SHORTCUTS)),
+            )
+            .clicked()
+        {
             gui.show_shortcut_modal = true;
             ui.close_menu();
         }

@@ -107,7 +107,7 @@ impl SfontPlayer {
     }
 
     /// Cancels app exit if needed
-    fn exit_check(&mut self, ctx: &Context) {
+    fn quit_check(&mut self, ctx: &Context) {
         if !ctx.input(|i| i.viewport().close_requested()) {
             return;
         }
@@ -115,13 +115,13 @@ impl SfontPlayer {
         if player.autosave {
             return;
         }
-        if self.gui_state.force_exit {
+        if self.gui_state.force_quit {
             return;
         }
 
         for workspace in player.get_workspaces() {
             if workspace.has_unsaved_changes() {
-                self.gui_state.show_unsaved_exit_modal = true;
+                self.gui_state.show_unsaved_quit_modal = true;
                 ctx.send_viewport_cmd(ViewportCommand::CancelClose);
             }
         }
@@ -160,7 +160,7 @@ impl eframe::App for SfontPlayer {
                 ctx.request_repaint();
             }
         }
-        self.exit_check(ctx);
+        self.quit_check(ctx);
     }
 }
 
@@ -172,7 +172,7 @@ fn handle_events(player: &mut Player, gui: &mut GuiState, ctx: &Context) {
                 ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
                 ctx.send_viewport_cmd(ViewportCommand::Focus);
             }
-            player::PlayerEvent::Exit => ctx.send_viewport_cmd(ViewportCommand::Close),
+            player::PlayerEvent::Quit => ctx.send_viewport_cmd(ViewportCommand::Close),
             player::PlayerEvent::NotifyError(message) => gui.toast_error(message),
         }
     }

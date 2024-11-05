@@ -1,8 +1,7 @@
-use eframe::egui::{Context, Key, KeyboardShortcut, Modifiers};
-
-use crate::player::Player;
+use eframe::egui::{Context, Key, KeyboardShortcut, Modifiers, ViewportCommand};
 
 use super::{modals::file_dialogs, GuiState};
+use crate::player::Player;
 
 const CTRL_SHIFT: Modifiers = Modifiers::CTRL.plus(Modifiers::SHIFT);
 const CTRL_ALT: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
@@ -32,8 +31,11 @@ pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT,
 pub const WORKSPACE_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::S);
 pub const WORKSPACE_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
 
+pub const GUI_QUIT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Q);
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
 pub const GUI_SETTINGS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Comma);
+pub const GUI_SHORTCUTS: KeyboardShortcut =
+    KeyboardShortcut::new(Modifiers::CTRL, Key::Questionmark);
 
 /// Check and act on shortcuts
 pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
@@ -69,6 +71,8 @@ fn consume_2_modifiers(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
 }
 
 fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
+    let mut quit = false;
+
     ctx.input_mut(|input| {
         if input.consume_shortcut(&PLAYBACK_STARTSTOP) {
             if player.is_empty() {
@@ -115,13 +119,24 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             }
         }
 
+        if input.consume_shortcut(&GUI_QUIT) {
+            quit = true;
+        }
         if input.consume_shortcut(&GUI_SHOWFONTS) {
             gui.show_soundfonts = !gui.show_soundfonts;
         }
         if input.consume_shortcut(&GUI_SETTINGS) {
             gui.show_settings_modal = true;
         }
+        if input.consume_shortcut(&GUI_SHORTCUTS) {
+            gui.show_shortcut_modal = true;
+        }
     });
+
+    // This is down here because sending the command from the input closure hangs the program.
+    if quit {
+        ctx.send_viewport_cmd(ViewportCommand::Close);
+    }
 }
 
 fn consume_no_modifiers(ctx: &Context, player: &mut Player, gui: &GuiState) {
