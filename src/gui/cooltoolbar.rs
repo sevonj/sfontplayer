@@ -1,4 +1,4 @@
-use eframe::egui::{Button, Theme, ThemePreference, Ui, ViewportCommand};
+use eframe::egui::{Button, Ui, ViewportCommand};
 
 use super::{
     actions,
@@ -54,13 +54,6 @@ fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
     ui.menu_button("Options", |ui| {
         gui.disable_play_shortcut();
 
-        if ui.ctx().theme() == Theme::Light {
-            if ui.button("🌙 Toggle theme").clicked() {
-                ui.ctx().set_theme(ThemePreference::Dark);
-            }
-        } else if ui.button("☀ Toggle theme").clicked() {
-            ui.ctx().set_theme(ThemePreference::Light);
-        }
         if ui
             .add(
                 Button::new("Toggle soundfonts")

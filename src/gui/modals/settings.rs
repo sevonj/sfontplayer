@@ -28,6 +28,25 @@ pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
                         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                             ui.vertical(|ui| {
                                 ui.set_width(ui.available_width() - 32.);
+                                ui.heading("Theme");
+                                ui.label("Change theme.");
+                            });
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                eframe::egui::widgets::global_theme_preference_buttons(ui);
+                                // if ui.ctx().theme() == Theme::Light {
+                                //     if ui.button("🌙 Toggle theme").clicked() {
+                                //         ui.ctx().set_theme(ThemePreference::Dark);
+                                //     }
+                                // } else if ui.button("☀ Toggle theme").clicked() {
+                                //     ui.ctx().set_theme(ThemePreference::Light);
+                                // }
+                            });
+                        });
+                        ui.add_space(8.);
+
+                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                            ui.vertical(|ui| {
+                                ui.set_width(ui.available_width() - 32.);
                                 ui.heading("Autosave");
                                 ui.label(
                                     "Disable manual saving and use autosave for all workspaces.",
