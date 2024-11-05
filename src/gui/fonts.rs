@@ -1,15 +1,15 @@
-use crate::player::{
-    workspace::enums::{FileListMode, FontSort},
-    Player,
-};
 use eframe::egui::{Align, Button, ComboBox, Label, Layout, RichText, Sense, TextWrapMode, Ui};
 use egui_extras::{Column, TableBuilder};
 use rfd::FileDialog;
 use size_format::SizeFormatterBinary;
 
-use super::{GuiState, TBL_ROW_H};
+use super::{actions, GuiState, TBL_ROW_H};
+use crate::player::{
+    workspace::enums::{FileListMode, FontSort},
+    Player,
+};
 
-pub fn font_titlebar(ui: &mut Ui, player: &mut Player) {
+pub fn font_titlebar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.horizontal(|ui| {
         // Manually add files
         if player.get_workspace().get_font_list_mode() == FileListMode::Manual {
@@ -61,10 +61,7 @@ pub fn font_titlebar(ui: &mut Ui, player: &mut Player) {
 
             if let Some(dir) = &player.get_workspace().get_font_dir() {
                 ui.label(dir.to_string_lossy()).context_menu(|ui| {
-                    if ui.button("Go to directory").clicked() {
-                        let _ = open::that(dir);
-                        ui.close_menu();
-                    }
+                    actions::open_dir(ui, dir, gui);
                 });
             } else {
                 ui.label("No directory.");
@@ -230,11 +227,11 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                             }
                         },
                     );
-                    if ui.button("Go to directory").clicked() {
-                        let filepath = player.get_workspace().get_fonts()[index].get_path();
-                        let _ = open::that(filepath.parent().expect("Can't open parent"));
-                        ui.close_menu();
-                    }
+                    actions::open_file_dir(
+                        ui,
+                        &player.get_workspace().get_fonts()[index].get_path(),
+                        gui,
+                    );
                     ui.menu_button("Add to workspace", |ui| {
                         let filepath = player.get_workspace().get_fonts()[index].get_path();
                         if ui.button("➕ New workspace").clicked() {

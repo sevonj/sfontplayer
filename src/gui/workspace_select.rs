@@ -1,8 +1,8 @@
-use super::{modals::file_dialogs, GuiState};
-use crate::player::{workspace::enums::FileListMode, Player};
+use super::{actions, GuiState};
+use crate::player::Player;
 use eframe::egui::{
-    scroll_area::ScrollBarVisibility, vec2, Button, Color32, Frame, Label, Response, RichText,
-    ScrollArea, Sense, Shadow, Stroke, TextEdit, Ui, UiBuilder,
+    scroll_area::ScrollBarVisibility, vec2, Button, Color32, Frame, Label, RichText, ScrollArea,
+    Sense, Shadow, Stroke, Ui, UiBuilder,
 };
 
 pub fn workspace_tabs(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
@@ -110,64 +110,27 @@ fn workspace_tab(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiSt
         if response.clicked() {
             let _ = player.switch_to_workspace(index);
         }
-        tab_context_menu(&response, index, player, gui);
-    });
-}
 
-fn tab_context_menu(response: &Response, index: usize, player: &mut Player, gui: &mut GuiState) {
-    response.context_menu(|ui| {
-        gui.disable_play_shortcut();
+        response.context_menu(|ui| {
+            gui.disable_play_shortcut();
 
-        ui.add(Label::new("Name:").selectable(false));
-        ui.add(
-            TextEdit::singleline(&mut player.get_workspaces_mut()[index].name).desired_width(128.),
-        );
-
-        ui.add_enabled_ui(
-            player.get_workspaces()[index].is_portable() && !player.autosave,
-            |ui| {
-                let hover_text = if !player.get_workspaces()[index].is_portable() {
-                    "Workspaces in app memory are saved automatically."
-                } else if player.autosave {
-                    "Autosave is enabled."
-                } else {
-                    "Save unsaved changes."
-                };
-                if ui
-                    .add(Button::new("Save"))
-                    .on_hover_text(hover_text)
-                    .on_disabled_hover_text(hover_text)
-                    .clicked()
-                {
-                    if let Err(e) = player.save_portable_workspace(index) {
-                        gui.toast_error(e.to_string());
-                    }
-                }
-            },
-        );
-        if ui
-            .add(Button::new("Save as"))
-            .on_hover_text("Save a copy to a new file")
-            .clicked()
-        {
-            file_dialogs::save_workspace_as(player, index, gui);
-        }
-        if ui
-            .add(Button::new("Duplicate"))
-            .on_hover_text("Create a copy of this workspace")
-            .clicked()
-        {
-            let _ = player.duplicate_workspace(index);
-        }
-
-        let workspace = &mut player.get_workspaces_mut()[index];
-        let can_refresh = workspace.get_font_list_mode() != FileListMode::Manual
-            || workspace.get_song_list_mode() != FileListMode::Manual;
-        ui.add_enabled_ui(can_refresh, |ui| {
-            if ui.button("Refresh directory content").clicked() {
-                workspace.refresh_font_list();
-                workspace.refresh_song_list();
+            actions::rename_workspace(ui, player, index);
+            actions::refresh_workspace(player, index, ui);
+            if let Some(filepath) = player.get_workspaces()[index].get_portable_path() {
+                actions::open_file_dir(ui, &filepath, gui);
             }
+
+            ui.separator();
+
+            actions::save_workspace(ui, player, index, gui);
+            actions::save_workspace_as(ui, player, index, gui);
+            actions::duplicate_workspace(ui, player, index);
+            actions::close_workspace(ui, player, index);
+
+            ui.separator();
+
+            actions::move_workspace_left(ui, player, index);
+            actions::move_workspace_right(ui, player, index);
         });
     });
 }
