@@ -1,3 +1,4 @@
+pub mod actions;
 pub mod conversions;
 mod cooltoolbar;
 mod fonts;
@@ -102,7 +103,7 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             .resizable(false)
             .show(ctx, |ui| {
                 disable_if_modal(ui, gui);
-                font_titlebar(ui, player);
+                font_titlebar(ui, player, gui);
             });
         TopBottomPanel::top("font_table")
             .resizable(true)
@@ -117,7 +118,7 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         .resizable(false)
         .show(ctx, |ui| {
             disable_if_modal(ui, gui);
-            song_titlebar(ui, player);
+            song_titlebar(ui, player, gui);
         });
     CentralPanel::default().show(ctx, |ui| {
         disable_if_modal(ui, gui);

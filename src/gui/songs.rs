@@ -1,15 +1,16 @@
-use super::{conversions::format_duration, GuiState, TBL_ROW_H};
-use crate::player::{
-    workspace::enums::{FileListMode, SongSort},
-    Player,
-};
 use eframe::egui::{Align, Button, ComboBox, Label, Layout, RichText, Sense, TextWrapMode, Ui};
 use egui_extras::{Column, TableBuilder};
 use rfd::FileDialog;
 use size_format::SizeFormatterBinary;
 use std::time::Duration;
 
-pub fn song_titlebar(ui: &mut Ui, player: &mut Player) {
+use super::{actions, conversions::format_duration, GuiState, TBL_ROW_H};
+use crate::player::{
+    workspace::enums::{FileListMode, SongSort},
+    Player,
+};
+
+pub fn song_titlebar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.horizontal(|ui| {
         // Manually add files
         if player.get_workspace().get_song_list_mode() == FileListMode::Manual {
@@ -62,8 +63,7 @@ pub fn song_titlebar(ui: &mut Ui, player: &mut Player) {
             if let Some(dir) = &player.get_workspace().get_song_dir() {
                 ui.label(dir.to_string_lossy()).context_menu(|ui| {
                     if ui.button("Go to directory").clicked() {
-                        let _ = open::that(dir);
-                        ui.close_menu();
+                        actions::open_dir(ui, dir, gui);
                     }
                 });
             } else {
@@ -273,11 +273,11 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                             }
                         },
                     );
-                    if ui.button("Go to directory").clicked() {
-                        let filepath = player.get_workspace().get_songs()[index].get_path();
-                        let _ = open::that(filepath.parent().expect("Can't open parent"));
-                        ui.close_menu();
-                    }
+                    actions::open_file_dir(
+                        ui,
+                        &player.get_workspace().get_songs()[index].get_path(),
+                        gui,
+                    );
                     ui.menu_button("Add to workspace", |ui| {
                         let filepath = player.get_workspace().get_songs()[index].get_path();
                         if ui.button("➕ New workspace").clicked() {
