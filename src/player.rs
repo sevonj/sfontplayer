@@ -10,7 +10,7 @@ use serde_json::Value;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use souvlaki::{MediaControlEvent, MediaControls};
 use std::{error, fmt, fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
-use workspace::{font_meta::FontMeta, Workspace};
+use workspace::{font_meta::FontMeta, DeletionStatus, Workspace};
 
 pub mod audio;
 mod mediacontrols;
@@ -164,10 +164,29 @@ impl Player {
 
         self.get_workspace_mut().delete_queued();
 
+        self.delete_queued_workspaces();
+
+        self.mediacontrol_handle_events();
+    }
+
+    fn delete_queued_workspaces(&mut self) {
         for index in (0..self.workspaces.len()).rev() {
-            if !self.workspaces[index].is_queued_for_deletion {
-                continue;
+            let workspace = &mut self.workspaces[index];
+
+            match workspace.deletion_status {
+                DeletionStatus::None => continue,
+                DeletionStatus::Queued => {
+                    if workspace.has_unsaved_changes() {
+                        continue;
+                    }
+                }
+                DeletionStatus::QueuedDiscard => (),
             }
+
+            if self.autosave && workspace.is_portable() {
+                let _ = workspace.save_portable();
+            }
+
             self.workspaces.remove(index);
 
             let last_selected = self.workspace_idx == self.workspaces.len();
@@ -183,8 +202,6 @@ impl Player {
             }
         }
         self.ensure_workspace_existence();
-
-        self.mediacontrol_handle_events();
     }
 
     // --- Playback Control
@@ -466,12 +483,38 @@ impl Player {
         self.workspaces.push(Workspace::default());
     }
     /// Remove a workspace by index
-    pub fn remove_workspace(&mut self, index: usize) -> anyhow::Result<()> {
+    pub fn remove_workspace(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.workspaces.len() {
-            bail!(PlayerError::InvalidWorkspaceIndex { index });
+            return Err(PlayerError::InvalidWorkspaceIndex { index });
         }
-        self.workspaces[index].is_queued_for_deletion = true;
+        self.workspaces[index].deletion_status = DeletionStatus::Queued;
         Ok(())
+    }
+    /// Remove a workspace by index, override unsaved check
+    pub fn force_remove_workspace(&mut self, index: usize) -> Result<(), PlayerError> {
+        if index >= self.workspaces.len() {
+            return Err(PlayerError::InvalidWorkspaceIndex { index });
+        }
+        self.workspaces[index].deletion_status = DeletionStatus::QueuedDiscard;
+        Ok(())
+    }
+    pub fn cancel_remove_workspace(&mut self, index: usize) -> Result<(), PlayerError> {
+        if index >= self.workspaces.len() {
+            return Err(PlayerError::InvalidWorkspaceIndex { index });
+        }
+        self.workspaces[index].deletion_status = DeletionStatus::None;
+        Ok(())
+    }
+    /// Get a workspace waiting for delete confirm, if any exist.
+    pub fn get_workspace_waiting_for_discard(&self) -> Option<usize> {
+        for (i, workspace) in self.workspaces.iter().enumerate() {
+            if workspace.deletion_status == DeletionStatus::Queued
+                && workspace.has_unsaved_changes()
+            {
+                return Some(i);
+            }
+        }
+        None
     }
     /// Rearrange workspaces
     pub fn move_workspace(&mut self, old_index: usize, new_index: usize) -> anyhow::Result<()> {
