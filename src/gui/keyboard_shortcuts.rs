@@ -30,6 +30,7 @@ pub const WORKSPACE_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CT
 pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
 pub const WORKSPACE_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::S);
 pub const WORKSPACE_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
+pub const WORKSPACE_REOPEN: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::T);
 
 pub const GUI_QUIT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Q);
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
@@ -66,6 +67,9 @@ fn consume_2_modifiers(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         }
         if input.consume_shortcut(&WORKSPACE_DUPLICATE) {
             let _ = player.duplicate_workspace(player.get_workspace_idx());
+        }
+        if input.consume_shortcut(&WORKSPACE_REOPEN) {
+            player.reopen_removed_workspace();
         }
     });
 }

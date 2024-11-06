@@ -27,6 +27,7 @@ fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         actions::save_current_workspace_as(ui, player, gui);
         actions::duplicate_current_workspace(ui, player);
         actions::close_current_workspace(ui, player);
+        actions::reopen_workspace(ui, player);
 
         ui.separator();
 

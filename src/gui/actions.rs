@@ -9,8 +9,8 @@ use rfd::FileDialog;
 use super::{
     keyboard_shortcuts::{
         WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT,
-        WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE, WORKSPACE_SAVEAS,
-        WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+        WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_REOPEN, WORKSPACE_SAVE,
+        WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
     },
     modals::file_dialogs,
     GuiState,
@@ -177,6 +177,21 @@ pub fn close_current_workspace(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.remove_workspace(player.get_workspace_idx());
+        ui.close_menu();
+    }
+}
+
+pub fn reopen_workspace(ui: &mut Ui, player: &mut Player) {
+    if ui
+        .add_enabled(
+            player.has_removed_workspaces(),
+            Button::new("Reopen closed").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_REOPEN)),
+        )
+        .on_hover_text("Reopen last closed workspace")
+        .on_disabled_hover_text("Reopen last closed workspace")
+        .clicked()
+    {
+        player.reopen_removed_workspace();
         ui.close_menu();
     }
 }

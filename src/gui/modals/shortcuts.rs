@@ -6,8 +6,9 @@ use crate::{
         GUI_QUIT, GUI_SETTINGS, GUI_SHORTCUTS, GUI_SHOWFONTS, PLAYBACK_PLAYPAUSE, PLAYBACK_REPEAT,
         PLAYBACK_SHUFFLE, PLAYBACK_SKIP, PLAYBACK_SKIPBACK, PLAYBACK_STARTSTOP, PLAYBACK_VOLDN,
         PLAYBACK_VOLUP, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
-        WORKSPACE_MOVERIGHT, WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_SAVE,
-        WORKSPACE_SAVEALL, WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+        WORKSPACE_MOVERIGHT, WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_REOPEN,
+        WORKSPACE_SAVE, WORKSPACE_SAVEALL, WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT,
+        WORKSPACE_SWITCHRIGHT,
     },
     GuiState,
 };
@@ -205,6 +206,14 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&WORKSPACE_DUPLICATE));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Reopen last closed workspace");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&WORKSPACE_REOPEN));
                             });
                         });
 

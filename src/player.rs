@@ -17,6 +17,8 @@ mod mediacontrols;
 mod serialize_player;
 pub mod workspace;
 
+const REMOVED_WORKSPACE_HISTORY_LEN: usize = 100;
+
 /// To be handled in gui
 pub enum PlayerEvent {
     /// Bring window to focus
@@ -102,6 +104,8 @@ pub struct Player {
     workspace_idx: usize,
     /// Which workspace was last playing music
     playing_workspace_idx: usize,
+    /// For undo closing
+    removed_workspaces: Vec<Workspace>,
 
     // -- settings
     shuffle: bool,
@@ -130,6 +134,7 @@ impl Default for Player {
             workspaces: vec![],
             workspace_idx: 0,
             playing_workspace_idx: 0,
+            removed_workspaces: vec![],
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
@@ -187,7 +192,10 @@ impl Player {
                 let _ = workspace.save_portable();
             }
 
-            self.workspaces.remove(index);
+            self.removed_workspaces.push(self.workspaces.remove(index));
+            while self.removed_workspaces.len() > REMOVED_WORKSPACE_HISTORY_LEN {
+                self.removed_workspaces.remove(0);
+            }
 
             let last_selected = self.workspace_idx == self.workspaces.len();
             // First selected: Never decrement
@@ -515,6 +523,25 @@ impl Player {
             }
         }
         None
+    }
+    pub fn has_removed_workspaces(&self) -> bool {
+        !self.removed_workspaces.is_empty()
+    }
+    pub fn reopen_removed_workspace(&mut self) {
+        if !self.removed_workspaces.is_empty() {
+            let last_index = self.removed_workspaces.len() - 1;
+            let mut workspace = self.removed_workspaces.remove(last_index);
+            workspace.deletion_status = DeletionStatus::None;
+
+            if let Some(filepath) = workspace.get_portable_path() {
+                if self.is_portable_workspace_open(&filepath) {
+                    self.reopen_removed_workspace();
+                }
+            }
+
+            self.workspaces.push(workspace);
+            self.workspace_idx = self.workspaces.len() - 1;
+        }
     }
     /// Rearrange workspaces
     pub fn move_workspace(&mut self, old_index: usize, new_index: usize) -> anyhow::Result<()> {
