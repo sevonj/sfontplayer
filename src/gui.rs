@@ -14,8 +14,8 @@ use eframe::egui::{CentralPanel, Context, TopBottomPanel, Ui};
 use egui_notify::Toasts;
 use fonts::{font_titlebar, soundfont_table};
 use keyboard_shortcuts::consume_shortcuts;
-use modals::unsaved_quit_dialog;
 use modals::{about_modal::about_modal, settings::settings_modal, shortcuts::shortcut_modal};
+use modals::{unsaved_close_dialog, unsaved_quit_dialog};
 use playback_controls::playback_panel;
 use songs::{song_table, song_titlebar};
 use workspace_select::workspace_tabs;
@@ -84,6 +84,7 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     about_modal(ctx, gui);
     settings_modal(ctx, player, gui);
     shortcut_modal(ctx, gui);
+    unsaved_close_dialog(ctx, player);
     unsaved_quit_dialog(ctx, player, gui);
 
     TopBottomPanel::top("top_bar")

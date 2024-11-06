@@ -14,6 +14,15 @@ pub mod midi_meta;
 mod error;
 mod serialize_workspace;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum DeletionStatus {
+    None,
+    /// Queued for deletion.
+    Queued,
+    /// Queued, and delete even if unsaved changes.
+    QueuedDiscard,
+}
+
 #[derive(Clone)]
 pub struct Workspace {
     pub name: String,
@@ -21,7 +30,7 @@ pub struct Workspace {
     portable_filepath: Option<PathBuf>,
     /// Only applicable to portable file
     unsaved_changes: bool,
-    pub is_queued_for_deletion: bool,
+    pub deletion_status: DeletionStatus,
 
     fonts: Vec<FontMeta>,
     font_idx: Option<usize>,
@@ -558,7 +567,7 @@ impl Default for Workspace {
             name: "Workspace".to_owned(),
             portable_filepath: None,
             unsaved_changes: true,
-            is_queued_for_deletion: false,
+            deletion_status: DeletionStatus::None,
 
             fonts: vec![],
             font_idx: None,
