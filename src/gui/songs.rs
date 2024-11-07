@@ -107,8 +107,8 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     let mut tablebuilder = TableBuilder::new(ui)
         .striped(true)
         .column(Column::exact(16.))
-        .column(Column::auto_with_initial_suggestion(width).resizable(true))
-        .column(Column::auto_with_initial_suggestion(96.).resizable(true))
+        .column(Column::initial(width).resizable(true))
+        .column(Column::initial(96.).resizable(true))
         .column(Column::remainder())
         .sense(Sense::click());
 
