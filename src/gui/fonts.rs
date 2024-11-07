@@ -99,11 +99,13 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         ui.style_mut().visuals.selection.stroke = ui.style().visuals.widgets.active.fg_stroke;
     }
 
+    let width = ui.available_width() - 192.;
+
     let tablebuilder = TableBuilder::new(ui)
         .striped(true)
         .sense(Sense::click())
         .column(Column::exact(16.))
-        .column(Column::auto().resizable(true))
+        .column(Column::initial(width).resizable(true))
         .column(Column::remainder());
 
     let table = tablebuilder.header(20.0, |mut header| {
