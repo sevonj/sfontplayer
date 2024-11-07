@@ -112,8 +112,6 @@ fn workspace_tab(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiSt
         }
 
         response.context_menu(|ui| {
-            gui.disable_play_shortcut();
-
             actions::rename_workspace(ui, player, index);
             actions::refresh_workspace(player, index, ui);
             if let Some(filepath) = player.get_workspaces()[index].get_portable_path() {

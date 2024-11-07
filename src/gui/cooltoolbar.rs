@@ -19,8 +19,6 @@ pub fn toolbar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.menu_button("File", |ui| {
-        gui.disable_play_shortcut();
-
         actions::new_workspace(ui, player);
         actions::open_workspace(ui, player, gui);
         actions::save_current_workspace(ui, player, gui);
@@ -56,8 +54,6 @@ fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
     ui.menu_button("Options", |ui| {
-        gui.disable_play_shortcut();
-
         if ui
             .add(
                 Button::new("Toggle soundfonts")
@@ -79,8 +75,6 @@ fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
 
 fn help_menu(ui: &mut Ui, gui: &mut GuiState) {
     ui.menu_button("Help", |ui| {
-        gui.disable_play_shortcut();
-
         if ui.button("About").clicked() {
             gui.show_about_modal = true;
             ui.close_menu();

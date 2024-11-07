@@ -59,23 +59,15 @@ impl GuiState {
             .set_show_progress_bar(false)
             .set_closable(true);
     }
-
-    /// Keyboard shortcut won't be consumed at the end of this frame.
-    /// To avoid involuntary pausing by spacebar while typing in a text box.
-    pub fn disable_play_shortcut(&mut self) {
-        self.update_flags.disable_play_shortcut = true;
-    }
 }
 
 #[derive(Default)]
 pub struct UpdateFlags {
     pub scroll_to_song: bool,
-    pub disable_play_shortcut: bool,
 }
 impl UpdateFlags {
     pub fn clear(&mut self) {
         self.scroll_to_song = false;
-        self.disable_play_shortcut = false;
     }
 }
 
