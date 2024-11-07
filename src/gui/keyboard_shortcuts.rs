@@ -40,6 +40,9 @@ pub const GUI_SHORTCUTS: KeyboardShortcut =
 
 /// Check and act on shortcuts
 pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
+    if ctx.wants_keyboard_input() {
+        return;
+    }
     consume_2_modifiers(ctx, player, gui);
     consume_1_modifier(ctx, player, gui);
     consume_no_modifiers(ctx, player, gui);
@@ -143,9 +146,9 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     }
 }
 
-fn consume_no_modifiers(ctx: &Context, player: &mut Player, gui: &GuiState) {
+fn consume_no_modifiers(ctx: &Context, player: &mut Player, _gui: &GuiState) {
     ctx.input_mut(|input| {
-        if !gui.update_flags.disable_play_shortcut && input.consume_shortcut(&PLAYBACK_PLAYPAUSE) {
+        if input.consume_shortcut(&PLAYBACK_PLAYPAUSE) {
             if !player.is_paused() {
                 player.pause();
             } else if !player.is_empty() {
