@@ -23,17 +23,18 @@ pub fn playback_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 }
 
 fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
-    let (back_enabled, skip_enabled) =
-        if player.get_repeat() == RepeatMode::Queue && player.is_playing() {
-            (true, true)
-        } else if let Some(idx) = player.get_playing_workspace().queue_idx {
-            (
-                idx > 0,
-                idx < player.get_playing_workspace().queue.len() - 1,
-            )
-        } else {
-            (false, false)
-        };
+    let (back_enabled, skip_enabled) = if player.get_playing_workspace().queue.is_empty() {
+        (false, false)
+    } else if player.get_repeat() == RepeatMode::Queue && player.is_playing() {
+        (true, true)
+    } else if let Some(idx) = player.get_playing_workspace().queue_idx {
+        (
+            idx > 0,
+            idx < player.get_playing_workspace().queue.len() - 1,
+        )
+    } else {
+        (false, false)
+    };
 
     // Current song info
     let current_hover_text = format!(
