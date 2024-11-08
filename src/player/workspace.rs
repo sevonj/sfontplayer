@@ -1,7 +1,7 @@
 use anyhow::bail;
-use enums::{FileListMode, FontSort, SongSort};
+use enums::{FileListMode, SongSort};
 use error::WorkspaceError;
-use font_meta::FontMeta;
+use font_meta::{FontMeta, FontSort};
 use midi_meta::MidiMeta;
 use rand::seq::SliceRandom;
 use std::{fs, path::PathBuf, time::Duration, vec};

@@ -61,7 +61,7 @@ fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
             )
             .clicked()
         {
-            gui.show_soundfonts = !gui.show_soundfonts;
+            gui.show_playlist_fonts = !gui.show_playlist_fonts;
         }
         if ui
             .add(Button::new("Settings").shortcut_text(ui.ctx().format_shortcut(&GUI_SETTINGS)))

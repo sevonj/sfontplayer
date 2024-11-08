@@ -5,7 +5,7 @@ use size_format::SizeFormatterBinary;
 
 use super::{actions, GuiState, TBL_ROW_H};
 use crate::player::{
-    workspace::enums::{FileListMode, FontSort},
+    workspace::{enums::FileListMode, font_meta::FontSort},
     Player,
 };
 
@@ -47,7 +47,7 @@ pub fn font_titlebar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         }
 
         // Title
-        ui.heading("Soundfonts");
+        ui.heading("Playlist Soundfonts");
 
         // Dir path
         if player.get_workspace().get_font_list_mode() != FileListMode::Manual {

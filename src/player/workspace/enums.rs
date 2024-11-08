@@ -23,30 +23,6 @@ impl TryFrom<u8> for FileListMode {
     }
 }
 
-/// Option for how fonts are sorted
-#[derive(PartialEq, Eq, Default, Clone, Copy, Debug)]
-#[repr(u8)]
-pub enum FontSort {
-    #[default]
-    NameAsc = 0,
-    NameDesc = 1,
-    SizeAsc = 2,
-    SizeDesc = 3,
-}
-impl TryFrom<u8> for FontSort {
-    type Error = ();
-
-    fn try_from(v: u8) -> Result<Self, Self::Error> {
-        match v {
-            x if x == Self::NameAsc as u8 => Ok(Self::NameAsc),
-            x if x == Self::NameDesc as u8 => Ok(Self::NameDesc),
-            x if x == Self::SizeAsc as u8 => Ok(Self::SizeAsc),
-            x if x == Self::SizeDesc as u8 => Ok(Self::SizeDesc),
-            _ => Err(()),
-        }
-    }
-}
-
 /// Option for how songs are sorted
 #[derive(PartialEq, Eq, Default, Clone, Copy, Debug)]
 #[repr(u8)]

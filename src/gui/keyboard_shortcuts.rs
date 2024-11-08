@@ -130,7 +130,7 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             quit = true;
         }
         if input.consume_shortcut(&GUI_SHOWFONTS) {
-            gui.show_soundfonts = !gui.show_soundfonts;
+            gui.show_playlist_fonts = !gui.show_playlist_fonts;
         }
         if input.consume_shortcut(&GUI_SETTINGS) {
             gui.show_settings_modal = true;

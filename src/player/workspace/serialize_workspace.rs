@@ -4,8 +4,8 @@
 use std::{convert::Into, fs::File, io::Write, path::PathBuf};
 
 use super::{
-    enums::{FileListMode, FontSort, SongSort},
-    font_meta::FontMeta,
+    enums::{FileListMode, SongSort},
+    font_meta::{FontMeta, FontSort},
     midi_meta::MidiMeta,
     Workspace,
 };

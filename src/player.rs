@@ -8,6 +8,7 @@ use mediacontrols::create_mediacontrols;
 use rodio::Sink;
 use serde_json::Value;
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use font_library::FontLibrary;
 use souvlaki::{MediaControlEvent, MediaControls};
 use std::{error, fmt, fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
 use workspace::{font_meta::FontMeta, DeletionStatus, Workspace};
@@ -16,6 +17,7 @@ pub mod audio;
 mod mediacontrols;
 mod serialize_player;
 pub mod workspace;
+pub mod font_library;
 
 const REMOVED_WORKSPACE_HISTORY_LEN: usize = 100;
 
@@ -99,6 +101,7 @@ pub struct Player {
     player_events: Vec<PlayerEvent>,
 
     // -- Data
+    pub font_lib: FontLibrary,
     workspaces: Vec<Workspace>,
     /// Which workspace is open
     workspace_idx: usize,
@@ -131,6 +134,7 @@ impl Default for Player {
             mediacontrol_events,
             player_events: vec![],
 
+            font_lib: FontLibrary::default(),
             workspaces: vec![],
             workspace_idx: 0,
             playing_workspace_idx: 0,

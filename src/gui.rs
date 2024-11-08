@@ -1,23 +1,25 @@
 pub mod actions;
 pub mod conversions;
 mod cooltoolbar;
-mod fonts;
 pub mod keyboard_shortcuts;
 pub mod modals;
 mod playback_controls;
-mod songs;
+mod playlist_fonts;
+mod playlist_songs;
+pub mod soundfont_library;
 mod workspace_select;
 
 use crate::player::Player;
 use cooltoolbar::toolbar;
-use eframe::egui::{CentralPanel, Context, TopBottomPanel, Ui};
+use eframe::egui::{CentralPanel, Context, SidePanel, TopBottomPanel, Ui};
 use egui_notify::Toasts;
-use fonts::{font_titlebar, soundfont_table};
 use keyboard_shortcuts::consume_shortcuts;
 use modals::{about_modal::about_modal, settings::settings_modal, shortcuts::shortcut_modal};
 use modals::{unsaved_close_dialog, unsaved_quit_dialog};
 use playback_controls::playback_panel;
-use songs::{song_table, song_titlebar};
+use playlist_fonts::{font_titlebar, soundfont_table};
+use playlist_songs::{song_table, song_titlebar};
+use soundfont_library::soundfont_library;
 use workspace_select::workspace_tabs;
 
 const TBL_ROW_H: f32 = 16.;
@@ -26,7 +28,8 @@ const TBL_ROW_H: f32 = 16.;
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)]
 pub struct GuiState {
-    pub show_soundfonts: bool,
+    pub show_playlist_fonts: bool,
+    pub show_font_library: bool,
     #[serde(skip)]
     pub show_about_modal: bool,
     #[serde(skip)]
@@ -90,7 +93,9 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         playback_panel(ui, player, gui);
     });
 
-    if gui.show_soundfonts {
+    SidePanel::right("soundfont_library").show(ctx, |ui| soundfont_library(ui, player, gui));
+
+    if gui.show_playlist_fonts {
         TopBottomPanel::top("font_titlebar")
             .show_separator_line(false)
             .resizable(false)
