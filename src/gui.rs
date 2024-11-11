@@ -93,39 +93,48 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         playback_panel(ui, player, gui);
     });
 
-    SidePanel::right("soundfont_library").show(ctx, |ui| soundfont_library(ui, player, gui));
-
-    if gui.show_playlist_fonts {
-        TopBottomPanel::top("font_titlebar")
-            .show_separator_line(false)
-            .resizable(false)
-            .show(ctx, |ui| {
-                disable_if_modal(ui, gui);
-                font_titlebar(ui, player, gui);
-            });
-        TopBottomPanel::top("font_table")
-            .resizable(true)
-            .show(ctx, |ui| {
-                disable_if_modal(ui, gui);
-                soundfont_table(ui, player, gui);
-            });
-    }
-
-    TopBottomPanel::top("song_titlebar")
-        .show_separator_line(false)
+    SidePanel::right("soundfont_library")
         .resizable(false)
         .show(ctx, |ui| {
             disable_if_modal(ui, gui);
-            song_titlebar(ui, player, gui);
+            soundfont_library(ui, player, gui);
         });
-    CentralPanel::default().show(ctx, |ui| {
-        disable_if_modal(ui, gui);
-        song_table(ui, player, gui);
-    });
+
+    playlist_panel(ctx, player, gui);
 
     gui.toasts.show(ctx);
     consume_shortcuts(ctx, player, gui);
     handle_dropped_files(ctx);
+}
+
+fn playlist_panel(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
+    TopBottomPanel::top("playlist_headerbar")
+        .resizable(false)
+        .show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.heading("Playlist");
+                ui.label(&player.get_workspace().name);
+                if let Some(path) = player.get_workspace().get_portable_path() {
+                    ui.label(path.to_string_lossy());
+                }
+            });
+        });
+
+    if gui.show_playlist_fonts {
+        TopBottomPanel::top("playlist_fonts")
+            .resizable(true)
+            .show(ctx, |ui| {
+                font_titlebar(ui, player, gui);
+                soundfont_table(ui, player, gui);
+            });
+    }
+
+    CentralPanel::default().show(ctx, |ui| {
+        disable_if_modal(ui, gui);
+
+        song_titlebar(ui, player, gui);
+        song_table(ui, player, gui);
+    });
 }
 
 /// TODO: Drag files into the window to add them

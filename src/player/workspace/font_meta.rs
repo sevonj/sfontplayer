@@ -1,7 +1,6 @@
 use std::{error, fmt, fs, path::PathBuf};
 
 use anyhow::bail;
-use rand::seq::index;
 use rustysynth::SoundFont;
 use serde::Serialize;
 
@@ -84,8 +83,14 @@ impl FontList {
             }
         }
     }
-    pub fn contains(&self, font: &FontMeta) -> bool {
-        let filepath = font.get_path();
+    pub fn get_sort(&self) -> FontSort {
+        self.sort
+    }
+    pub fn set_sort(&mut self, sort: FontSort) {
+        self.sort = sort;
+        self.sort();
+    }
+    pub fn contains(&self, filepath: &PathBuf) -> bool {
         for i in 0..self.fonts.len() {
             if self.fonts[i].get_path() == *filepath {
                 return true;
@@ -94,7 +99,7 @@ impl FontList {
         false
     }
     pub fn add(&mut self, font: FontMeta) -> Result<(), FontListError> {
-        if self.contains(&font) {
+        if self.contains(&font.get_path()) {
             return Err(FontListError::AlreadyExists);
         }
         self.fonts.push(font);
@@ -137,8 +142,11 @@ impl FontList {
         };
         Some(&mut self.fonts[index])
     }
+    pub fn get_selected_index(&self) -> Option<usize> {
+        self.selected
+    }
     pub fn select(&mut self, value: Option<usize>) -> Result<(), FontListError> {
-        let Some(index) = self.selected else {
+        let Some(index) = value else {
             self.selected = None;
             return Ok(());
         };

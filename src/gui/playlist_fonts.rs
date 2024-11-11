@@ -277,10 +277,17 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         ui.close_menu();
                         gui.toast_success("Copied");
                     }
-                    if ui.button("Make default").clicked() {
-                        player.set_default_soundfont(Some(
-                            player.get_workspace().get_fonts()[index].clone(),
-                        ));
+                    if ui
+                        .add_enabled(
+                            !player.font_lib.contains_font(&filepath),
+                            Button::new("Add to library"),
+                        )
+                        .on_disabled_hover_text("Already in library")
+                        .clicked()
+                    {
+                        let _ = player
+                            .font_lib
+                            .add_path(player.get_workspace().get_fonts()[index].get_path());
                         ui.close_menu();
                     }
                 });

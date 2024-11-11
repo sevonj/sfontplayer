@@ -8,7 +8,7 @@ use mediacontrols::create_mediacontrols;
 use rodio::Sink;
 use serde_json::Value;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use font_library::FontLibrary;
+use soundfont_library::FontLibrary;
 use souvlaki::{MediaControlEvent, MediaControls};
 use std::{error, fmt, fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
 use workspace::{font_meta::FontMeta, DeletionStatus, Workspace};
@@ -16,8 +16,8 @@ use workspace::{font_meta::FontMeta, DeletionStatus, Workspace};
 pub mod audio;
 mod mediacontrols;
 mod serialize_player;
+pub mod soundfont_library;
 pub mod workspace;
-pub mod font_library;
 
 const REMOVED_WORKSPACE_HISTORY_LEN: usize = 100;
 
@@ -85,8 +85,6 @@ pub struct Player {
     audioplayer: AudioPlayer,
     /// Is there playback going on? Paused playback also counts.
     is_playing: bool,
-    /// Used when workspace has no soundfont selected.
-    default_soundfont: Option<FontMeta>,
 
     // -- Control
     /// Ranges 0.0..=100.0 as in percentage.
@@ -126,7 +124,6 @@ impl Default for Player {
         Self {
             audioplayer: AudioPlayer::default(),
             is_playing: false,
-            default_soundfont: None,
 
             volume: 100.,
             #[cfg(not(target_os = "windows"))]
@@ -154,11 +151,8 @@ impl Player {
         self.audioplayer.set_sink(value);
     }
 
-    pub fn get_default_soundfont(&self) -> Option<FontMeta> {
-        self.default_soundfont.clone()
-    }
-    pub fn set_default_soundfont(&mut self, value: Option<FontMeta>) {
-        self.default_soundfont = value;
+    pub fn get_default_soundfont(&self) -> Option<&FontMeta> {
+        self.font_lib.get_selected()
     }
 
     /// GUI frame update
@@ -172,7 +166,7 @@ impl Player {
         }
 
         self.get_workspace_mut().delete_queued();
-
+        self.font_lib.update();
         self.delete_queued_workspaces();
 
         self.mediacontrol_handle_events();
@@ -228,14 +222,14 @@ impl Player {
         }
     }
 
-    fn get_soundfont(&mut self) -> anyhow::Result<&mut FontMeta> {
+    fn get_soundfont(&mut self) -> anyhow::Result<FontMeta> {
         if let Some(font_index) = self.get_playing_workspace().get_font_idx() {
-            return Ok(&mut self.get_playing_workspace_mut().get_fonts_mut()[font_index]);
+            return Ok(self.get_playing_workspace_mut().get_fonts_mut()[font_index].clone());
         }
-        let Some(default) = &mut self.default_soundfont else {
+        let Some(default) = self.get_default_soundfont() else {
             bail!(PlayerError::NoSoundfont);
         };
-        Ok(default)
+        Ok(default.to_owned())
     }
 
     /// Load currently selected song & font from workspace and start playing
@@ -246,7 +240,7 @@ impl Player {
         };
         let midi_index = self.get_playing_workspace().queue[queue_index];
 
-        let sf = self.get_soundfont()?;
+        let mut sf = self.get_soundfont()?;
         let sf_path = sf.get_path();
         sf.refresh();
         sf.get_status()?;
