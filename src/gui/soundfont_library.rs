@@ -36,6 +36,13 @@ fn empty_lib_placeholder(ui: &mut Ui, gui: &mut GuiState) {
 
 #[allow(clippy::too_many_lines)]
 fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
+    let playlist_font_override = player.get_workspace().get_font_idx().is_some();
+    if playlist_font_override {
+        // Less intense gray highlight
+        ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
+        ui.style_mut().visuals.selection.stroke = ui.style().visuals.widgets.active.fg_stroke;
+    }
+
     let name_w = ui.available_width() - 64.;
     let tablebuilder = TableBuilder::new(ui)
         .striped(true)
@@ -101,14 +108,18 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                     if let Err(e) = &status {
                         ui.label(RichText::new("？")).on_hover_text(e.to_string());
                     }
-                    ui.add_enabled(
-                        status.is_ok(),
-                        Label::new(filename)
-                            .wrap_mode(TextWrapMode::Truncate)
-                            .selectable(false),
-                    )
-                    .on_hover_text(filepath.to_string_lossy())
-                    .on_disabled_hover_text(filepath.to_string_lossy());
+                    let label_resp = ui
+                        .add_enabled(
+                            status.is_ok(),
+                            Label::new(filename)
+                                .wrap_mode(TextWrapMode::Truncate)
+                                .selectable(false),
+                        )
+                        .on_hover_text(filepath.to_string_lossy())
+                        .on_disabled_hover_text(filepath.to_string_lossy());
+                    if playlist_font_override {
+                        label_resp.on_hover_text("Soundfont is overridden by current playlist.");
+                    }
                 });
             });
 
