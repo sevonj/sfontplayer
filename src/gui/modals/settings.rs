@@ -1,6 +1,7 @@
 use eframe::egui::{
-    lerp, pos2, vec2, Align, Align2, Button, CollapsingHeader, Context, Label, Layout, RichText,
-    ScrollArea, Sense, Stroke, TextWrapMode, Ui, Vec2, Widget, WidgetInfo, WidgetType, Window,
+    lerp, pos2, vec2, Align, Align2, Button, CollapsingHeader, Context, InputState, Label, Layout,
+    RichText, ScrollArea, Sense, Stroke, TextWrapMode, Ui, Vec2, Widget, WidgetInfo, WidgetType,
+    Window,
 };
 use egui_extras::{Column, TableBuilder};
 
@@ -12,7 +13,7 @@ use crate::{
 use super::file_dialogs;
 
 pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
-    let window_size = ctx.input(|i| i.screen_rect()).size() - Vec2 { x: 32., y: 64. };
+    let window_size = ctx.input(InputState::screen_rect).size() - Vec2 { x: 32., y: 64. };
     let modal_size = window_size.min(Vec2 { x: 600., y: 800. });
 
     Window::new("Settings")
@@ -51,12 +52,12 @@ pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
                         if ui
                             .add(toggle_row(
                                 "Search subdirectories",
-                                "Look for soundfonts in subdirectories",
+                                "Also search all subdirectories",
                                 &mut player.font_lib.crawl_subdirs,
                             ))
                             .changed()
                         {
-                            player.font_lib.refresh_files();
+                            player.font_lib.refresh();
                         };
 
                         if !gui.show_developer_options {

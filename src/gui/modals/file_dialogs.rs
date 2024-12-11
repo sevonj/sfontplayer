@@ -40,7 +40,7 @@ pub fn add_font_lib_files(font_lib: &mut FontLibrary /* , gui: &mut GuiState */)
                 // gui.toast_error(e.to_string());
             }
         }
-        font_lib.refresh_files();
+        font_lib.refresh();
     }
 }
 pub fn add_font_lib_dirs(font_lib: &mut FontLibrary /* , gui: &mut GuiState */) {
@@ -53,6 +53,6 @@ pub fn add_font_lib_dirs(font_lib: &mut FontLibrary /* , gui: &mut GuiState */) 
                 // gui.toast_error(e.to_string());
             }
         }
-        font_lib.refresh_files();
+        font_lib.refresh();
     }
 }

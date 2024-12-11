@@ -1,8 +1,8 @@
-use eframe::egui::{Button, Ui, ViewportCommand};
+use eframe::egui::{Align, Button, Layout, RichText, Ui, ViewportCommand};
 
 use super::{
     actions,
-    keyboard_shortcuts::{GUI_QUIT, GUI_SETTINGS, GUI_SHORTCUTS, GUI_SHOWFONTS},
+    keyboard_shortcuts::{GUI_QUIT, GUI_SETTINGS, GUI_SHORTCUTS},
 };
 use crate::{player::Player, GuiState};
 
@@ -14,6 +14,10 @@ pub fn toolbar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         options_menu(ui, gui);
 
         help_menu(ui, gui);
+
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            sidebar_toggle(ui, gui);
+        });
     });
 }
 
@@ -54,15 +58,15 @@ fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
     ui.menu_button("Options", |ui| {
-        if ui
-            .add(
-                Button::new("Toggle soundfonts")
-                    .shortcut_text(ui.ctx().format_shortcut(&GUI_SHOWFONTS)),
-            )
-            .clicked()
-        {
-            gui.show_playlist_fonts = !gui.show_playlist_fonts;
-        }
+        //if ui
+        //    .add(
+        //        Button::new("Toggle soundfonts")
+        //            .shortcut_text(ui.ctx().format_shortcut(&GUI_SHOWFONTS)),
+        //    )
+        //    .clicked()
+        //{
+        //    gui.show_playlist_fonts = !gui.show_playlist_fonts;
+        //}
         if ui
             .add(Button::new("Settings").shortcut_text(ui.ctx().format_shortcut(&GUI_SETTINGS)))
             .clicked()
@@ -90,4 +94,23 @@ fn help_menu(ui: &mut Ui, gui: &mut GuiState) {
             ui.close_menu();
         }
     });
+}
+
+fn sidebar_toggle(ui: &mut Ui, gui: &mut GuiState) {
+    if ui
+        .add(
+            Button::new(
+                RichText::new(if gui.show_font_library {
+                    "⏵"
+                } else {
+                    "⏴ Soundfonts"
+                })
+                .size(16.),
+            )
+            .frame(false),
+        )
+        .clicked()
+    {
+        gui.show_font_library = !gui.show_font_library;
+    };
 }

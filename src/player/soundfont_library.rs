@@ -3,16 +3,18 @@
 
 use serde::Serialize;
 use std::{error, fmt, path::PathBuf};
+use walkdir::WalkDir;
 
-use super::workspace::font_meta::{FontList, FontListError, FontMeta, FontSort};
+use super::{
+    soundfont_list::{FontList, FontListError, FontSort},
+    workspace::font_meta::FontMeta,
+};
 
 #[derive(Debug, Clone, Serialize)]
 pub enum FontLibraryError {
     PathAlreadyExists { path: PathBuf },
-    PathDoesntExist { path: PathBuf },
     PathInaccessible { path: PathBuf },
-    PathNotAFile { path: PathBuf },
-    PathNotADir { path: PathBuf },
+    NoSuchFont { path: PathBuf },
     IndexOutOfRange,
 }
 impl error::Error for FontLibraryError {}
@@ -22,17 +24,11 @@ impl fmt::Display for FontLibraryError {
             Self::PathAlreadyExists { path } => {
                 write!(f, "This path already exists in the library: {path:?}")
             }
-            Self::PathDoesntExist { path } => {
-                write!(f, "This path doesn't exist in the library: {path:?}")
-            }
             Self::PathInaccessible { path } => {
                 write!(f, "This path was inaccessible: {path:?}")
             }
-            Self::PathNotAFile { path } => {
-                write!(f, "This path wasn't a file: {path:?}")
-            }
-            Self::PathNotADir { path } => {
-                write!(f, "This path wasn't a directory: {path:?}")
+            Self::NoSuchFont { path } => {
+                write!(f, "No such font: {path:?}")
             }
             Self::IndexOutOfRange => {
                 write!(f, "Path index out of range")
@@ -41,14 +37,15 @@ impl fmt::Display for FontLibraryError {
     }
 }
 
-/// The FontLibrary is a wrapper around FontList.
-/// It abstracts manual font management to auto-crawling files from paths.
+/// `FontLibrary` is a wrapper around `FontList`.
+/// It abstracts manual font management into paths that will be auto-crawled for files.
 pub struct FontLibrary {
     paths: Vec<PathBuf>,
     delet: Vec<bool>,
     pub crawl_subdirs: bool,
     fontlist: FontList,
 }
+#[allow(clippy::derivable_impls)]
 impl Default for FontLibrary {
     fn default() -> Self {
         Self {
@@ -64,15 +61,15 @@ impl FontLibrary {
     // --- Wrap --- //
 
     pub fn sort(&mut self) {
-        self.fontlist.sort()
+        self.fontlist.sort();
     }
-    pub fn get_sort(&self) -> FontSort {
+    pub const fn get_sort(&self) -> FontSort {
         self.fontlist.get_sort()
     }
     pub fn set_sort(&mut self, sort: FontSort) {
-        self.fontlist.set_sort(sort)
+        self.fontlist.set_sort(sort);
     }
-    pub fn get_fonts(&self) -> &Vec<FontMeta> {
+    pub const fn get_fonts(&self) -> &Vec<FontMeta> {
         self.fontlist.get_fonts()
     }
     pub fn get_selected(&self) -> Option<&FontMeta> {
@@ -81,7 +78,7 @@ impl FontLibrary {
     pub fn get_selected_mut(&mut self) -> Option<&mut FontMeta> {
         self.fontlist.get_selected_mut()
     }
-    pub fn get_selected_index(&self) -> Option<usize> {
+    pub const fn get_selected_index(&self) -> Option<usize> {
         self.fontlist.get_selected_index()
     }
     pub fn select(&mut self, value: Option<usize>) -> Result<(), FontListError> {
@@ -93,7 +90,7 @@ impl FontLibrary {
 
     // --- Paths --- //
 
-    pub fn get_paths(&self) -> &Vec<PathBuf> {
+    pub const fn get_paths(&self) -> &Vec<PathBuf> {
         &self.paths
     }
     pub fn contains_path(&self, path: &PathBuf) -> bool {
@@ -104,6 +101,15 @@ impl FontLibrary {
         }
         false
     }
+    pub fn select_by_path(&mut self, path: PathBuf) -> Result<(), FontLibraryError> {
+        for (i, font) in self.get_fonts().iter().enumerate() {
+            if font.get_path() == path {
+                let _ = self.fontlist.select(Some(i));
+                return Ok(());
+            }
+        }
+        Err(FontLibraryError::NoSuchFont { path })
+    }
     pub fn add_path(&mut self, path: PathBuf) -> Result<(), FontLibraryError> {
         if self.contains_path(&path) {
             return Err(FontLibraryError::PathAlreadyExists { path });
@@ -113,7 +119,7 @@ impl FontLibrary {
         }
         self.paths.push(path);
         self.delet.push(false);
-        self.refresh_files();
+        self.refresh();
         Ok(())
     }
     pub fn remove_path(&mut self, index: usize) -> Result<(), FontLibraryError> {
@@ -129,17 +135,34 @@ impl FontLibrary {
         self.delet.clear();
         self.fontlist.clear();
     }
-    pub fn refresh_files(&mut self) {
-        for path in &self.paths {
-            if !path.exists() {
+    pub fn refresh(&mut self) {
+        for input_path in &self.paths {
+            if !input_path.exists() {
                 continue;
             }
-            if path.is_dir() {
-                //
-            } else if path.is_file() {
-                let _ = self.fontlist.add(FontMeta::new(path.to_owned()));
+            if input_path.is_dir() {
+                for entry in WalkDir::new(input_path)
+                    .into_iter()
+                    .filter_map(std::result::Result::ok)
+                {
+                    let filepath = entry.path();
+                    if filepath.is_file() && filepath.extension().is_some_and(|s| s == "sf2") {
+                        let _ = self.fontlist.add(FontMeta::new(filepath.to_owned()));
+                    }
+                }
+            } else if input_path.is_file() {
+                let _ = self.fontlist.add(FontMeta::new(input_path.to_owned()));
             }
         }
+
+        // handle missing dir search entries
+        for index in 0..self.fontlist.get_fonts().len() {
+            let path = self.get_fonts()[index].get_path();
+            if !path.exists() && !self.paths.contains(&path) {
+                let _ = self.fontlist.remove(index);
+            }
+        }
+
         self.sort();
     }
     pub fn update(&mut self) {
@@ -156,24 +179,10 @@ impl FontLibrary {
     }
 
     fn assert_delete_queue_len(&self) {
-        if self.paths.len() != self.delet.len() {
-            panic!("Delete queue length != paths length!")
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    #[test]
-    fn test_add_path_delete_queue() {
-        let font_lib = FontLibrary::default();
-    }
-    
-    #[test]
-    fn test_rm_path_delete_queue() {
-        let font_lib = FontLibrary::default();
+        assert_eq!(
+            self.paths.len(),
+            self.delet.len(),
+            "Sanity check failed: Delete queue length != paths length!"
+        );
     }
 }

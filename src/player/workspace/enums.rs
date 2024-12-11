@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 /// Option for how soundfonts or midis are managed
 #[derive(PartialEq, Eq, Default, Clone, Copy, Debug)]
 #[repr(u8)]
@@ -9,6 +11,15 @@ pub enum FileListMode {
     Directory = 1,
     /// The contents are fetched automatically from a directory and subdirectories.
     Subdirectories = 2,
+}
+impl Display for FileListMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Manual => write!(f, "Individual files"),
+            Self::Directory => write!(f, "Directory"),
+            Self::Subdirectories => write!(f, "Subdirectories"),
+        }
+    }
 }
 impl TryFrom<u8> for FileListMode {
     type Error = ();

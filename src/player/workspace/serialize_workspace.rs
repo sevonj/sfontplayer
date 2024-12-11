@@ -5,10 +5,11 @@ use std::{convert::Into, fs::File, io::Write, path::PathBuf};
 
 use super::{
     enums::{FileListMode, SongSort},
-    font_meta::{FontMeta, FontSort},
+    font_meta::FontMeta,
     midi_meta::MidiMeta,
     Workspace,
 };
+use crate::player::soundfont_list::FontSort;
 use anyhow::bail;
 use relative_path::{PathExt, RelativePath};
 use serde_json::{json, Value};

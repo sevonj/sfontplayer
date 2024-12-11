@@ -12,11 +12,8 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use super::{
-    workspace::{font_meta::FontMeta, Workspace},
-    Player, RepeatMode,
-};
-use crate::player::PlayerError;
+use super::{workspace::Workspace, Player, RepeatMode};
+use crate::player::{workspace::font_meta::FontMeta, PlayerError};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WorkspaceListEntry {
@@ -35,6 +32,9 @@ impl Player {
         if let Err(e) = self.save_config() {
             bail!(format!("save_config(): {e}"))
         }
+        if let Err(e) = self.save_fontlib() {
+            bail!(format!("save_fontlib(): {e}"))
+        }
 
         Ok(())
     }
@@ -46,6 +46,9 @@ impl Player {
         if let Err(e) = self.load_config() {
             bail!(format!("load_config(): {e}"))
         }
+        if let Err(e) = self.load_fontlib() {
+            bail!(format!("load_fontlib(): {e}"))
+        }
 
         Ok(())
     }
@@ -54,7 +57,7 @@ impl Player {
         let state_dir = state_dir();
         fs::create_dir_all(&state_dir)?;
 
-        let mut data = json! ({
+        let data = json! ({
             "shuffle": self.shuffle,
             "repeat": self.repeat,
             "workspace_idx": self.workspace_idx,
@@ -88,6 +91,43 @@ impl Player {
         //    .as_str()
         //    .map(|filepath| FontMeta::new(filepath.into()));
 
+        Ok(())
+    }
+
+    fn save_fontlib(&self) -> anyhow::Result<()> {
+        let state_dir = state_dir();
+        fs::create_dir_all(&state_dir)?;
+
+        let filepath = state_dir.join("fontlib.json");
+        let mut file = File::create(filepath)?;
+
+        let data = json!({
+            "paths": self.font_lib.get_paths(),
+            "selected": self.font_lib.get_selected().map(FontMeta::get_path)
+        });
+
+        file.write_all(data.to_string().as_bytes())?;
+
+        Ok(())
+    }
+
+    fn load_fontlib(&mut self) -> anyhow::Result<()> {
+        let filepath = state_dir().join("fontlib.json");
+        let data_string = std::fs::read_to_string(filepath)?;
+        let data: Value = serde_json::from_str(&data_string)?;
+        let Some(paths) = data["paths"].as_array() else {
+            bail!("Couldn't parse paths");
+        };
+        for value in paths {
+            let Some(path_str) = value.as_str() else {
+                bail!("Couldn't parse path: {value}")
+            };
+            let _ = self.font_lib.add_path(PathBuf::from(path_str));
+        }
+        let Some(selected) = data["selected"].as_str().map(std::convert::Into::into) else {
+            bail!("Couldn't parse paths");
+        };
+        let _ = self.font_lib.select_by_path(selected);
         Ok(())
     }
 

@@ -227,7 +227,7 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Toggle soundfont table");
+                                add_shortcut_title(ui, "Toggle font library sidebar");
                             });
                             row.col(|ui| {
                                 ui.label(ctx.format_shortcut(&GUI_SHOWFONTS));

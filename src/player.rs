@@ -17,6 +17,7 @@ pub mod audio;
 mod mediacontrols;
 mod serialize_player;
 pub mod soundfont_library;
+pub mod soundfont_list;
 pub mod workspace;
 
 const REMOVED_WORKSPACE_HISTORY_LEN: usize = 100;
@@ -222,14 +223,13 @@ impl Player {
         }
     }
 
-    fn get_soundfont(&mut self) -> anyhow::Result<FontMeta> {
+    fn get_soundfont(&mut self) -> Result<&mut FontMeta, PlayerError> {
         if let Some(font_index) = self.get_playing_workspace().get_font_idx() {
-            return Ok(self.get_playing_workspace_mut().get_fonts_mut()[font_index].clone());
+            return Ok(&mut self.get_playing_workspace_mut().get_fonts_mut()[font_index]);
         }
-        let Some(default) = self.get_default_soundfont() else {
-            bail!(PlayerError::NoSoundfont);
-        };
-        Ok(default.to_owned())
+        self.font_lib
+            .get_selected_mut()
+            .ok_or(PlayerError::NoSoundfont)
     }
 
     /// Load currently selected song & font from workspace and start playing
@@ -240,7 +240,7 @@ impl Player {
         };
         let midi_index = self.get_playing_workspace().queue[queue_index];
 
-        let mut sf = self.get_soundfont()?;
+        let sf = self.get_soundfont()?;
         let sf_path = sf.get_path();
         sf.refresh();
         sf.get_status()?;

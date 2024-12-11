@@ -1,12 +1,13 @@
 //! Common actions for context menus and such
 //!
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use eframe::egui::{Button, Label, TextEdit, Ui};
+use eframe::egui::{Button, ComboBox, Label, TextEdit, Ui, Widget};
 use rfd::FileDialog;
 
 use super::{
+    custom_controls::circle_button,
     keyboard_shortcuts::{
         WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT,
         WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_REOPEN, WORKSPACE_SAVE,
@@ -19,15 +20,6 @@ use crate::player::{workspace::enums::FileListMode, Player};
 
 // --- Common File Actions --- //
 
-pub fn open_dir(ui: &mut Ui, dir: &Path, gui: &mut GuiState) {
-    if ui.button("Go to directory").clicked() {
-        if let Err(e) = open::that(dir) {
-            gui.toast_error(e.to_string());
-        }
-        ui.close_menu();
-    }
-}
-
 pub fn open_file_dir(ui: &mut Ui, filepath: &Path, gui: &mut GuiState) {
     if ui.button("Go to directory").clicked() {
         let Some(dir) = filepath.parent() else {
@@ -39,6 +31,35 @@ pub fn open_file_dir(ui: &mut Ui, filepath: &Path, gui: &mut GuiState) {
         }
         ui.close_menu();
     }
+}
+
+pub fn pick_dir_button(dir: &Option<PathBuf>, ui: &mut Ui) -> Option<PathBuf> {
+    let folder_text = if dir.is_some() { "🗁" } else { "🗀" };
+    if circle_button(folder_text, ui)
+        .on_hover_text("Select directory")
+        .clicked()
+    {
+        return FileDialog::new().pick_folder();
+    }
+    None
+}
+
+pub fn pick_soundfonts_button(ui: &mut Ui) -> Option<Vec<PathBuf>> {
+    if circle_button("➕", ui).on_hover_text("Add").clicked() {
+        return FileDialog::new()
+            .add_filter("Soundfonts", &["sf2"])
+            .pick_files();
+    }
+    None
+}
+
+pub fn pick_midifiles_button(ui: &mut Ui) -> Option<Vec<PathBuf>> {
+    if circle_button("➕", ui).on_hover_text("Add").clicked() {
+        return FileDialog::new()
+            .add_filter("Midi files", &["mid"])
+            .pick_files();
+    }
+    None
 }
 
 // --- Workspace File Actions --- //
@@ -319,6 +340,27 @@ pub fn current_workspace_songs_action(ui: &mut Ui, player: &mut Player) {
             player.get_workspace_mut().set_song_list_mode(list_mode);
         }
     });
+}
+
+pub fn content_mode_selector(mode: &mut FileListMode) -> impl Widget + '_ {
+    move |ui: &mut Ui| {
+        ComboBox::from_id_salt("mode_select")
+            .selected_text(format!("{mode}"))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(mode, FileListMode::Manual, FileListMode::Manual.to_string());
+                ui.selectable_value(
+                    mode,
+                    FileListMode::Directory,
+                    FileListMode::Directory.to_string(),
+                );
+                ui.selectable_value(
+                    mode,
+                    FileListMode::Subdirectories,
+                    FileListMode::Subdirectories.to_string(),
+                );
+            })
+            .response
+    }
 }
 
 // --- Workspace Navigation --- //

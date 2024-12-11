@@ -1,7 +1,9 @@
+use super::soundfont_list::FontSort;
+
 use anyhow::bail;
 use enums::{FileListMode, SongSort};
 use error::WorkspaceError;
-use font_meta::{FontMeta, FontSort};
+use font_meta::FontMeta;
 use midi_meta::MidiMeta;
 use rand::seq::SliceRandom;
 use std::{fs, path::PathBuf, time::Duration, vec};

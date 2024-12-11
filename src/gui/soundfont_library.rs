@@ -4,7 +4,7 @@ use size_format::SizeFormatterBinary;
 
 use super::{actions, TBL_ROW_H};
 use crate::{
-    player::{soundfont_library::FontLibrary, workspace::font_meta::FontSort, Player},
+    player::{soundfont_library::FontLibrary, soundfont_list::FontSort, Player},
     GuiState,
 };
 
@@ -31,11 +31,12 @@ fn empty_lib_placeholder(ui: &mut Ui, gui: &mut GuiState) {
 }
 
 fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) {
+    let name_w = ui.available_width() - 64.;
     let tablebuilder = TableBuilder::new(ui)
         .striped(true)
         .sense(Sense::click())
-        .column(Column::exact(192.))
-        .column(Column::exact(64.));
+        .column(Column::exact(name_w))
+        .column(Column::remainder());
 
     let table = tablebuilder.header(20.0, |mut header| {
         let font_sort = font_lib.get_sort();
