@@ -63,12 +63,10 @@ impl Player {
             "workspace_idx": self.workspace_idx,
             "autosave": self.autosave,
         });
-        //if let Some(default) = &self.default_soundfont {
-        //    data["default_soundfont_path"] = Value::from(default.get_path().to_str());
-        //}
         let config_file = state_dir.join("state.json");
         let mut file = File::create(config_file)?;
         file.write_all(data.to_string().as_bytes())?;
+
         Ok(())
     }
 
@@ -86,10 +84,6 @@ impl Player {
             _ => 0,
         };
         self.autosave = data["autosave"].as_bool().is_some_and(|value| value);
-
-        //self.default_soundfont = data["default_soundfont_path"]
-        //    .as_str()
-        //    .map(|filepath| FontMeta::new(filepath.into()));
 
         Ok(())
     }
@@ -128,6 +122,7 @@ impl Player {
             bail!("Couldn't parse paths");
         };
         let _ = self.font_lib.select_by_path(selected);
+
         Ok(())
     }
 
@@ -198,6 +193,7 @@ impl Player {
             };
             self.workspaces.push(workspace);
         }
+
         Ok(())
     }
 }
