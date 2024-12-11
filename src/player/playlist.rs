@@ -14,7 +14,7 @@ pub mod font_meta;
 pub mod midi_meta;
 
 mod error;
-mod serialize_workspace;
+mod serialize_playlist;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DeletionStatus {

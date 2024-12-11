@@ -7,7 +7,7 @@ use std::{
 
 use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
-use player::{workspace::Playlist, Player};
+use player::{playlist::Playlist, Player};
 use rodio::{OutputStream, Sink};
 
 mod gui;

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-use super::workspace::font_meta::FontMeta;
+use super::playlist::font_meta::FontMeta;
 
 #[derive(PartialEq, Eq, Default, Clone, Copy, Debug)]
 #[repr(u8)]

@@ -133,7 +133,7 @@ impl TryFrom<&serde_json::Value> for MidiMeta {
 mod tests {
 
     use super::*;
-    use crate::player::workspace::Playlist;
+    use crate::player::playlist::Playlist;
     use serde_json::Value;
 
     fn run_serialize(playlist: Playlist) -> Playlist {

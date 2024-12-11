@@ -12,8 +12,8 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use super::{workspace::Playlist, Player, RepeatMode};
-use crate::player::{workspace::font_meta::FontMeta, PlayerError};
+use super::{playlist::Playlist, Player, RepeatMode};
+use crate::player::{playlist::font_meta::FontMeta, PlayerError};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlaylistListEntry {

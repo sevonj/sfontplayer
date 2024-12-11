@@ -5,20 +5,20 @@ use audio::AudioPlayer;
 use eframe::egui::mutex::Mutex;
 #[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
+use playlist::{font_meta::FontMeta, DeletionStatus, Playlist};
 use rodio::Sink;
 use serde_json::Value;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use soundfont_library::FontLibrary;
 use souvlaki::{MediaControlEvent, MediaControls};
 use std::{error, fmt, fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
-use workspace::{font_meta::FontMeta, DeletionStatus, Playlist};
 
 pub mod audio;
 mod mediacontrols;
+pub mod playlist;
 mod serialize_player;
 pub mod soundfont_library;
 pub mod soundfont_list;
-pub mod workspace;
 
 const REMOVED_PLAYLIST_HISTORY_LEN: usize = 100;
 

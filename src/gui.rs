@@ -8,7 +8,7 @@ mod playback_controls;
 mod playlist_fonts;
 mod playlist_songs;
 pub mod soundfont_library;
-mod workspace_select;
+mod tabs;
 
 use crate::player::Player;
 use cooltoolbar::toolbar;
@@ -21,7 +21,7 @@ use playback_controls::playback_panel;
 use playlist_fonts::soundfont_table;
 use playlist_songs::playlist_song_panel;
 use soundfont_library::soundfont_library;
-use workspace_select::playlist_tabs;
+use tabs::playlist_tabs;
 
 const TBL_ROW_H: f32 = 16.;
 

@@ -6,8 +6,8 @@ use std::{error, fmt, path::PathBuf};
 use walkdir::WalkDir;
 
 use super::{
+    playlist::font_meta::FontMeta,
     soundfont_list::{FontList, FontListError, FontSort},
-    workspace::font_meta::FontMeta,
 };
 
 #[derive(Debug, Clone, Serialize)]
