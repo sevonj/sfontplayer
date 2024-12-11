@@ -5,10 +5,9 @@ use crate::{
     gui::keyboard_shortcuts::{
         GUI_QUIT, GUI_SETTINGS, GUI_SHORTCUTS, GUI_SHOWFONTS, PLAYBACK_PLAYPAUSE, PLAYBACK_REPEAT,
         PLAYBACK_SHUFFLE, PLAYBACK_SKIP, PLAYBACK_SKIPBACK, PLAYBACK_STARTSTOP, PLAYBACK_VOLDN,
-        PLAYBACK_VOLUP, WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT,
-        WORKSPACE_MOVERIGHT, WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_REOPEN,
-        WORKSPACE_SAVE, WORKSPACE_SAVEALL, WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT,
-        WORKSPACE_SWITCHRIGHT,
+        PLAYBACK_VOLUP, PLAYLIST, PLAYLIST_CREATE, PLAYLIST_DUPLICATE, PLAYLIST_MOVELEFT,
+        PLAYLIST_MOVERIGHT, PLAYLIST_OPEN, PLAYLIST_REMOVE, PLAYLIST_REOPEN, PLAYLIST_SAVE,
+        PLAYLIST_SAVEALL, PLAYLIST_SAVEAS, PLAYLIST_SWITCHLEFT, PLAYLIST_SWITCHRIGHT,
     },
     GuiState,
 };
@@ -104,116 +103,116 @@ pub fn shortcut_modal(ctx: &Context, gui: &mut GuiState) {
                             });
                         });
 
-                        // --- Workspaces
+                        // --- Playlists
 
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                ui.label("Workspaces");
+                                ui.label("Playlists");
                             });
                             row.col(|_| {});
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Switch to previous workspace (left)");
+                                add_shortcut_title(ui, "Switch to previous playlist (left)");
                             });
                             row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_SWITCHLEFT));
-                            });
-                        });
-                        body.row(16., |mut row| {
-                            row.col(|ui| {
-                                add_shortcut_title(ui, "Switch to next workspace (right)");
-                            });
-                            row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_SWITCHRIGHT));
+                                ui.label(ctx.format_shortcut(&PLAYLIST_SWITCHLEFT));
                             });
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Move current workspace left");
+                                add_shortcut_title(ui, "Switch to next playlist (right)");
                             });
                             row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_MOVELEFT));
-                            });
-                        });
-                        body.row(16., |mut row| {
-                            row.col(|ui| {
-                                add_shortcut_title(ui, "Move current workspace right");
-                            });
-                            row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_MOVERIGHT));
+                                ui.label(ctx.format_shortcut(&PLAYLIST_SWITCHRIGHT));
                             });
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Create new workspace");
+                                add_shortcut_title(ui, "Move current playlist left");
                             });
                             row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_CREATE));
-                            });
-                        });
-                        body.row(16., |mut row| {
-                            row.col(|ui| {
-                                add_shortcut_title(ui, "Remove current workspace");
-                            });
-                            row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_REMOVE));
+                                ui.label(ctx.format_shortcut(&PLAYLIST_MOVELEFT));
                             });
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Refresh workspace content");
+                                add_shortcut_title(ui, "Move current playlist right");
                             });
                             row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_REFRESH));
-                            });
-                        });
-                        body.row(16., |mut row| {
-                            row.col(|ui| {
-                                add_shortcut_title(ui, "Open workspace");
-                            });
-                            row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_OPEN));
+                                ui.label(ctx.format_shortcut(&PLAYLIST_MOVERIGHT));
                             });
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Save workspace");
+                                add_shortcut_title(ui, "Create new playlist");
                             });
                             row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_SAVE));
-                            });
-                        });
-                        body.row(16., |mut row| {
-                            row.col(|ui| {
-                                add_shortcut_title(ui, "Save all workspaces");
-                            });
-                            row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_SAVEALL));
+                                ui.label(ctx.format_shortcut(&PLAYLIST_CREATE));
                             });
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Save workspace to a new file");
+                                add_shortcut_title(ui, "Remove current playlist");
                             });
                             row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_SAVEAS));
-                            });
-                        });
-                        body.row(16., |mut row| {
-                            row.col(|ui| {
-                                add_shortcut_title(ui, "Duplicate current workspace");
-                            });
-                            row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_DUPLICATE));
+                                ui.label(ctx.format_shortcut(&PLAYLIST_REMOVE));
                             });
                         });
                         body.row(16., |mut row| {
                             row.col(|ui| {
-                                add_shortcut_title(ui, "Reopen last closed workspace");
+                                add_shortcut_title(ui, "Refresh playlist content");
                             });
                             row.col(|ui| {
-                                ui.label(ctx.format_shortcut(&WORKSPACE_REOPEN));
+                                ui.label(ctx.format_shortcut(&PLAYLIST));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Open playlist");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&PLAYLIST_OPEN));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Save playlist");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&PLAYLIST_SAVE));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Save all playlists");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&PLAYLIST_SAVEALL));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Save playlist to a new file");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&PLAYLIST_SAVEAS));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Duplicate current playlist");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&PLAYLIST_DUPLICATE));
+                            });
+                        });
+                        body.row(16., |mut row| {
+                            row.col(|ui| {
+                                add_shortcut_title(ui, "Reopen last closed playlist");
+                            });
+                            row.col(|ui| {
+                                ui.label(ctx.format_shortcut(&PLAYLIST_REOPEN));
                             });
                         });
 

@@ -1,11 +1,11 @@
-//! Workspace errors
+//! Playlist errors
 
 use std::{error::Error, fmt, path::PathBuf};
 
 use super::enums::FileListMode;
 
 #[derive(Debug, Clone)]
-pub enum WorkspaceError {
+pub enum PlaylistError {
     InvalidFontIndex { index: usize },
     InvalidSongIndex { index: usize },
     ModifyAutoFontList { mode: FileListMode },
@@ -13,9 +13,9 @@ pub enum WorkspaceError {
     UnknownFileFormat { path: PathBuf },
 }
 
-impl Error for WorkspaceError {}
+impl Error for PlaylistError {}
 
-impl fmt::Display for WorkspaceError {
+impl fmt::Display for PlaylistError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidFontIndex { index } => {

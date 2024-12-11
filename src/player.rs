@@ -11,7 +11,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use soundfont_library::FontLibrary;
 use souvlaki::{MediaControlEvent, MediaControls};
 use std::{error, fmt, fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
-use workspace::{font_meta::FontMeta, DeletionStatus, Workspace};
+use workspace::{font_meta::FontMeta, DeletionStatus, Playlist};
 
 pub mod audio;
 mod mediacontrols;
@@ -20,7 +20,7 @@ pub mod soundfont_library;
 pub mod soundfont_list;
 pub mod workspace;
 
-const REMOVED_WORKSPACE_HISTORY_LEN: usize = 100;
+const REMOVED_PLAYLIST_HISTORY_LEN: usize = 100;
 
 /// To be handled in gui
 pub enum PlayerEvent {
@@ -53,34 +53,34 @@ impl TryFrom<u8> for RepeatMode {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum PlayerError {
-    InvalidWorkspaceIndex { index: usize },
-    CantMoveWorkspace,
-    CantSwitchWorkspace,
+    InvalidPlaylistIndex { index: usize },
+    CantMovePlaylist,
+    CantSwitchPlaylist,
     NoQueueIndex,
     NoSoundfont,
-    WorkspaceAlreadyOpen,
-    WorkspaceSaveFailed,
+    PlaylistAlreadyOpen,
+    PlaylistSaveFailed,
     DebugBlockSaving,
 }
 impl error::Error for PlayerError {}
 impl fmt::Display for PlayerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidWorkspaceIndex { index } => {
-                write!(f, "Workspace index {index} is out of bounds.")
+            Self::InvalidPlaylistIndex { index } => {
+                write!(f, "Playlist index {index} is out of bounds.")
             }
-            Self::CantMoveWorkspace => write!(f, "Can't move this workspace further."),
-            Self::CantSwitchWorkspace => write!(f, "Can't switch workspaces further."),
+            Self::CantMovePlaylist => write!(f, "Can't move this playlist further."),
+            Self::CantSwitchPlaylist => write!(f, "Can't switch playlists further."),
             Self::NoQueueIndex => write!(f, "No queue index!"),
             Self::NoSoundfont => write!(f, "No soundfont!"),
-            Self::WorkspaceAlreadyOpen => write!(f, "Workspace is already open."),
-            Self::WorkspaceSaveFailed => write!(f, "Failed to save workspace."),
+            Self::PlaylistAlreadyOpen => write!(f, "Playlist is already open."),
+            Self::PlaylistSaveFailed => write!(f, "Failed to save playlist."),
             Self::DebugBlockSaving => write!(f, "debug_block_saving == true"),
         }
     }
 }
 
-/// The Player class does high-level app logic, which includes workspaces and playback.
+/// The Player class does high-level app logic, which includes playlists and playback.
 pub struct Player {
     // -- Audio
     audioplayer: AudioPlayer,
@@ -101,13 +101,13 @@ pub struct Player {
 
     // -- Data
     pub font_lib: FontLibrary,
-    workspaces: Vec<Workspace>,
-    /// Which workspace is open
-    workspace_idx: usize,
-    /// Which workspace was last playing music
-    playing_workspace_idx: usize,
+    playlists: Vec<Playlist>,
+    /// Which playlist is open
+    playlist_idx: usize,
+    /// Which playlist was last playing music
+    playing_playlist_idx: usize,
     /// For undo closing
-    removed_workspaces: Vec<Workspace>,
+    removed_playlists: Vec<Playlist>,
 
     // -- settings
     shuffle: bool,
@@ -133,10 +133,10 @@ impl Default for Player {
             player_events: vec![],
 
             font_lib: FontLibrary::default(),
-            workspaces: vec![],
-            workspace_idx: 0,
-            playing_workspace_idx: 0,
-            removed_workspaces: vec![],
+            playlists: vec![],
+            playlist_idx: 0,
+            playing_playlist_idx: 0,
+            removed_playlists: vec![],
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
@@ -158,7 +158,7 @@ impl Player {
 
     /// GUI frame update
     pub fn update(&mut self) {
-        self.ensure_workspace_existence();
+        self.ensure_playlist_existence();
 
         if !self.is_paused() && self.is_empty() {
             if let Err(e) = self.advance_queue() {
@@ -166,92 +166,92 @@ impl Player {
             }
         }
 
-        self.get_workspace_mut().delete_queued();
+        self.get_playlist_mut().delete_queued();
         self.font_lib.update();
-        self.delete_queued_workspaces();
+        self.delete_queued_playlists();
 
         self.mediacontrol_handle_events();
     }
 
-    fn delete_queued_workspaces(&mut self) {
-        for index in (0..self.workspaces.len()).rev() {
-            let workspace = &mut self.workspaces[index];
+    fn delete_queued_playlists(&mut self) {
+        for index in (0..self.playlists.len()).rev() {
+            let playlist = &mut self.playlists[index];
 
-            match workspace.deletion_status {
+            match playlist.deletion_status {
                 DeletionStatus::None => continue,
                 DeletionStatus::Queued => {
-                    if workspace.has_unsaved_changes() {
+                    if playlist.has_unsaved_changes() {
                         continue;
                     }
                 }
                 DeletionStatus::QueuedDiscard => (),
             }
 
-            if self.autosave && workspace.is_portable() {
-                let _ = workspace.save_portable();
+            if self.autosave && playlist.is_portable() {
+                let _ = playlist.save_portable();
             }
 
-            self.removed_workspaces.push(self.workspaces.remove(index));
-            while self.removed_workspaces.len() > REMOVED_WORKSPACE_HISTORY_LEN {
-                self.removed_workspaces.remove(0);
+            self.removed_playlists.push(self.playlists.remove(index));
+            while self.removed_playlists.len() > REMOVED_PLAYLIST_HISTORY_LEN {
+                self.removed_playlists.remove(0);
             }
 
-            let last_selected = self.workspace_idx == self.workspaces.len();
+            let last_selected = self.playlist_idx == self.playlists.len();
             // First selected: Never decrement
             // Between: Decrement if smaller
             // Last selected: Always decrement (unless last == first)
-            if 0 < self.workspace_idx && (index < self.workspace_idx || last_selected) {
-                self.workspace_idx -= 1;
+            if 0 < self.playlist_idx && (index < self.playlist_idx || last_selected) {
+                self.playlist_idx -= 1;
             }
             // Doesn't really matter what we do with stale playing index, as long as it's in bounds.
-            if 0 < self.playing_workspace_idx && index <= self.playing_workspace_idx {
-                self.playing_workspace_idx -= 1;
+            if 0 < self.playing_playlist_idx && index <= self.playing_playlist_idx {
+                self.playing_playlist_idx -= 1;
             }
         }
-        self.ensure_workspace_existence();
+        self.ensure_playlist_existence();
     }
 
     // --- Playback Control
 
     /// Start playing (from a fully stopped state)
     pub fn start(&mut self) {
-        self.playing_workspace_idx = self.workspace_idx;
+        self.playing_playlist_idx = self.playlist_idx;
         let shuffle = self.shuffle;
-        self.get_playing_workspace_mut().rebuild_queue(shuffle);
+        self.get_playing_playlist_mut().rebuild_queue(shuffle);
         if let Err(e) = self.play_selected_song() {
             self.push_error(e.to_string());
         }
     }
 
     fn get_soundfont(&mut self) -> Result<&mut FontMeta, PlayerError> {
-        if let Some(font_index) = self.get_playing_workspace().get_font_idx() {
-            return Ok(&mut self.get_playing_workspace_mut().get_fonts_mut()[font_index]);
+        if let Some(font_index) = self.get_playing_playlist().get_font_idx() {
+            return Ok(&mut self.get_playing_playlist_mut().get_fonts_mut()[font_index]);
         }
         self.font_lib
             .get_selected_mut()
             .ok_or(PlayerError::NoSoundfont)
     }
 
-    /// Load currently selected song & font from workspace and start playing
+    /// Load currently selected song & font from playlist and start playing
     fn play_selected_song(&mut self) -> anyhow::Result<()> {
         self.audioplayer.stop_playback()?;
-        let Some(queue_index) = self.get_playing_workspace().queue_idx else {
+        let Some(queue_index) = self.get_playing_playlist().queue_idx else {
             bail!(PlayerError::NoQueueIndex);
         };
-        let midi_index = self.get_playing_workspace().queue[queue_index];
+        let midi_index = self.get_playing_playlist().queue[queue_index];
 
         let sf = self.get_soundfont()?;
         let sf_path = sf.get_path();
         sf.refresh();
         sf.get_status()?;
 
-        let mid = &mut self.get_playing_workspace_mut().get_songs_mut()[midi_index];
+        let mid = &mut self.get_playing_playlist_mut().get_songs_mut()[midi_index];
         let mid_path = mid.get_path();
         mid.refresh();
         mid.get_status()?;
 
-        let workspace = self.get_playing_workspace_mut();
-        workspace.set_song_idx(Some(midi_index))?;
+        let playlist = self.get_playing_playlist_mut();
+        playlist.set_song_idx(Some(midi_index))?;
 
         // Play
         self.audioplayer.set_soundfont(sf_path);
@@ -269,8 +269,8 @@ impl Player {
     /// Stop playback
     pub fn stop(&mut self) {
         let _ = self.audioplayer.stop_playback();
-        self.get_playing_workspace_mut().queue_idx = None;
-        let _ = self.get_playing_workspace_mut().set_song_idx(None);
+        self.get_playing_playlist_mut().queue_idx = None;
+        let _ = self.get_playing_playlist_mut().set_song_idx(None);
         self.is_playing = false;
 
         self.mediacontrol_update_song();
@@ -289,16 +289,16 @@ impl Player {
     }
     /// Play previous song
     pub fn skip_back(&mut self) {
-        if let Some(mut index) = self.get_playing_workspace().queue_idx {
+        if let Some(mut index) = self.get_playing_playlist().queue_idx {
             if index > 0 {
                 index -= 1;
-                self.get_playing_workspace_mut().queue_idx = Some(index);
+                self.get_playing_playlist_mut().queue_idx = Some(index);
                 if let Err(e) = self.play_selected_song() {
                     self.push_error(e.to_string());
                 }
             } else if self.repeat == RepeatMode::Queue {
-                index = self.get_playing_workspace().queue.len() - 1;
-                self.get_playing_workspace_mut().queue_idx = Some(index);
+                index = self.get_playing_playlist().queue.len() - 1;
+                self.get_playing_playlist_mut().queue_idx = Some(index);
                 if let Err(e) = self.play_selected_song() {
                     self.push_error(e.to_string());
                 }
@@ -307,15 +307,15 @@ impl Player {
     }
     /// Play next song
     pub fn skip(&mut self) {
-        if let Some(index) = self.get_playing_workspace().queue_idx {
-            if index < self.get_playing_workspace().queue.len() - 1 {
-                self.get_playing_workspace_mut().queue_idx = Some(index + 1);
+        if let Some(index) = self.get_playing_playlist().queue_idx {
+            if index < self.get_playing_playlist().queue.len() - 1 {
+                self.get_playing_playlist_mut().queue_idx = Some(index + 1);
                 if let Err(e) = self.play_selected_song() {
                     self.push_error(e.to_string());
                 }
             }
             if self.repeat == RepeatMode::Queue {
-                self.get_playing_workspace_mut().queue_idx = Some(0);
+                self.get_playing_playlist_mut().queue_idx = Some(0);
                 if let Err(e) = self.play_selected_song() {
                     self.push_error(e.to_string());
                 }
@@ -329,7 +329,7 @@ impl Player {
     pub fn toggle_shuffle(&mut self) {
         let shuffle = !self.shuffle;
         self.shuffle = shuffle;
-        self.get_playing_workspace_mut().rebuild_queue(shuffle);
+        self.get_playing_playlist_mut().rebuild_queue(shuffle);
     }
     pub const fn get_repeat(&self) -> RepeatMode {
         self.repeat
@@ -356,17 +356,17 @@ impl Player {
     // When previous song has ended, advance queue or stop.
     fn advance_queue(&mut self) -> anyhow::Result<()> {
         let repeat = self.repeat;
-        let workspace = self.get_playing_workspace_mut();
+        let playlist = self.get_playing_playlist_mut();
 
-        let Some(mut queue_index) = workspace.queue_idx else {
+        let Some(mut queue_index) = playlist.queue_idx else {
             self.stop();
             bail!(PlayerError::NoQueueIndex)
         };
 
         // Replay the same song
         if repeat == RepeatMode::Song {
-            workspace
-                .set_song_idx(Some(workspace.queue[queue_index]))
+            playlist
+                .set_song_idx(Some(playlist.queue[queue_index]))
                 .expect("advance_queue: repeat song idx failed?!");
             self.play_selected_song()?;
             return Ok(());
@@ -375,20 +375,20 @@ impl Player {
         queue_index += 1;
 
         // Queue end reached, back to start or bail out
-        if queue_index == workspace.queue.len() {
+        if queue_index == playlist.queue.len() {
             if repeat == RepeatMode::Queue {
                 queue_index = 0;
             } else {
-                let _ = workspace.set_song_idx(None);
+                let _ = playlist.set_song_idx(None);
                 self.stop();
                 return Ok(());
             }
         }
 
         // Play next song in queue
-        workspace.queue_idx = Some(queue_index);
-        workspace
-            .set_song_idx(Some(workspace.queue[queue_index]))
+        playlist.queue_idx = Some(queue_index);
+        playlist
+            .set_song_idx(Some(playlist.queue[queue_index]))
             .expect("advance_queue: next song idx failed?!");
         self.play_selected_song()?;
         Ok(())
@@ -418,277 +418,270 @@ impl Player {
         self.audioplayer.get_midi_position()
     }
 
-    // --- Manage Workspaces
+    // --- Manage Playlists
 
-    /// Index of currently open workspace
-    pub const fn get_workspace_idx(&self) -> usize {
-        self.workspace_idx
+    /// Index of currently open playlist
+    pub const fn get_playlist_idx(&self) -> usize {
+        self.playlist_idx
     }
-    /// Index of currently playing workspace
-    pub const fn get_playing_workspace_idx(&self) -> usize {
-        self.playing_workspace_idx
+    /// Index of currently playing playlist
+    pub const fn get_playing_playlist_idx(&self) -> usize {
+        self.playing_playlist_idx
     }
-    /// Get a reference to the workspace list
-    pub const fn get_workspaces(&self) -> &Vec<Workspace> {
-        &self.workspaces
+    /// Get a reference to the playlist list
+    pub const fn get_playlists(&self) -> &Vec<Playlist> {
+        &self.playlists
     }
-    /// Get a mutable reference to the workspace list
-    pub fn get_workspaces_mut(&mut self) -> &mut Vec<Workspace> {
-        &mut self.workspaces
+    /// Get a mutable reference to the playlist list
+    pub fn get_playlists_mut(&mut self) -> &mut Vec<Playlist> {
+        &mut self.playlists
     }
-    /// Get a reference to the currently open workspace
-    pub fn get_workspace(&self) -> &Workspace {
-        &self.workspaces[self.workspace_idx]
+    /// Get a reference to the currently open playlist
+    pub fn get_playlist(&self) -> &Playlist {
+        &self.playlists[self.playlist_idx]
     }
-    /// Get a mutable reference to the currently open workspace
-    pub fn get_workspace_mut(&mut self) -> &mut Workspace {
-        &mut self.workspaces[self.workspace_idx]
+    /// Get a mutable reference to the currently open playlist
+    pub fn get_playlist_mut(&mut self) -> &mut Playlist {
+        &mut self.playlists[self.playlist_idx]
     }
-    /// Get a reference to the currently playing workspace.
-    /// If nothing's playing, it gives the currently open workspace instead.
-    pub fn get_playing_workspace(&self) -> &Workspace {
+    /// Get a reference to the currently playing playlist.
+    /// If nothing's playing, it gives the currently open playlist instead.
+    pub fn get_playing_playlist(&self) -> &Playlist {
         if self.is_playing {
-            return &self.workspaces[self.playing_workspace_idx];
+            return &self.playlists[self.playing_playlist_idx];
         }
-        &self.workspaces[self.workspace_idx]
+        &self.playlists[self.playlist_idx]
     }
-    /// Get a mutable reference to the currently playing workspace.
-    /// If nothing's playing, it gives the currently open workspace instead.
-    pub fn get_playing_workspace_mut(&mut self) -> &mut Workspace {
+    /// Get a mutable reference to the currently playing playlist.
+    /// If nothing's playing, it gives the currently open playlist instead.
+    pub fn get_playing_playlist_mut(&mut self) -> &mut Playlist {
         if self.is_playing {
-            return &mut self.workspaces[self.playing_workspace_idx];
+            return &mut self.playlists[self.playing_playlist_idx];
         }
-        &mut self.workspaces[self.workspace_idx]
+        &mut self.playlists[self.playlist_idx]
     }
-    /// Switch to another workspace
-    pub fn switch_to_workspace(&mut self, index: usize) -> anyhow::Result<()> {
-        if index >= self.workspaces.len() {
-            bail!(PlayerError::InvalidWorkspaceIndex { index });
+    /// Switch to another playlist
+    pub fn switch_to_playlist(&mut self, index: usize) -> anyhow::Result<()> {
+        if index >= self.playlists.len() {
+            bail!(PlayerError::InvalidPlaylistIndex { index });
         }
-        self.workspace_idx = index;
-        self.get_workspace_mut().refresh_font_list();
-        self.get_workspace_mut().refresh_song_list();
+        self.playlist_idx = index;
+        self.get_playlist_mut().refresh_font_list();
+        self.get_playlist_mut().refresh_song_list();
         Ok(())
     }
-    pub fn switch_workspace_left(&mut self) -> anyhow::Result<()> {
-        if self.workspace_idx == 0 {
-            bail!(PlayerError::CantSwitchWorkspace);
+    pub fn switch_playlist_left(&mut self) -> anyhow::Result<()> {
+        if self.playlist_idx == 0 {
+            bail!(PlayerError::CantSwitchPlaylist);
         }
-        self.workspace_idx -= 1;
+        self.playlist_idx -= 1;
         Ok(())
     }
-    pub fn switch_workspace_right(&mut self) -> anyhow::Result<()> {
-        if self.workspace_idx >= self.workspaces.len() - 1 {
-            bail!(PlayerError::CantSwitchWorkspace);
+    pub fn switch_playlist_right(&mut self) -> anyhow::Result<()> {
+        if self.playlist_idx >= self.playlists.len() - 1 {
+            bail!(PlayerError::CantSwitchPlaylist);
         }
-        self.workspace_idx += 1;
+        self.playlist_idx += 1;
         Ok(())
     }
-    /// Create a new workspace
-    pub fn new_workspace(&mut self) {
-        self.workspaces.push(Workspace::default());
+    /// Create a new playlist
+    pub fn new_playlist(&mut self) {
+        self.playlists.push(Playlist::default());
     }
-    /// Remove a workspace by index
-    pub fn remove_workspace(&mut self, index: usize) -> Result<(), PlayerError> {
-        if index >= self.workspaces.len() {
-            return Err(PlayerError::InvalidWorkspaceIndex { index });
+    /// Remove a playlist by index
+    pub fn remove_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
+        if index >= self.playlists.len() {
+            return Err(PlayerError::InvalidPlaylistIndex { index });
         }
-        self.workspaces[index].deletion_status = DeletionStatus::Queued;
+        self.playlists[index].deletion_status = DeletionStatus::Queued;
         Ok(())
     }
-    /// Remove a workspace by index, override unsaved check
-    pub fn force_remove_workspace(&mut self, index: usize) -> Result<(), PlayerError> {
-        if index >= self.workspaces.len() {
-            return Err(PlayerError::InvalidWorkspaceIndex { index });
+    /// Remove a playlist by index, override unsaved check
+    pub fn force_remove_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
+        if index >= self.playlists.len() {
+            return Err(PlayerError::InvalidPlaylistIndex { index });
         }
-        self.workspaces[index].deletion_status = DeletionStatus::QueuedDiscard;
+        self.playlists[index].deletion_status = DeletionStatus::QueuedDiscard;
         Ok(())
     }
-    pub fn cancel_remove_workspace(&mut self, index: usize) -> Result<(), PlayerError> {
-        if index >= self.workspaces.len() {
-            return Err(PlayerError::InvalidWorkspaceIndex { index });
+    pub fn cancel_remove_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
+        if index >= self.playlists.len() {
+            return Err(PlayerError::InvalidPlaylistIndex { index });
         }
-        self.workspaces[index].deletion_status = DeletionStatus::None;
+        self.playlists[index].deletion_status = DeletionStatus::None;
         Ok(())
     }
-    /// Get a workspace waiting for delete confirm, if any exist.
-    pub fn get_workspace_waiting_for_discard(&self) -> Option<usize> {
-        for (i, workspace) in self.workspaces.iter().enumerate() {
-            if workspace.deletion_status == DeletionStatus::Queued
-                && workspace.has_unsaved_changes()
+    /// Get a playlist waiting for delete confirm, if any exist.
+    pub fn get_playlist_waiting_for_discard(&self) -> Option<usize> {
+        for (i, playlist) in self.playlists.iter().enumerate() {
+            if playlist.deletion_status == DeletionStatus::Queued && playlist.has_unsaved_changes()
             {
                 return Some(i);
             }
         }
         None
     }
-    pub fn has_removed_workspaces(&self) -> bool {
-        !self.removed_workspaces.is_empty()
+    pub fn has_removed_playlist(&self) -> bool {
+        !self.removed_playlists.is_empty()
     }
-    pub fn reopen_removed_workspace(&mut self) {
-        if !self.removed_workspaces.is_empty() {
-            let last_index = self.removed_workspaces.len() - 1;
-            let mut workspace = self.removed_workspaces.remove(last_index);
-            workspace.deletion_status = DeletionStatus::None;
+    pub fn reopen_removed_playlist(&mut self) {
+        if !self.removed_playlists.is_empty() {
+            let last_index = self.removed_playlists.len() - 1;
+            let mut playlist = self.removed_playlists.remove(last_index);
+            playlist.deletion_status = DeletionStatus::None;
 
-            if let Some(filepath) = workspace.get_portable_path() {
-                if self.is_portable_workspace_open(&filepath) {
-                    self.reopen_removed_workspace();
+            if let Some(filepath) = playlist.get_portable_path() {
+                if self.is_portable_playlist_open(&filepath) {
+                    self.reopen_removed_playlist();
                 }
             }
 
-            self.workspaces.push(workspace);
-            self.workspace_idx = self.workspaces.len() - 1;
+            self.playlists.push(playlist);
+            self.playlist_idx = self.playlists.len() - 1;
         }
     }
-    /// Rearrange workspaces
-    pub fn move_workspace(&mut self, old_index: usize, new_index: usize) -> anyhow::Result<()> {
-        if old_index >= self.workspaces.len() {
-            bail!(PlayerError::InvalidWorkspaceIndex { index: old_index });
+    /// Rearrange playlists
+    pub fn move_playlist(&mut self, old_index: usize, new_index: usize) -> anyhow::Result<()> {
+        if old_index >= self.playlists.len() {
+            bail!(PlayerError::InvalidPlaylistIndex { index: old_index });
         }
-        if new_index >= self.workspaces.len() {
-            bail!(PlayerError::InvalidWorkspaceIndex { index: new_index });
+        if new_index >= self.playlists.len() {
+            bail!(PlayerError::InvalidPlaylistIndex { index: new_index });
         }
-        let workspace = self.workspaces.remove(old_index); // Remove at old index
-        self.workspaces.insert(new_index, workspace); // Reinsert at new index
+        let playlist = self.playlists.remove(old_index); // Remove at old index
+        self.playlists.insert(new_index, playlist); // Reinsert at new index
 
-        // Update current workspace index if it was affected by the move
-        if old_index == self.workspace_idx {
-            self.workspace_idx = new_index;
-        } else if old_index < self.workspace_idx && self.workspace_idx <= new_index {
-            self.workspace_idx -= 1;
-        } else if new_index <= self.workspace_idx && self.workspace_idx < old_index {
-            self.workspace_idx += 1;
+        // Update current playlist index if it was affected by the move
+        if old_index == self.playlist_idx {
+            self.playlist_idx = new_index;
+        } else if old_index < self.playlist_idx && self.playlist_idx <= new_index {
+            self.playlist_idx -= 1;
+        } else if new_index <= self.playlist_idx && self.playlist_idx < old_index {
+            self.playlist_idx += 1;
         }
-        // Update playing workspace index if it was affected by the move
-        if old_index == self.playing_workspace_idx {
-            self.playing_workspace_idx = new_index;
-        } else if old_index < self.playing_workspace_idx && self.playing_workspace_idx <= new_index
-        {
-            self.playing_workspace_idx -= 1;
-        } else if new_index <= self.playing_workspace_idx && self.playing_workspace_idx < old_index
-        {
-            self.playing_workspace_idx += 1;
+        // Update playing playlist index if it was affected by the move
+        if old_index == self.playing_playlist_idx {
+            self.playing_playlist_idx = new_index;
+        } else if old_index < self.playing_playlist_idx && self.playing_playlist_idx <= new_index {
+            self.playing_playlist_idx -= 1;
+        } else if new_index <= self.playing_playlist_idx && self.playing_playlist_idx < old_index {
+            self.playing_playlist_idx += 1;
         }
 
         Ok(())
     }
-    /// Move current workspace left
-    pub fn move_workspace_left(&mut self) -> anyhow::Result<()> {
-        if self.workspace_idx == 0 {
-            bail!(PlayerError::CantMoveWorkspace);
+    /// Move current playlist left
+    pub fn move_playlist_left(&mut self) -> anyhow::Result<()> {
+        if self.playlist_idx == 0 {
+            bail!(PlayerError::CantMovePlaylist);
         }
-        self.move_workspace(self.workspace_idx, self.workspace_idx - 1)
-            .expect("move_workspace_left out of bounds?!");
+        self.move_playlist(self.playlist_idx, self.playlist_idx - 1)
+            .expect("move_playlist_left out of bounds?!");
         Ok(())
     }
-    /// Move current workspace right
-    pub fn move_workspace_right(&mut self) -> anyhow::Result<()> {
-        if self.workspace_idx >= self.workspaces.len() - 1 {
-            bail!(PlayerError::CantMoveWorkspace);
+    /// Move current playlist right
+    pub fn move_playlist_right(&mut self) -> anyhow::Result<()> {
+        if self.playlist_idx >= self.playlists.len() - 1 {
+            bail!(PlayerError::CantMovePlaylist);
         }
-        self.move_workspace(self.workspace_idx, self.workspace_idx + 1)
-            .expect("move_workspace_right out of bounds?!");
+        self.move_playlist(self.playlist_idx, self.playlist_idx + 1)
+            .expect("move_playlist_right out of bounds?!");
         Ok(())
     }
-    pub fn open_portable_workspace(&mut self, filepath: PathBuf) -> anyhow::Result<()> {
-        if self.is_portable_workspace_open(&filepath) {
-            bail!("Workspace is already open")
+    pub fn open_portable_playlist(&mut self, filepath: PathBuf) -> anyhow::Result<()> {
+        if self.is_portable_playlist_open(&filepath) {
+            bail!("Playlist is already open")
         }
-        let workspace = Workspace::open_portable(filepath)?;
-        self.workspaces.push(workspace);
-        self.workspace_idx = self.workspaces.len() - 1;
+        let playlist = Playlist::open_portable(filepath)?;
+        self.playlists.push(playlist);
+        self.playlist_idx = self.playlists.len() - 1;
         Ok(())
     }
-    pub fn save_portable_workspace(&mut self, index: usize) -> Result<(), PlayerError> {
-        if index >= self.workspaces.len() {
-            return Err(PlayerError::InvalidWorkspaceIndex { index });
+    pub fn save_portable_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
+        if index >= self.playlists.len() {
+            return Err(PlayerError::InvalidPlaylistIndex { index });
         }
         if self.debug_block_saving {
             return Err(PlayerError::DebugBlockSaving);
         }
-        if self.workspaces[index].save_portable().is_err() {
-            return Err(PlayerError::WorkspaceSaveFailed);
+        if self.playlists[index].save_portable().is_err() {
+            return Err(PlayerError::PlaylistSaveFailed);
         }
         Ok(())
     }
-    pub fn save_all_portable_workspaces(&mut self) -> Result<(), PlayerError> {
+    pub fn save_all_portable_playlists(&mut self) -> Result<(), PlayerError> {
         if self.debug_block_saving {
             return Err(PlayerError::DebugBlockSaving);
         }
-        for workspace in &mut self.workspaces {
-            if workspace.is_portable() && workspace.save_portable().is_err() {
-                return Err(PlayerError::WorkspaceSaveFailed);
+        for playlist in &mut self.playlists {
+            if playlist.is_portable() && playlist.save_portable().is_err() {
+                return Err(PlayerError::PlaylistSaveFailed);
             }
         }
         Ok(())
     }
-    /// Save workspace into a portable file.
-    pub fn save_workspace_as(
-        &mut self,
-        index: usize,
-        filepath: PathBuf,
-    ) -> Result<(), PlayerError> {
-        if index >= self.workspaces.len() {
-            return Err(PlayerError::InvalidWorkspaceIndex { index });
+    /// Save playlist into a portable file.
+    pub fn save_playlist_as(&mut self, index: usize, filepath: PathBuf) -> Result<(), PlayerError> {
+        if index >= self.playlists.len() {
+            return Err(PlayerError::InvalidPlaylistIndex { index });
         }
         if self.debug_block_saving {
             return Err(PlayerError::DebugBlockSaving);
         }
-        if self.is_portable_workspace_open(&filepath) {
-            return Err(PlayerError::WorkspaceAlreadyOpen);
+        if self.is_portable_playlist_open(&filepath) {
+            return Err(PlayerError::PlaylistAlreadyOpen);
         }
-        let mut new_workspace = self.workspaces[index].clone();
-        new_workspace.set_portable_path(Some(filepath.clone()));
-        new_workspace.name = filepath.file_stem().map_or_else(
-            || format!("{} (Copy)", self.workspaces[index].name),
+        let mut new_playlist = self.playlists[index].clone();
+        new_playlist.set_portable_path(Some(filepath.clone()));
+        new_playlist.name = filepath.file_stem().map_or_else(
+            || format!("{} (Copy)", self.playlists[index].name),
             |stem| {
                 stem.to_str()
-                    .expect("save_workspace_as(): stem.to_str()")
+                    .expect("save_playlist_as(): stem.to_str()")
                     .to_owned()
             },
         );
 
         let Ok(mut file) = File::create(filepath) else {
-            return Err(PlayerError::WorkspaceSaveFailed);
+            return Err(PlayerError::PlaylistSaveFailed);
         };
         if file
-            .write_all(Value::from(&new_workspace).to_string().as_bytes())
+            .write_all(Value::from(&new_playlist).to_string().as_bytes())
             .is_err()
         {
-            return Err(PlayerError::WorkspaceSaveFailed);
+            return Err(PlayerError::PlaylistSaveFailed);
         };
 
-        self.workspaces.push(new_workspace);
-        let _ = self.switch_to_workspace(self.workspaces.len() - 1);
+        self.playlists.push(new_playlist);
+        let _ = self.switch_to_playlist(self.playlists.len() - 1);
         Ok(())
     }
-    /// New workspace is stored to app data.
-    pub fn duplicate_workspace(&mut self, index: usize) -> anyhow::Result<()> {
-        if index >= self.workspaces.len() {
-            bail!(PlayerError::InvalidWorkspaceIndex { index });
+    /// New playlist is stored to app data.
+    pub fn duplicate_playlist(&mut self, index: usize) -> anyhow::Result<()> {
+        if index >= self.playlists.len() {
+            bail!(PlayerError::InvalidPlaylistIndex { index });
         }
-        let mut new_workspace = self.workspaces[index].clone();
-        new_workspace.set_portable_path(None);
-        new_workspace.name = format!("{} (Copy)", self.workspaces[index].name);
+        let mut new_playlist = self.playlists[index].clone();
+        new_playlist.set_portable_path(None);
+        new_playlist.name = format!("{} (Copy)", self.playlists[index].name);
 
-        self.workspaces.push(new_workspace);
-        let _ = self.switch_to_workspace(self.workspaces.len() - 1);
+        self.playlists.push(new_playlist);
+        let _ = self.switch_to_playlist(self.playlists.len() - 1);
         Ok(())
     }
-    /// Make sure at least one workspace exists!
-    fn ensure_workspace_existence(&mut self) {
-        if self.get_workspaces().is_empty() {
-            self.new_workspace();
-            self.workspace_idx = 0;
+    /// Make sure at least one playlist exists!
+    fn ensure_playlist_existence(&mut self) {
+        if self.get_playlists().is_empty() {
+            self.new_playlist();
+            self.playlist_idx = 0;
         }
     }
-    fn is_portable_workspace_open(&self, filepath: &PathBuf) -> bool {
-        for workspace in &self.workspaces {
-            let Some(workspace_path) = workspace.get_portable_path() else {
+    fn is_portable_playlist_open(&self, filepath: &PathBuf) -> bool {
+        for playlist in &self.playlists {
+            let Some(playlist_path) = playlist.get_portable_path() else {
                 continue;
             };
-            if workspace_path == *filepath {
+            if playlist_path == *filepath {
                 return true;
             }
         }
@@ -711,173 +704,173 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rearrange_workspaces_cur_wksp_index() {
+    fn test_rearrange_playlists_cur_wksp_index() {
         let mut player = Player::default();
-        player.new_workspace();
-        player.new_workspace();
-        player.new_workspace();
+        player.new_playlist();
+        player.new_playlist();
+        player.new_playlist();
 
-        player.switch_to_workspace(1).unwrap();
-        assert_eq!(player.workspace_idx, 1);
-        player.move_workspace_left().unwrap();
-        assert_eq!(player.workspace_idx, 0);
-        player.move_workspace_left().unwrap_err();
-        assert_eq!(player.workspace_idx, 0);
-        player.move_workspace_right().unwrap();
-        assert_eq!(player.workspace_idx, 1);
-        player.move_workspace_right().unwrap();
-        assert_eq!(player.workspace_idx, 2);
-        player.move_workspace_right().unwrap_err();
-        assert_eq!(player.workspace_idx, 2);
+        player.switch_to_playlist(1).unwrap();
+        assert_eq!(player.playlist_idx, 1);
+        player.move_playlist_left().unwrap();
+        assert_eq!(player.playlist_idx, 0);
+        player.move_playlist_left().unwrap_err();
+        assert_eq!(player.playlist_idx, 0);
+        player.move_playlist_right().unwrap();
+        assert_eq!(player.playlist_idx, 1);
+        player.move_playlist_right().unwrap();
+        assert_eq!(player.playlist_idx, 2);
+        player.move_playlist_right().unwrap_err();
+        assert_eq!(player.playlist_idx, 2);
 
-        player.move_workspace(0, 1).unwrap();
-        assert_eq!(player.workspace_idx, 2);
+        player.move_playlist(0, 1).unwrap();
+        assert_eq!(player.playlist_idx, 2);
 
-        player.move_workspace(0, 2).unwrap();
-        assert_eq!(player.workspace_idx, 1);
+        player.move_playlist(0, 2).unwrap();
+        assert_eq!(player.playlist_idx, 1);
 
-        player.move_workspace(1, 2).unwrap();
-        assert_eq!(player.workspace_idx, 2);
+        player.move_playlist(1, 2).unwrap();
+        assert_eq!(player.playlist_idx, 2);
 
-        player.move_workspace(2, 2).unwrap();
-        assert_eq!(player.workspace_idx, 2);
+        player.move_playlist(2, 2).unwrap();
+        assert_eq!(player.playlist_idx, 2);
 
-        player.move_workspace(2, 0).unwrap();
-        assert_eq!(player.workspace_idx, 0);
+        player.move_playlist(2, 0).unwrap();
+        assert_eq!(player.playlist_idx, 0);
 
-        player.move_workspace(0, 1).unwrap();
-        assert_eq!(player.workspace_idx, 1);
+        player.move_playlist(0, 1).unwrap();
+        assert_eq!(player.playlist_idx, 1);
     }
 
     #[test]
-    fn test_rearrange_workspaces_cur_wksp_index_outofbounds() {
+    fn test_rearrange_playlists_cur_wksp_index_outofbounds() {
         let mut player = Player::default();
-        player.new_workspace();
-        player.new_workspace();
-        player.new_workspace();
+        player.new_playlist();
+        player.new_playlist();
+        player.new_playlist();
 
-        player.switch_to_workspace(0).unwrap();
-        assert_eq!(player.workspace_idx, 0);
-        player.move_workspace_left().unwrap_err();
-        assert_eq!(player.workspace_idx, 0);
+        player.switch_to_playlist(0).unwrap();
+        assert_eq!(player.playlist_idx, 0);
+        player.move_playlist_left().unwrap_err();
+        assert_eq!(player.playlist_idx, 0);
 
-        player.switch_to_workspace(2).unwrap();
-        assert_eq!(player.workspace_idx, 2);
-        player.move_workspace_right().unwrap_err();
-        assert_eq!(player.workspace_idx, 2);
+        player.switch_to_playlist(2).unwrap();
+        assert_eq!(player.playlist_idx, 2);
+        player.move_playlist_right().unwrap_err();
+        assert_eq!(player.playlist_idx, 2);
 
-        player.move_workspace(0, 3).unwrap_err();
-        assert_eq!(player.workspace_idx, 2);
-        player.move_workspace(2, 3).unwrap_err();
-        assert_eq!(player.workspace_idx, 2);
-        player.move_workspace(2, usize::MAX).unwrap_err();
-        assert_eq!(player.workspace_idx, 2);
+        player.move_playlist(0, 3).unwrap_err();
+        assert_eq!(player.playlist_idx, 2);
+        player.move_playlist(2, 3).unwrap_err();
+        assert_eq!(player.playlist_idx, 2);
+        player.move_playlist(2, usize::MAX).unwrap_err();
+        assert_eq!(player.playlist_idx, 2);
     }
 
     #[test]
-    fn test_rearrange_workspaces_playing_wksp_index() {
+    fn test_rearrange_playlists_playing_wksp_index() {
         let mut player = Player::default();
-        player.new_workspace();
-        player.new_workspace();
-        player.new_workspace();
+        player.new_playlist();
+        player.new_playlist();
+        player.new_playlist();
 
-        player.switch_to_workspace(1).unwrap();
-        player.playing_workspace_idx = 1;
-        assert_eq!(player.playing_workspace_idx, 1);
-        player.move_workspace_left().unwrap();
-        assert_eq!(player.playing_workspace_idx, 0);
-        player.move_workspace_left().unwrap_err();
-        assert_eq!(player.playing_workspace_idx, 0);
-        player.move_workspace_right().unwrap();
-        assert_eq!(player.playing_workspace_idx, 1);
-        player.move_workspace_right().unwrap();
-        assert_eq!(player.playing_workspace_idx, 2);
-        player.move_workspace_right().unwrap_err();
-        assert_eq!(player.playing_workspace_idx, 2);
+        player.switch_to_playlist(1).unwrap();
+        player.playing_playlist_idx = 1;
+        assert_eq!(player.playing_playlist_idx, 1);
+        player.move_playlist_left().unwrap();
+        assert_eq!(player.playing_playlist_idx, 0);
+        player.move_playlist_left().unwrap_err();
+        assert_eq!(player.playing_playlist_idx, 0);
+        player.move_playlist_right().unwrap();
+        assert_eq!(player.playing_playlist_idx, 1);
+        player.move_playlist_right().unwrap();
+        assert_eq!(player.playing_playlist_idx, 2);
+        player.move_playlist_right().unwrap_err();
+        assert_eq!(player.playing_playlist_idx, 2);
 
-        player.move_workspace(0, 1).unwrap();
-        assert_eq!(player.playing_workspace_idx, 2);
+        player.move_playlist(0, 1).unwrap();
+        assert_eq!(player.playing_playlist_idx, 2);
 
-        player.move_workspace(0, 2).unwrap();
-        assert_eq!(player.playing_workspace_idx, 1);
+        player.move_playlist(0, 2).unwrap();
+        assert_eq!(player.playing_playlist_idx, 1);
 
-        player.move_workspace(1, 2).unwrap();
-        assert_eq!(player.playing_workspace_idx, 2);
+        player.move_playlist(1, 2).unwrap();
+        assert_eq!(player.playing_playlist_idx, 2);
 
-        player.move_workspace(2, 2).unwrap();
-        assert_eq!(player.playing_workspace_idx, 2);
+        player.move_playlist(2, 2).unwrap();
+        assert_eq!(player.playing_playlist_idx, 2);
 
-        player.move_workspace(2, 0).unwrap();
-        assert_eq!(player.playing_workspace_idx, 0);
+        player.move_playlist(2, 0).unwrap();
+        assert_eq!(player.playing_playlist_idx, 0);
 
-        player.move_workspace(0, 1).unwrap();
-        assert_eq!(player.playing_workspace_idx, 1);
+        player.move_playlist(0, 1).unwrap();
+        assert_eq!(player.playing_playlist_idx, 1);
     }
 
     #[test]
-    fn test_rearrange_workspaces_playing_wksp_index_outofbounds() {
+    fn test_rearrange_playlists_playing_wksp_index_outofbounds() {
         let mut player = Player::default();
-        player.new_workspace();
-        player.new_workspace();
-        player.new_workspace();
+        player.new_playlist();
+        player.new_playlist();
+        player.new_playlist();
 
-        player.switch_to_workspace(0).unwrap();
-        player.playing_workspace_idx = 0;
-        assert_eq!(player.playing_workspace_idx, 0);
-        player.move_workspace_left().unwrap_err();
-        assert_eq!(player.playing_workspace_idx, 0);
+        player.switch_to_playlist(0).unwrap();
+        player.playing_playlist_idx = 0;
+        assert_eq!(player.playing_playlist_idx, 0);
+        player.move_playlist_left().unwrap_err();
+        assert_eq!(player.playing_playlist_idx, 0);
 
-        player.switch_to_workspace(2).unwrap();
-        player.playing_workspace_idx = 2;
-        assert_eq!(player.playing_workspace_idx, 2);
-        player.move_workspace_right().unwrap_err();
-        assert_eq!(player.playing_workspace_idx, 2);
+        player.switch_to_playlist(2).unwrap();
+        player.playing_playlist_idx = 2;
+        assert_eq!(player.playing_playlist_idx, 2);
+        player.move_playlist_right().unwrap_err();
+        assert_eq!(player.playing_playlist_idx, 2);
 
-        player.move_workspace(0, 3).unwrap_err();
-        assert_eq!(player.playing_workspace_idx, 2);
-        player.move_workspace(2, 3).unwrap_err();
-        assert_eq!(player.playing_workspace_idx, 2);
-        player.move_workspace(2, usize::MAX).unwrap_err();
-        assert_eq!(player.playing_workspace_idx, 2);
+        player.move_playlist(0, 3).unwrap_err();
+        assert_eq!(player.playing_playlist_idx, 2);
+        player.move_playlist(2, 3).unwrap_err();
+        assert_eq!(player.playing_playlist_idx, 2);
+        player.move_playlist(2, usize::MAX).unwrap_err();
+        assert_eq!(player.playing_playlist_idx, 2);
     }
 
     #[test]
-    fn test_remove_last_workspace_decreases_index() {
+    fn test_remove_last_playlist_decreases_index() {
         let mut player = Player::default();
-        player.new_workspace();
-        player.new_workspace();
-        player.new_workspace();
+        player.new_playlist();
+        player.new_playlist();
+        player.new_playlist();
 
-        player.workspace_idx = 2;
-        player.remove_workspace(2).unwrap();
+        player.playlist_idx = 2;
+        player.remove_playlist(2).unwrap();
         player.update();
-        assert_eq!(player.workspace_idx, 1)
+        assert_eq!(player.playlist_idx, 1)
     }
 
     #[test]
-    fn test_remove_last_workspace_decreases_playing_index() {
+    fn test_remove_last_playlist_decreases_playing_index() {
         let mut player = Player::default();
-        player.new_workspace();
-        player.new_workspace();
-        player.new_workspace();
+        player.new_playlist();
+        player.new_playlist();
+        player.new_playlist();
 
-        player.playing_workspace_idx = 2;
-        player.remove_workspace(2).unwrap();
+        player.playing_playlist_idx = 2;
+        player.remove_playlist(2).unwrap();
         player.update();
-        assert_eq!(player.playing_workspace_idx, 1)
+        assert_eq!(player.playing_playlist_idx, 1)
     }
 
     #[test]
-    fn test_remove_nonlast_workspace_keeps_index() {
+    fn test_remove_nonlast_playlist_keeps_index() {
         let mut player = Player::default();
-        player.new_workspace();
-        player.new_workspace();
-        player.new_workspace();
+        player.new_playlist();
+        player.new_playlist();
+        player.new_playlist();
 
-        player.workspace_idx = 1;
-        player.remove_workspace(1).unwrap();
+        player.playlist_idx = 1;
+        player.remove_playlist(1).unwrap();
         player.update();
-        assert_eq!(player.workspace_idx, 1)
+        assert_eq!(player.playlist_idx, 1)
     }
 
     #[test]
@@ -885,22 +878,22 @@ mod tests {
         let mut player = Player::default();
         player.debug_block_saving = true;
 
-        player.new_workspace();
-        player.new_workspace();
-        player.new_workspace();
+        player.new_playlist();
+        player.new_playlist();
+        player.new_playlist();
 
-        player.workspaces[0].set_portable_path(Some("fakepath".into()));
+        player.playlists[0].set_portable_path(Some("fakepath".into()));
 
         assert_eq!(
-            player.save_portable_workspace(0).unwrap_err(),
+            player.save_portable_playlist(0).unwrap_err(),
             PlayerError::DebugBlockSaving
         );
         assert_eq!(
-            player.save_all_portable_workspaces().unwrap_err(),
+            player.save_all_portable_playlists().unwrap_err(),
             PlayerError::DebugBlockSaving
         );
         assert_eq!(
-            player.save_workspace_as(0, "fakepath2".into()).unwrap_err(),
+            player.save_playlist_as(0, "fakepath2".into()).unwrap_err(),
             PlayerError::DebugBlockSaving
         );
         assert_eq!(

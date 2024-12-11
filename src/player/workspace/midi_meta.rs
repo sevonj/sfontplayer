@@ -133,31 +133,31 @@ impl TryFrom<&serde_json::Value> for MidiMeta {
 mod tests {
 
     use super::*;
-    use crate::player::workspace::Workspace;
+    use crate::player::workspace::Playlist;
     use serde_json::Value;
 
-    fn run_serialize(workspace: Workspace) -> Workspace {
-        Workspace::from(Value::from(&workspace))
+    fn run_serialize(playlist: Playlist) -> Playlist {
+        Playlist::from(Value::from(&playlist))
     }
 
     #[test]
     fn test_serialize_filepath() {
-        let mut workspace = Workspace::default();
+        let mut playlist = Playlist::default();
         let song = MidiMeta {
             filepath: "Fakepath".into(),
             ..Default::default()
         };
-        workspace.midis.push(song);
-        let new_workspace = run_serialize(workspace);
+        playlist.midis.push(song);
+        let new_playlist = run_serialize(playlist);
         assert_eq!(
-            new_workspace.midis[0].get_path().to_str().unwrap(),
+            new_playlist.midis[0].get_path().to_str().unwrap(),
             "Fakepath"
         );
     }
 
     #[test]
     fn test_serialize_filesize() {
-        let mut workspace = Workspace::default();
+        let mut playlist = Playlist::default();
         let song_none = MidiMeta {
             filepath: "unused".into(),
             filesize: None,
@@ -168,16 +168,16 @@ mod tests {
             filesize: Some(420),
             ..Default::default()
         };
-        workspace.midis.push(song_none);
-        workspace.midis.push(song_420);
-        let new_workspace = run_serialize(workspace);
-        assert_eq!(new_workspace.midis[0].get_size(), None);
-        assert_eq!(new_workspace.midis[1].get_size().unwrap(), 420);
+        playlist.midis.push(song_none);
+        playlist.midis.push(song_420);
+        let new_playlist = run_serialize(playlist);
+        assert_eq!(new_playlist.midis[0].get_size(), None);
+        assert_eq!(new_playlist.midis[1].get_size().unwrap(), 420);
     }
 
     #[test]
     fn test_serialize_duration() {
-        let mut workspace = Workspace::default();
+        let mut playlist = Playlist::default();
         let song_none = MidiMeta {
             filepath: "unused".into(),
             duration: None,
@@ -188,12 +188,12 @@ mod tests {
             duration: Some(Duration::from_secs(420)),
             ..Default::default()
         };
-        workspace.midis.push(song_none);
-        workspace.midis.push(song_420);
-        let new_workspace = run_serialize(workspace);
-        assert_eq!(new_workspace.midis[0].get_duration(), None);
+        playlist.midis.push(song_none);
+        playlist.midis.push(song_420);
+        let new_playlist = run_serialize(playlist);
+        assert_eq!(new_playlist.midis[0].get_duration(), None);
         assert_eq!(
-            new_workspace.midis[1].get_duration().unwrap(),
+            new_playlist.midis[1].get_duration().unwrap(),
             Duration::from_secs(420)
         );
     }

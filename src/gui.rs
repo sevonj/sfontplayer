@@ -21,7 +21,7 @@ use playback_controls::playback_panel;
 use playlist_fonts::soundfont_table;
 use playlist_songs::playlist_song_panel;
 use soundfont_library::soundfont_library;
-use workspace_select::workspace_tabs;
+use workspace_select::playlist_tabs;
 
 const TBL_ROW_H: f32 = 16.;
 
@@ -133,7 +133,7 @@ fn playlist_panel(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
         .resizable(false)
         .show_separator_line(false)
         .show(ctx, |ui| {
-            workspace_tabs(ui, player, gui);
+            playlist_tabs(ui, player, gui);
         });
 
     CentralPanel::default()

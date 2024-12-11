@@ -4,25 +4,25 @@ use crate::{
 };
 use rfd::FileDialog;
 
-pub fn open_workspace(player: &mut Player, gui: &mut GuiState) {
+pub fn open_playlist(player: &mut Player, gui: &mut GuiState) {
     if let Some(path) = FileDialog::new()
-        .add_filter("Workspace file", &["sfontspace"])
+        .add_filter("Playlist file", &["sfontspace"])
         .pick_file()
     {
-        if let Err(e) = player.open_portable_workspace(path) {
+        if let Err(e) = player.open_portable_playlist(path) {
             gui.toast_error(e.to_string());
         }
     }
 }
 
-pub fn save_workspace_as(player: &mut Player, idx: usize, gui: &mut GuiState) {
+pub fn save_playlist_as(player: &mut Player, idx: usize, gui: &mut GuiState) {
     if let Some(filepath) = FileDialog::new()
-        .add_filter("Workspace file", &["sfontspace"])
-        .set_title("Save Workspace As")
-        .set_file_name(format!("{}.sfontspace", &player.get_workspace().name))
+        .add_filter("Playlist file", &["sfontspace"])
+        .set_title("Save Playlist As")
+        .set_file_name(format!("{}.sfontspace", &player.get_playlist().name))
         .save_file()
     {
-        if let Err(e) = player.save_workspace_as(idx, filepath) {
+        if let Err(e) = player.save_playlist_as(idx, filepath) {
             gui.toast_error(e.to_string());
         }
     }

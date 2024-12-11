@@ -31,14 +31,14 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
     ui.separator();
 
-    let is_active_workspace =
-        !player.is_playing() || player.get_workspace_idx() == player.get_playing_workspace_idx();
-    if !is_active_workspace {
+    let is_active_playlist =
+        !player.is_playing() || player.get_playlist_idx() == player.get_playing_playlist_idx();
+    if !is_active_playlist {
         // Less intense gray highlight if not active
         ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
         ui.style_mut().visuals.selection.stroke = ui.style().visuals.widgets.active.fg_stroke;
     }
-    let manual_files = player.get_workspace().get_font_list_mode() == FileListMode::Manual;
+    let manual_files = player.get_playlist().get_font_list_mode() == FileListMode::Manual;
 
     let name_w = ui.available_width() - 64.;
 
@@ -50,7 +50,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         .column(Column::remainder());
 
     let table = tablebuilder.header(20.0, |mut header| {
-        let font_sort = player.get_workspace().get_font_sort();
+        let font_sort = player.get_playlist().get_font_sort();
 
         header.col(|_| {});
 
@@ -68,7 +68,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 )
                 .clicked()
             {
-                player.get_workspace_mut().set_font_sort(match font_sort {
+                player.get_playlist_mut().set_font_sort(match font_sort {
                     FontSort::NameAsc => FontSort::NameDesc,
                     _ => FontSort::NameAsc,
                 });
@@ -84,7 +84,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 .frame(false)
                 .wrap_mode(TextWrapMode::Extend);
             if ui.add(widget).clicked() {
-                player.get_workspace_mut().set_font_sort(match font_sort {
+                player.get_playlist_mut().set_font_sort(match font_sort {
                     FontSort::SizeAsc => FontSort::SizeDesc,
                     _ => FontSort::SizeAsc,
                 });
@@ -95,20 +95,20 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     table.body(|body| {
         body.rows(
             TBL_ROW_H,
-            player.get_workspace().get_fonts().len() + 1,
+            player.get_playlist().get_fonts().len() + 1,
             |mut row| {
                 if row.index() == 0 {
                     default_font_item(&mut row, player);
                     return;
                 }
                 let index = row.index() - 1;
-                let fontref = &player.get_workspace().get_fonts()[index];
+                let fontref = &player.get_playlist().get_fonts()[index];
                 let filename = fontref.get_name();
                 let filepath = fontref.get_path();
                 let filesize = fontref.get_size();
                 let status = fontref.get_status();
 
-                row.set_selected(Some(index) == player.get_workspace().get_font_idx());
+                row.set_selected(Some(index) == player.get_playlist().get_font_idx());
 
                 // Remove button
                 row.col(|ui| {
@@ -118,7 +118,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                             .on_hover_text("Remove")
                             .clicked()
                     {
-                        let _ = player.get_workspace_mut().remove_font(index);
+                        let _ = player.get_playlist_mut().remove_font(index);
                     }
                 });
                 // Filename
@@ -152,49 +152,49 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
                 // Select
                 if row.response().clicked() {
-                    let _ = player.get_workspace_mut().set_font_idx(Some(index));
+                    let _ = player.get_playlist_mut().set_font_idx(Some(index));
                 }
                 // Context menu
                 row.response().context_menu(|ui| {
                     if ui.button("Refresh").clicked() {
-                        player.get_workspace_mut().get_fonts_mut()[index].refresh();
+                        player.get_playlist_mut().get_fonts_mut()[index].refresh();
                         ui.close_menu();
                     }
                     ui.add_enabled_ui(
-                        player.get_workspace().get_font_list_mode() == FileListMode::Manual,
+                        player.get_playlist().get_font_list_mode() == FileListMode::Manual,
                         |ui| {
                             if ui.button("Remove").clicked() {
-                                let _ = player.get_workspace_mut().remove_font(index);
+                                let _ = player.get_playlist_mut().remove_font(index);
                                 ui.close_menu();
                             }
                         },
                     );
                     actions::open_file_dir(
                         ui,
-                        &player.get_workspace().get_fonts()[index].get_path(),
+                        &player.get_playlist().get_fonts()[index].get_path(),
                         gui,
                     );
-                    ui.menu_button("Add to workspace", |ui| {
-                        let filepath = player.get_workspace().get_fonts()[index].get_path();
-                        if ui.button("➕ New workspace").clicked() {
-                            player.new_workspace();
-                            let workspace_index = player.get_workspaces().len() - 1;
-                            let _ = player.get_workspaces_mut()[workspace_index]
+                    ui.menu_button("Add to playlist", |ui| {
+                        let filepath = player.get_playlist().get_fonts()[index].get_path();
+                        if ui.button("➕ New playlist").clicked() {
+                            player.new_playlist();
+                            let playlist_index = player.get_playlists().len() - 1;
+                            let _ = player.get_playlists_mut()[playlist_index]
                                 .add_font(filepath.clone());
                         }
-                        for i in 0..player.get_workspaces().len() {
-                            if i == player.get_workspace_idx() {
+                        for i in 0..player.get_playlists().len() {
+                            if i == player.get_playlist_idx() {
                                 continue;
                             }
-                            let workspace = &player.get_workspaces_mut()[i];
+                            let playlist = &player.get_playlists_mut()[i];
 
-                            let already_contains = workspace.contains_font(&filepath);
-                            let dir_list = workspace.get_font_list_mode() != FileListMode::Manual;
+                            let already_contains = playlist.contains_font(&filepath);
+                            let dir_list = playlist.get_font_list_mode() != FileListMode::Manual;
 
                             let hovertext = if dir_list {
                                 "Can't manually add files to directory list."
                             } else if already_contains {
-                                "Workspace already contains this file."
+                                "Playlist already contains this file."
                             } else {
                                 ""
                             };
@@ -202,12 +202,12 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                             if ui
                                 .add_enabled(
                                     !already_contains && !dir_list,
-                                    Button::new(&workspace.name),
+                                    Button::new(&playlist.name),
                                 )
                                 .on_disabled_hover_text(hovertext)
                                 .clicked()
                             {
-                                let _ = player.get_workspaces_mut()[i].add_font(filepath.clone());
+                                let _ = player.get_playlists_mut()[i].add_font(filepath.clone());
                                 ui.close_menu();
                             }
                         }
@@ -227,7 +227,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                     {
                         let _ = player
                             .font_lib
-                            .add_path(player.get_workspace().get_fonts()[index].get_path());
+                            .add_path(player.get_playlist().get_fonts()[index].get_path());
                         ui.close_menu();
                     }
                 });
@@ -238,28 +238,28 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn content_controls(ui: &mut Ui, player: &mut Player) {
     ui.horizontal(|ui| {
-        let mut list_mode = player.get_workspace().get_font_list_mode();
+        let mut list_mode = player.get_playlist().get_font_list_mode();
         ui.add(actions::content_mode_selector(&mut list_mode));
-        if list_mode != player.get_workspace().get_font_list_mode() {
-            player.get_workspace_mut().set_font_list_mode(list_mode);
+        if list_mode != player.get_playlist().get_font_list_mode() {
+            player.get_playlist_mut().set_font_list_mode(list_mode);
         }
 
         ui.with_layout(Layout::right_to_left(eframe::egui::Align::Center), |ui| {
-            if player.get_workspace().get_font_list_mode() != FileListMode::Manual {
+            if player.get_playlist().get_font_list_mode() != FileListMode::Manual {
                 if let Some(path) =
-                    actions::pick_dir_button(player.get_workspace().get_font_dir(), ui)
+                    actions::pick_dir_button(player.get_playlist().get_font_dir(), ui)
                 {
-                    player.get_workspace_mut().set_font_dir(path);
+                    player.get_playlist_mut().set_font_dir(path);
                 }
                 if circle_button("🔃", ui)
                     .on_hover_text("Refresh content")
                     .clicked()
                 {
-                    player.get_workspace_mut().refresh_font_list();
+                    player.get_playlist_mut().refresh_font_list();
                 }
             } else if let Some(paths) = actions::pick_soundfonts_button(ui) {
                 for path in paths {
-                    player.get_workspace_mut().set_font_dir(path);
+                    player.get_playlist_mut().set_font_dir(path);
                 }
             }
         });
@@ -267,7 +267,7 @@ fn content_controls(ui: &mut Ui, player: &mut Player) {
 }
 
 fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Player) {
-    row.set_selected(player.get_workspace().get_font_idx().is_none());
+    row.set_selected(player.get_playlist().get_font_idx().is_none());
 
     // Remove button
     row.col(|_| {});
@@ -310,6 +310,6 @@ fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Playe
 
     // Select
     if row.response().clicked() {
-        let _ = player.get_workspace_mut().set_font_idx(None);
+        let _ = player.get_playlist_mut().set_font_idx(None);
     }
 }

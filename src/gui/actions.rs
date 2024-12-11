@@ -9,9 +9,9 @@ use rfd::FileDialog;
 use super::{
     custom_controls::circle_button,
     keyboard_shortcuts::{
-        WORKSPACE_CREATE, WORKSPACE_DUPLICATE, WORKSPACE_MOVELEFT, WORKSPACE_MOVERIGHT,
-        WORKSPACE_OPEN, WORKSPACE_REFRESH, WORKSPACE_REMOVE, WORKSPACE_REOPEN, WORKSPACE_SAVE,
-        WORKSPACE_SAVEAS, WORKSPACE_SWITCHLEFT, WORKSPACE_SWITCHRIGHT,
+        PLAYLIST, PLAYLIST_CREATE, PLAYLIST_DUPLICATE, PLAYLIST_MOVELEFT, PLAYLIST_MOVERIGHT,
+        PLAYLIST_OPEN, PLAYLIST_REMOVE, PLAYLIST_REOPEN, PLAYLIST_SAVE, PLAYLIST_SAVEAS,
+        PLAYLIST_SWITCHLEFT, PLAYLIST_SWITCHRIGHT,
     },
     modals::file_dialogs,
     GuiState,
@@ -62,42 +62,42 @@ pub fn pick_midifiles_button(ui: &mut Ui) -> Option<Vec<PathBuf>> {
     None
 }
 
-// --- Workspace File Actions --- //
+// --- Playlist File Actions --- //
 
-pub fn new_workspace(ui: &mut Ui, player: &mut Player) {
+pub fn new_playlist(ui: &mut Ui, player: &mut Player) {
     if ui
-        .add(Button::new("New").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_CREATE)))
-        .on_hover_text("Create a new workspace")
+        .add(Button::new("New").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_CREATE)))
+        .on_hover_text("Create a new playlist")
         .clicked()
     {
-        player.new_workspace();
+        player.new_playlist();
         ui.close_menu();
     }
 }
 
-pub fn open_workspace(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
+pub fn open_playlist(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     if ui
-        .add(Button::new("Open").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_OPEN)))
-        .on_hover_text("Load a workspace file")
+        .add(Button::new("Open").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_OPEN)))
+        .on_hover_text("Load a playlist file")
         .clicked()
     {
-        file_dialogs::open_workspace(player, gui);
+        file_dialogs::open_playlist(player, gui);
         ui.close_menu();
     }
 }
 
-pub fn save_workspace(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiState) {
+pub fn save_playlist(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiState) {
     ui.add_enabled_ui(
-        player.get_workspaces()[index].is_portable() && !player.autosave,
+        player.get_playlists()[index].is_portable() && !player.autosave,
         |ui| {
-            let hover_text = get_save_workspace_tooltip(player, index);
+            let hover_text = get_save_playlist_tooltip(player, index);
             if ui
                 .add(Button::new("Save"))
                 .on_hover_text(hover_text)
                 .on_disabled_hover_text(hover_text)
                 .clicked()
             {
-                if let Err(e) = player.save_portable_workspace(index) {
+                if let Err(e) = player.save_portable_playlist(index) {
                     gui.toast_error(e.to_string());
                 }
                 ui.close_menu();
@@ -106,18 +106,18 @@ pub fn save_workspace(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut 
     );
 }
 
-pub fn save_current_workspace(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
+pub fn save_current_playlist(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.add_enabled_ui(
-        player.get_workspace().is_portable() && !player.autosave,
+        player.get_playlist().is_portable() && !player.autosave,
         |ui| {
-            let hover_text = get_save_workspace_tooltip(player, player.get_workspace_idx());
+            let hover_text = get_save_playlist_tooltip(player, player.get_playlist_idx());
             if ui
-                .add(Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVE)))
+                .add(Button::new("Save").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_SAVE)))
                 .on_hover_text(hover_text)
                 .on_disabled_hover_text(hover_text)
                 .clicked()
             {
-                if let Err(e) = player.save_portable_workspace(player.get_workspace_idx()) {
+                if let Err(e) = player.save_portable_playlist(player.get_playlist_idx()) {
                     gui.toast_error(e.to_string());
                 }
                 ui.close_menu();
@@ -126,9 +126,9 @@ pub fn save_current_workspace(ui: &mut Ui, player: &mut Player, gui: &mut GuiSta
     );
 }
 
-fn get_save_workspace_tooltip(player: &Player, index: usize) -> &str {
-    if !player.get_workspaces()[index].is_portable() {
-        "Workspaces in app memory are saved automatically."
+fn get_save_playlist_tooltip(player: &Player, index: usize) -> &str {
+    if !player.get_playlists()[index].is_portable() {
+        "Playlists in app memory are saved automatically."
     } else if player.autosave {
         "Autosave is enabled."
     } else {
@@ -136,98 +136,98 @@ fn get_save_workspace_tooltip(player: &Player, index: usize) -> &str {
     }
 }
 
-pub fn save_workspace_as(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiState) {
+pub fn save_playlist_as(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiState) {
     if ui
         .add(Button::new("Save as"))
         .on_hover_text("Save a copy to a new file")
         .clicked()
     {
-        file_dialogs::save_workspace_as(player, index, gui);
+        file_dialogs::save_playlist_as(player, index, gui);
         ui.close_menu();
     }
 }
 
-pub fn save_current_workspace_as(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
+pub fn save_current_playlist_as(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     if ui
-        .add(Button::new("Save as").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SAVEAS)))
+        .add(Button::new("Save as").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_SAVEAS)))
         .on_hover_text("Save a copy to a new file")
         .clicked()
     {
-        file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
+        file_dialogs::save_playlist_as(player, player.get_playlist_idx(), gui);
         ui.close_menu();
     }
 }
 
-pub fn duplicate_workspace(ui: &mut Ui, player: &mut Player, index: usize) {
+pub fn duplicate_playlist(ui: &mut Ui, player: &mut Player, index: usize) {
     if ui
         .add(Button::new("Duplicate"))
-        .on_hover_text("Create a copy of this workspace")
+        .on_hover_text("Create a copy of this playlist")
         .clicked()
     {
-        let _ = player.duplicate_workspace(index);
+        let _ = player.duplicate_playlist(index);
         ui.close_menu();
     }
 }
 
-pub fn duplicate_current_workspace(ui: &mut Ui, player: &mut Player) {
+pub fn duplicate_current_playlist(ui: &mut Ui, player: &mut Player) {
     if ui
-        .add(Button::new("Duplicate").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_DUPLICATE)))
-        .on_hover_text("Create a copy of current workspace")
+        .add(Button::new("Duplicate").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_DUPLICATE)))
+        .on_hover_text("Create a copy of current playlist")
         .clicked()
     {
-        let _ = player.duplicate_workspace(player.get_workspace_idx());
+        let _ = player.duplicate_playlist(player.get_playlist_idx());
         ui.close_menu();
     }
 }
 
-pub fn close_workspace(ui: &mut Ui, player: &mut Player, index: usize) {
+pub fn close_playlist(ui: &mut Ui, player: &mut Player, index: usize) {
     if ui
         .add(Button::new("Close"))
-        .on_hover_text("Close workspace")
+        .on_hover_text("Close playlist")
         .clicked()
     {
-        let _ = player.remove_workspace(index);
+        let _ = player.remove_playlist(index);
         ui.close_menu();
     }
 }
 
-pub fn close_current_workspace(ui: &mut Ui, player: &mut Player) {
+pub fn close_current_playlist(ui: &mut Ui, player: &mut Player) {
     if ui
-        .add(Button::new("Close").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_REMOVE)))
-        .on_hover_text("Close workspace")
+        .add(Button::new("Close").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_REMOVE)))
+        .on_hover_text("Close playlist")
         .clicked()
     {
-        let _ = player.remove_workspace(player.get_workspace_idx());
+        let _ = player.remove_playlist(player.get_playlist_idx());
         ui.close_menu();
     }
 }
 
-pub fn reopen_workspace(ui: &mut Ui, player: &mut Player) {
+pub fn reopen_playlist(ui: &mut Ui, player: &mut Player) {
     if ui
         .add_enabled(
-            player.has_removed_workspaces(),
-            Button::new("Reopen closed").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_REOPEN)),
+            player.has_removed_playlist(),
+            Button::new("Reopen closed").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_REOPEN)),
         )
-        .on_hover_text("Reopen last closed workspace")
-        .on_disabled_hover_text("Reopen last closed workspace")
+        .on_hover_text("Reopen last closed playlist")
+        .on_disabled_hover_text("Reopen last closed playlist")
         .clicked()
     {
-        player.reopen_removed_workspace();
+        player.reopen_removed_playlist();
         ui.close_menu();
     }
 }
 
-// --- Workspace Content Actions --- //
+// --- Playlist Content Actions --- //
 
-pub fn rename_workspace(ui: &mut Ui, player: &mut Player, index: usize) {
+pub fn rename_playlist(ui: &mut Ui, player: &mut Player, index: usize) {
     ui.add(Label::new("Name:").selectable(false));
-    ui.add(TextEdit::singleline(&mut player.get_workspaces_mut()[index].name).desired_width(128.));
+    ui.add(TextEdit::singleline(&mut player.get_playlists_mut()[index].name).desired_width(128.));
 }
 
-pub fn rename_current_workspace(ui: &mut Ui, player: &mut Player) {
-    ui.menu_button("Rename Workspace", |ui| {
+pub fn rename_current_playlist(ui: &mut Ui, player: &mut Player) {
+    ui.menu_button("Rename playlist", |ui| {
         if ui
-            .add(TextEdit::singleline(&mut player.get_workspace_mut().name).desired_width(128.))
+            .add(TextEdit::singleline(&mut player.get_playlist_mut().name).desired_width(128.))
             .lost_focus()
         {
             ui.close_menu();
@@ -238,46 +238,45 @@ pub fn rename_current_workspace(ui: &mut Ui, player: &mut Player) {
     });
 }
 
-pub fn refresh_workspace(player: &mut Player, index: usize, ui: &mut Ui) {
-    let workspace = &mut player.get_workspaces_mut()[index];
-    let can_refresh = workspace.get_font_list_mode() != FileListMode::Manual
-        || workspace.get_song_list_mode() != FileListMode::Manual;
+pub fn refresh_playlist(player: &mut Player, index: usize, ui: &mut Ui) {
+    let playlist = &mut player.get_playlists_mut()[index];
+    let can_refresh = playlist.get_font_list_mode() != FileListMode::Manual
+        || playlist.get_song_list_mode() != FileListMode::Manual;
     ui.add_enabled_ui(can_refresh, |ui| {
         if ui
             .button("Refresh content")
             .on_hover_text("Refresh directory contents")
-            .on_disabled_hover_text("This workspace uses manual listing.")
+            .on_disabled_hover_text("This playlist uses manual listing.")
             .clicked()
         {
-            workspace.refresh_font_list();
-            workspace.refresh_song_list();
+            playlist.refresh_font_list();
+            playlist.refresh_song_list();
             ui.close_menu();
         }
     });
 }
 
-pub fn refresh_current_workspace(player: &mut Player, ui: &mut Ui) {
-    let can_refresh = player.get_workspace().get_font_list_mode() != FileListMode::Manual
-        || player.get_workspace().get_song_list_mode() != FileListMode::Manual;
+pub fn refresh_current_playlist(player: &mut Player, ui: &mut Ui) {
+    let can_refresh = player.get_playlist().get_font_list_mode() != FileListMode::Manual
+        || player.get_playlist().get_song_list_mode() != FileListMode::Manual;
     if ui
         .add_enabled(
             can_refresh,
-            Button::new("Refresh content")
-                .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_REFRESH)),
+            Button::new("Refresh content").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST)),
         )
         .on_hover_text("Refresh directory contents")
-        .on_disabled_hover_text("This workspace uses manual listing.")
+        .on_disabled_hover_text("This playlist uses manual listing.")
         .clicked()
     {
-        player.get_workspace_mut().refresh_font_list();
-        player.get_workspace_mut().refresh_song_list();
+        player.get_playlist_mut().refresh_font_list();
+        player.get_playlist_mut().refresh_song_list();
         ui.close_menu();
     }
 }
 
-pub fn current_workspace_fonts_action(ui: &mut Ui, player: &mut Player) {
+pub fn current_playlist_fonts_action(ui: &mut Ui, player: &mut Player) {
     ui.menu_button("Soundfonts", |ui| {
-        let mut list_mode = player.get_workspace().get_font_list_mode();
+        let mut list_mode = player.get_playlist().get_font_list_mode();
         ui.add_enabled_ui(list_mode == FileListMode::Manual, |ui| {
             if ui.button("Add soundfonts").clicked() {
                 if let Some(paths) = FileDialog::new()
@@ -285,13 +284,13 @@ pub fn current_workspace_fonts_action(ui: &mut Ui, player: &mut Player) {
                     .pick_files()
                 {
                     for path in paths {
-                        let _ = player.get_workspace_mut().add_font(path);
+                        let _ = player.get_playlist_mut().add_font(path);
                     }
                     ui.close_menu();
                 }
             }
             if ui.button("Clear soundfonts").clicked() {
-                player.get_workspace_mut().clear_fonts();
+                player.get_playlist_mut().clear_fonts();
                 ui.close_menu();
             }
         });
@@ -304,13 +303,13 @@ pub fn current_workspace_fonts_action(ui: &mut Ui, player: &mut Player) {
             "Subdirectories",
         );
         if response1.clicked() || response2.clicked() || response3.clicked() {
-            player.get_workspace_mut().set_font_list_mode(list_mode);
+            player.get_playlist_mut().set_font_list_mode(list_mode);
         }
     });
 }
-pub fn current_workspace_songs_action(ui: &mut Ui, player: &mut Player) {
+pub fn current_playlist_songs_action(ui: &mut Ui, player: &mut Player) {
     ui.menu_button("Songs", |ui| {
-        let mut list_mode = player.get_workspace().get_song_list_mode();
+        let mut list_mode = player.get_playlist().get_song_list_mode();
         ui.add_enabled_ui(list_mode == FileListMode::Manual, |ui| {
             if ui.button("Add songs").clicked() {
                 if let Some(paths) = FileDialog::new()
@@ -318,13 +317,13 @@ pub fn current_workspace_songs_action(ui: &mut Ui, player: &mut Player) {
                     .pick_files()
                 {
                     for path in paths {
-                        let _ = player.get_workspace_mut().add_song(path);
+                        let _ = player.get_playlist_mut().add_song(path);
                     }
                     ui.close_menu();
                 }
             }
             if ui.button("Clear songs").clicked() {
-                player.get_workspace_mut().clear_songs();
+                player.get_playlist_mut().clear_songs();
                 ui.close_menu();
             }
         });
@@ -337,7 +336,7 @@ pub fn current_workspace_songs_action(ui: &mut Ui, player: &mut Player) {
             "Subdirectories",
         );
         if response1.clicked() || response2.clicked() || response3.clicked() {
-            player.get_workspace_mut().set_song_list_mode(list_mode);
+            player.get_playlist_mut().set_song_list_mode(list_mode);
         }
     });
 }
@@ -363,93 +362,93 @@ pub fn content_mode_selector(mode: &mut FileListMode) -> impl Widget + '_ {
     }
 }
 
-// --- Workspace Navigation --- //
+// --- Playlist Navigation --- //
 
-pub fn switch_workspace_left(ui: &mut Ui, player: &mut Player) {
+pub fn switch_playlist_left(ui: &mut Ui, player: &mut Player) {
     if ui
         .add_enabled(
-            player.get_workspace_idx() > 0,
+            player.get_playlist_idx() > 0,
             Button::new("Switch one left")
-                .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SWITCHLEFT)),
+                .shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_SWITCHLEFT)),
         )
-        .on_hover_text("Switch to previous workspace")
-        .on_disabled_hover_text("Switch to previous workspace")
+        .on_hover_text("Switch to previous playlist")
+        .on_disabled_hover_text("Switch to previous playlist")
         .clicked()
     {
-        let _ = player.switch_workspace_left();
+        let _ = player.switch_playlist_left();
         ui.close_menu();
     }
 }
 
-pub fn switch_workspace_right(ui: &mut Ui, player: &mut Player) {
+pub fn switch_playlist_right(ui: &mut Ui, player: &mut Player) {
     if ui
         .add_enabled(
-            player.get_workspace_idx() < player.get_workspaces().len() - 1,
+            player.get_playlist_idx() < player.get_playlists().len() - 1,
             Button::new("Switch one right")
-                .shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_SWITCHRIGHT)),
+                .shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_SWITCHRIGHT)),
         )
-        .on_hover_text("Switch to next workspace")
-        .on_disabled_hover_text("Switch to next workspace")
+        .on_hover_text("Switch to next playlist")
+        .on_disabled_hover_text("Switch to next playlist")
         .clicked()
     {
-        let _ = player.switch_workspace_right();
+        let _ = player.switch_playlist_right();
         ui.close_menu();
     }
 }
 
-pub fn move_workspace_left(ui: &mut Ui, player: &mut Player, index: usize) {
+pub fn move_playlist_left(ui: &mut Ui, player: &mut Player, index: usize) {
     if ui
         .add_enabled(index > 0, Button::new("Move left"))
-        .on_hover_text("Move workspace left")
-        .on_disabled_hover_text("Move workspace left")
+        .on_hover_text("Move playlist left")
+        .on_disabled_hover_text("Move playlist left")
         .clicked()
     {
-        let _ = player.move_workspace(index, index - 1);
+        let _ = player.move_playlist(index, index - 1);
         ui.close_menu();
     }
 }
 
-pub fn move_current_workspace_left(ui: &mut Ui, player: &mut Player) {
+pub fn move_current_playlist_left(ui: &mut Ui, player: &mut Player) {
     if ui
         .add_enabled(
-            player.get_workspace_idx() > 0,
-            Button::new("Move left").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_MOVELEFT)),
+            player.get_playlist_idx() > 0,
+            Button::new("Move left").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_MOVELEFT)),
         )
-        .on_hover_text("Move workspace left")
-        .on_disabled_hover_text("Move workspace left")
+        .on_hover_text("Move playlist left")
+        .on_disabled_hover_text("Move playlist left")
         .clicked()
     {
-        let _ = player.move_workspace_left();
+        let _ = player.move_playlist_left();
         ui.close_menu();
     }
 }
 
-pub fn move_workspace_right(ui: &mut Ui, player: &mut Player, index: usize) {
+pub fn move_playlist_right(ui: &mut Ui, player: &mut Player, index: usize) {
     if ui
         .add_enabled(
-            index < player.get_workspaces().len() - 1,
+            index < player.get_playlists().len() - 1,
             Button::new("Move right"),
         )
-        .on_hover_text("Move workspace right")
-        .on_disabled_hover_text("Move workspace right")
+        .on_hover_text("Move playlist right")
+        .on_disabled_hover_text("Move playlist right")
         .clicked()
     {
-        let _ = player.move_workspace(index, index + 1);
+        let _ = player.move_playlist(index, index + 1);
         ui.close_menu();
     }
 }
 
-pub fn move_current_workspace_right(ui: &mut Ui, player: &mut Player) {
+pub fn move_current_playlist_right(ui: &mut Ui, player: &mut Player) {
     if ui
         .add_enabled(
-            player.get_workspace_idx() < player.get_workspaces().len() - 1,
-            Button::new("Move right").shortcut_text(ui.ctx().format_shortcut(&WORKSPACE_MOVERIGHT)),
+            player.get_playlist_idx() < player.get_playlists().len() - 1,
+            Button::new("Move right").shortcut_text(ui.ctx().format_shortcut(&PLAYLIST_MOVERIGHT)),
         )
-        .on_hover_text("Move workspace right")
-        .on_disabled_hover_text("Move workspace right")
+        .on_hover_text("Move playlist right")
+        .on_disabled_hover_text("Move playlist right")
         .clicked()
     {
-        let _ = player.move_workspace_right();
+        let _ = player.move_playlist_right();
         ui.close_menu();
     }
 }

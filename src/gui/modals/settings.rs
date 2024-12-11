@@ -36,7 +36,7 @@ pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
                         theme_control(ui);
                         ui.add(toggle_row(
                             "Autosave",
-                            "Disable manual saving and use autosave for all workspaces",
+                            "Disable manual saving and use autosave for all playlists",
                             &mut player.autosave,
                         ));
                         ui.add(toggle_row(

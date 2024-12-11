@@ -23,27 +23,27 @@ pub fn toolbar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ui.menu_button("File", |ui| {
-        actions::new_workspace(ui, player);
-        actions::open_workspace(ui, player, gui);
-        actions::save_current_workspace(ui, player, gui);
-        actions::save_current_workspace_as(ui, player, gui);
-        actions::duplicate_current_workspace(ui, player);
-        actions::close_current_workspace(ui, player);
-        actions::reopen_workspace(ui, player);
+        actions::new_playlist(ui, player);
+        actions::open_playlist(ui, player, gui);
+        actions::save_current_playlist(ui, player, gui);
+        actions::save_current_playlist_as(ui, player, gui);
+        actions::duplicate_current_playlist(ui, player);
+        actions::close_current_playlist(ui, player);
+        actions::reopen_playlist(ui, player);
 
         ui.separator();
 
-        actions::rename_current_workspace(ui, player);
-        actions::refresh_current_workspace(player, ui);
-        actions::current_workspace_fonts_action(ui, player);
-        actions::current_workspace_songs_action(ui, player);
+        actions::rename_current_playlist(ui, player);
+        actions::refresh_current_playlist(player, ui);
+        actions::current_playlist_fonts_action(ui, player);
+        actions::current_playlist_songs_action(ui, player);
 
         ui.separator();
 
-        actions::switch_workspace_left(ui, player);
-        actions::switch_workspace_right(ui, player);
-        actions::move_current_workspace_left(ui, player);
-        actions::move_current_workspace_right(ui, player);
+        actions::switch_playlist_left(ui, player);
+        actions::switch_playlist_right(ui, player);
+        actions::move_current_playlist_left(ui, player);
+        actions::move_current_playlist_right(ui, player);
 
         ui.separator();
 

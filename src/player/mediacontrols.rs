@@ -44,12 +44,12 @@ impl Player {
     pub(super) fn mediacontrol_update_song(&mut self) {
         #[cfg(not(target_os = "windows"))]
         {
-            let Some(midi_index) = self.get_workspace().get_song_idx() else {
+            let Some(midi_index) = self.get_playlist().get_song_idx() else {
                 // Clear song
                 let _ = self.mediacontrol.set_metadata(MediaMetadata::default());
                 return;
             };
-            let midi = &self.get_workspace().get_songs()[midi_index];
+            let midi = &self.get_playlist().get_songs()[midi_index];
 
             let filename = midi.get_name();
             let _ = self.mediacontrol.set_metadata(MediaMetadata {

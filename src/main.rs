@@ -7,7 +7,7 @@ use std::{
 
 use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
-use player::{workspace::Workspace, Player};
+use player::{workspace::Playlist, Player};
 use rodio::{OutputStream, Sink};
 
 mod gui;
@@ -78,28 +78,28 @@ impl SfontPlayer {
     fn handle_launch_args(&mut self, args: &[String]) {
         let mut player = self.player.lock();
 
-        let mut new_workspace = Workspace::default();
-        new_workspace.name = "Opened files".into();
+        let mut new_playlist = Playlist::default();
+        new_playlist.name = "Opened files".into();
 
         for (i, arg) in args.iter().enumerate() {
             if i == 0 {
                 continue;
             }
             if arg.ends_with(".sfontspace") {
-                if let Err(e) = player.open_portable_workspace(arg.into()) {
+                if let Err(e) = player.open_portable_playlist(arg.into()) {
                     self.gui_state.toast_error(e.to_string());
                 }
-            } else if let Err(e) = new_workspace.add_file(arg.into()) {
+            } else if let Err(e) = new_playlist.add_file(arg.into()) {
                 self.gui_state.toast_error(e.to_string());
             }
         }
-        let has_fonts = !new_workspace.get_fonts().is_empty();
-        let has_songs = !new_workspace.get_songs().is_empty();
+        let has_fonts = !new_playlist.get_fonts().is_empty();
+        let has_songs = !new_playlist.get_songs().is_empty();
 
         if has_fonts || has_songs {
-            player.get_workspaces_mut().push(new_workspace);
-            let index = player.get_workspaces().len() - 1;
-            player.switch_to_workspace(index).expect("unreachable");
+            player.get_playlists_mut().push(new_playlist);
+            let index = player.get_playlists().len() - 1;
+            player.switch_to_playlist(index).expect("unreachable");
         }
         if has_songs {
             player.start();
@@ -119,8 +119,8 @@ impl SfontPlayer {
             return;
         }
 
-        for workspace in player.get_workspaces() {
-            if workspace.has_unsaved_changes() {
+        for playlist in player.get_playlists() {
+            if playlist.has_unsaved_changes() {
                 self.gui_state.show_unsaved_quit_modal = true;
                 ctx.send_viewport_cmd(ViewportCommand::CancelClose);
             }
@@ -193,8 +193,8 @@ fn update_thread(player: Arc<Mutex<Player>>) {
             t_since_file_refresh += now - prev_update;
             if t_since_file_refresh >= FILELIST_REFRESH_INTERVAL {
                 t_since_file_refresh -= FILELIST_REFRESH_INTERVAL;
-                player.lock().get_workspace_mut().refresh_font_list();
-                player.lock().get_workspace_mut().refresh_song_list();
+                player.lock().get_playlist_mut().refresh_font_list();
+                player.lock().get_playlist_mut().refresh_song_list();
             }
 
             prev_update = now;

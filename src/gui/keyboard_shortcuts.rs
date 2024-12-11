@@ -15,22 +15,21 @@ pub const PLAYBACK_SHUFFLE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::
 pub const PLAYBACK_VOLUP: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowUp);
 pub const PLAYBACK_VOLDN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::ArrowDown);
 
-pub const WORKSPACE_SWITCHLEFT: KeyboardShortcut =
+pub const PLAYLIST_SWITCHLEFT: KeyboardShortcut =
     KeyboardShortcut::new(Modifiers::ALT, Key::ArrowLeft);
-pub const WORKSPACE_SWITCHRIGHT: KeyboardShortcut =
+pub const PLAYLIST_SWITCHRIGHT: KeyboardShortcut =
     KeyboardShortcut::new(Modifiers::ALT, Key::ArrowRight);
-pub const WORKSPACE_MOVELEFT: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowLeft);
-pub const WORKSPACE_MOVERIGHT: KeyboardShortcut =
-    KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowRight);
-pub const WORKSPACE_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
-pub const WORKSPACE_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
-pub const WORKSPACE_REFRESH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
-pub const WORKSPACE_OPEN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::O);
-pub const WORKSPACE_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
-pub const WORKSPACE_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
-pub const WORKSPACE_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::S);
-pub const WORKSPACE_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
-pub const WORKSPACE_REOPEN: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::T);
+pub const PLAYLIST_MOVELEFT: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowLeft);
+pub const PLAYLIST_MOVERIGHT: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::ArrowRight);
+pub const PLAYLIST_REMOVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::W);
+pub const PLAYLIST_CREATE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::N);
+pub const PLAYLIST: KeyboardShortcut = KeyboardShortcut::new(Modifiers::NONE, Key::F5);
+pub const PLAYLIST_OPEN: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::O);
+pub const PLAYLIST_SAVE: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::S);
+pub const PLAYLIST_SAVEAS: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::S);
+pub const PLAYLIST_SAVEALL: KeyboardShortcut = KeyboardShortcut::new(CTRL_ALT, Key::S);
+pub const PLAYLIST_DUPLICATE: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::D);
+pub const PLAYLIST_REOPEN: KeyboardShortcut = KeyboardShortcut::new(CTRL_SHIFT, Key::T);
 
 pub const GUI_QUIT: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::Q);
 pub const GUI_SHOWFONTS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::S);
@@ -50,29 +49,29 @@ pub fn consume_shortcuts(ctx: &Context, player: &mut Player, gui: &mut GuiState)
 
 fn consume_2_modifiers(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     ctx.input_mut(|input| {
-        if input.consume_shortcut(&WORKSPACE_MOVELEFT) {
-            if let Err(e) = player.move_workspace_left() {
+        if input.consume_shortcut(&PLAYLIST_MOVELEFT) {
+            if let Err(e) = player.move_playlist_left() {
                 gui.toast_error(e.to_string());
             }
         }
-        if input.consume_shortcut(&WORKSPACE_MOVERIGHT) {
-            if let Err(e) = player.move_workspace_right() {
+        if input.consume_shortcut(&PLAYLIST_MOVERIGHT) {
+            if let Err(e) = player.move_playlist_right() {
                 gui.toast_error(e.to_string());
             }
         }
-        if input.consume_shortcut(&WORKSPACE_SAVEAS) {
-            file_dialogs::save_workspace_as(player, player.get_workspace_idx(), gui);
+        if input.consume_shortcut(&PLAYLIST_SAVEAS) {
+            file_dialogs::save_playlist_as(player, player.get_playlist_idx(), gui);
         }
-        if input.consume_shortcut(&WORKSPACE_SAVEALL) {
-            if let Err(e) = player.save_all_portable_workspaces() {
+        if input.consume_shortcut(&PLAYLIST_SAVEALL) {
+            if let Err(e) = player.save_all_portable_playlists() {
                 gui.toast_error(e.to_string());
             }
         }
-        if input.consume_shortcut(&WORKSPACE_DUPLICATE) {
-            let _ = player.duplicate_workspace(player.get_workspace_idx());
+        if input.consume_shortcut(&PLAYLIST_DUPLICATE) {
+            let _ = player.duplicate_playlist(player.get_playlist_idx());
         }
-        if input.consume_shortcut(&WORKSPACE_REOPEN) {
-            player.reopen_removed_workspace();
+        if input.consume_shortcut(&PLAYLIST_REOPEN) {
+            player.reopen_removed_playlist();
         }
     });
 }
@@ -97,31 +96,31 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             player.set_volume(volume - 5.);
         }
 
-        if input.consume_shortcut(&WORKSPACE_SWITCHLEFT) {
-            if let Err(e) = player.switch_workspace_left() {
+        if input.consume_shortcut(&PLAYLIST_SWITCHLEFT) {
+            if let Err(e) = player.switch_playlist_left() {
                 gui.toast_error(e.to_string());
             }
         }
-        if input.consume_shortcut(&WORKSPACE_SWITCHRIGHT) {
-            if let Err(e) = player.switch_workspace_right() {
+        if input.consume_shortcut(&PLAYLIST_SWITCHRIGHT) {
+            if let Err(e) = player.switch_playlist_right() {
                 gui.toast_error(e.to_string());
             }
         }
-        if input.consume_shortcut(&WORKSPACE_CREATE) {
-            player.new_workspace();
-            let _ = player.switch_to_workspace(player.get_workspaces().len() - 1);
+        if input.consume_shortcut(&PLAYLIST_CREATE) {
+            player.new_playlist();
+            let _ = player.switch_to_playlist(player.get_playlists().len() - 1);
         }
-        if input.consume_shortcut(&WORKSPACE_REMOVE) {
-            let _ = player.remove_workspace(player.get_workspace_idx());
+        if input.consume_shortcut(&PLAYLIST_REMOVE) {
+            let _ = player.remove_playlist(player.get_playlist_idx());
         }
-        if input.consume_shortcut(&WORKSPACE_OPEN) {
-            file_dialogs::open_workspace(player, gui);
+        if input.consume_shortcut(&PLAYLIST_OPEN) {
+            file_dialogs::open_playlist(player, gui);
         }
-        if input.consume_shortcut(&WORKSPACE_SAVE) {
+        if input.consume_shortcut(&PLAYLIST_SAVE) {
             if player.autosave {
                 return;
             }
-            if let Err(e) = player.save_portable_workspace(player.get_workspace_idx()) {
+            if let Err(e) = player.save_portable_playlist(player.get_playlist_idx()) {
                 gui.toast_error(e.to_string());
             }
         }
@@ -167,9 +166,9 @@ fn consume_no_modifiers(ctx: &Context, player: &mut Player, _gui: &GuiState) {
         if input.consume_shortcut(&PLAYBACK_REPEAT) {
             player.cycle_repeat();
         }
-        if input.consume_shortcut(&WORKSPACE_REFRESH) {
-            player.get_workspace_mut().refresh_font_list();
-            player.get_workspace_mut().refresh_song_list();
+        if input.consume_shortcut(&PLAYLIST) {
+            player.get_playlist_mut().refresh_font_list();
+            player.get_playlist_mut().refresh_song_list();
         }
     });
 }

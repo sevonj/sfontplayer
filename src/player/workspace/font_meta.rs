@@ -120,31 +120,31 @@ impl TryFrom<&serde_json::Value> for FontMeta {
 mod tests {
 
     use super::*;
-    use crate::player::workspace::Workspace;
+    use crate::player::workspace::Playlist;
     use serde_json::Value;
 
-    fn run_serialize(workspace: Workspace) -> Workspace {
-        Workspace::from(Value::from(&workspace))
+    fn run_serialize(playlist: Playlist) -> Playlist {
+        Playlist::from(Value::from(&playlist))
     }
 
     #[test]
     fn test_serialize_filepath() {
-        let mut workspace = Workspace::default();
+        let mut playlist = Playlist::default();
         let font = FontMeta {
             filepath: "Fakepath".into(),
             ..Default::default()
         };
-        workspace.fonts.push(font);
-        let new_workspace = run_serialize(workspace);
+        playlist.fonts.push(font);
+        let new_playlist = run_serialize(playlist);
         assert_eq!(
-            new_workspace.fonts[0].get_path().to_str().unwrap(),
+            new_playlist.fonts[0].get_path().to_str().unwrap(),
             "Fakepath"
         );
     }
 
     #[test]
     fn test_serialize_filesize() {
-        let mut workspace = Workspace::default();
+        let mut playlist = Playlist::default();
         let font_none = FontMeta {
             filepath: "unused".into(),
             filesize: None,
@@ -155,10 +155,10 @@ mod tests {
             filesize: Some(420),
             ..Default::default()
         };
-        workspace.fonts.push(font_none);
-        workspace.fonts.push(font_420);
-        let new_workspace = run_serialize(workspace);
-        assert_eq!(new_workspace.fonts[0].get_size(), None);
-        assert_eq!(new_workspace.fonts[1].get_size().unwrap(), 420);
+        playlist.fonts.push(font_none);
+        playlist.fonts.push(font_420);
+        let new_playlist = run_serialize(playlist);
+        assert_eq!(new_playlist.fonts[0].get_size(), None);
+        assert_eq!(new_playlist.fonts[1].get_size().unwrap(), 420);
     }
 }

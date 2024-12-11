@@ -16,12 +16,12 @@ enum DialogButtonStyle {
     Destructive,
 }
 
-/// Workspace close confirm with unsaved changes
+/// Playlist close confirm with unsaved changes
 pub fn unsaved_close_dialog(ctx: &Context, player: &mut Player) {
-    let Some(index) = player.get_workspace_waiting_for_discard() else {
+    let Some(index) = player.get_playlist_waiting_for_discard() else {
         return;
     };
-    let name = player.get_workspaces()[index].name.clone();
+    let name = player.get_playlists()[index].name.clone();
 
     Window::new("Unsaved changes")
         .collapsible(false)
@@ -39,8 +39,8 @@ pub fn unsaved_close_dialog(ctx: &Context, player: &mut Player) {
                 ui.vertical(|ui| {
                     ui.add_space(10.);
                     ui.heading("Unsaved changes");
-                    ui.label("You have unsaved changes. Close this workspace?");
-                    ui.label(format!("Workspace: {name}"));
+                    ui.label("You have unsaved changes. Close this playlist?");
+                    ui.label(format!("Playlist: {name}"));
                 });
                 ui.add_space(16.);
             });
@@ -49,17 +49,17 @@ pub fn unsaved_close_dialog(ctx: &Context, player: &mut Player) {
                 ui.add_space(12.);
 
                 if add_dialog_button(ui, "Discard", &DialogButtonStyle::Destructive).clicked() {
-                    let _ = player.force_remove_workspace(index);
+                    let _ = player.force_remove_playlist(index);
                 };
 
                 ui.add_enabled_ui(!player.debug_block_saving, |ui| {
                     if add_dialog_button(ui, "Save", &DialogButtonStyle::Suggested).clicked() {
-                        let _ = player.save_portable_workspace(index);
+                        let _ = player.save_portable_playlist(index);
                     };
                 });
 
                 if add_dialog_button(ui, "Cancel", &DialogButtonStyle::None).clicked() {
-                    let _ = player.cancel_remove_workspace(index);
+                    let _ = player.cancel_remove_playlist(index);
                 };
             });
             ui.add_space(4.);
@@ -102,7 +102,7 @@ pub fn unsaved_quit_dialog(ctx: &Context, player: &mut Player, gui: &mut GuiStat
                         if add_dialog_button(ui, "Save all and quit", &DialogButtonStyle::Suggested)
                             .clicked()
                         {
-                            let _ = player.save_all_portable_workspaces();
+                            let _ = player.save_all_portable_playlists();
                             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
                         };
                     });

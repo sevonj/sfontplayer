@@ -36,7 +36,7 @@ fn empty_lib_placeholder(ui: &mut Ui, gui: &mut GuiState) {
 
 #[allow(clippy::too_many_lines)]
 fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
-    let playlist_font_override = player.get_workspace().get_font_idx().is_some();
+    let playlist_font_override = player.get_playlist().get_font_idx().is_some();
     if playlist_font_override {
         // Less intense gray highlight
         ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
@@ -152,28 +152,28 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 }
                 actions::open_file_dir(ui, &player.font_lib.get_fonts()[index].get_path(), gui);
 
-                ui.menu_button("Add to workspace", |ui| {
+                ui.menu_button("Add to playlist", |ui| {
                     let Ok(filepath) = player.font_lib.get_font(index).map(FontMeta::get_path)
                     else {
                         ui.label("Failed to get font");
                         return;
                     };
-                    if ui.button("➕ New workspace").clicked() {
-                        player.new_workspace();
-                        let workspace_index = player.get_workspaces().len() - 1;
+                    if ui.button("➕ New playlist").clicked() {
+                        player.new_playlist();
+                        let playlist_index = player.get_playlists().len() - 1;
                         let _ =
-                            player.get_workspaces_mut()[workspace_index].add_font(filepath.clone());
+                            player.get_playlists_mut()[playlist_index].add_font(filepath.clone());
                     }
-                    for i in 0..player.get_workspaces().len() {
-                        let workspace = &player.get_workspaces_mut()[i];
+                    for i in 0..player.get_playlists().len() {
+                        let playlist = &player.get_playlists_mut()[i];
 
-                        let already_contains = workspace.contains_font(&filepath);
-                        let dir_list = workspace.get_font_list_mode() != FileListMode::Manual;
+                        let already_contains = playlist.contains_font(&filepath);
+                        let dir_list = playlist.get_font_list_mode() != FileListMode::Manual;
 
                         let hovertext = if dir_list {
                             "Can't manually add files to directory list."
                         } else if already_contains {
-                            "Workspace already contains this file."
+                            "Playlist already contains this file."
                         } else {
                             ""
                         };
@@ -181,12 +181,12 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         if ui
                             .add_enabled(
                                 !already_contains && !dir_list,
-                                Button::new(&workspace.name),
+                                Button::new(&playlist.name),
                             )
                             .on_disabled_hover_text(hovertext)
                             .clicked()
                         {
-                            let _ = player.get_workspaces_mut()[i].add_font(filepath.clone());
+                            let _ = player.get_playlists_mut()[i].add_font(filepath.clone());
                             ui.close_menu();
                         }
                     }

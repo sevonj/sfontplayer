@@ -12,11 +12,11 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use super::{workspace::Workspace, Player, RepeatMode};
+use super::{workspace::Playlist, Player, RepeatMode};
 use crate::player::{workspace::font_meta::FontMeta, PlayerError};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct WorkspaceListEntry {
+struct PlaylistListEntry {
     pub filepath: String,
     pub portable: bool,
 }
@@ -26,8 +26,8 @@ impl Player {
         if self.debug_block_saving {
             bail!(PlayerError::DebugBlockSaving)
         }
-        if let Err(e) = self.save_workspaces() {
-            bail!(format!("save_workspaces(): {e}"))
+        if let Err(e) = self.save_playlists() {
+            bail!(format!("save_playlists(): {e}"))
         }
         if let Err(e) = self.save_config() {
             bail!(format!("save_config(): {e}"))
@@ -40,8 +40,8 @@ impl Player {
     }
 
     pub fn load_state(&mut self) -> anyhow::Result<()> {
-        if let Err(e) = self.load_workspaces() {
-            bail!(format!("load_workspaces(): {e}"))
+        if let Err(e) = self.load_playlists() {
+            bail!(format!("load_playlists(): {e}"))
         }
         if let Err(e) = self.load_config() {
             bail!(format!("load_config(): {e}"))
@@ -60,7 +60,7 @@ impl Player {
         let data = json! ({
             "shuffle": self.shuffle,
             "repeat": self.repeat,
-            "workspace_idx": self.workspace_idx,
+            "playlist_idx": self.playlist_idx,
             "autosave": self.autosave,
         });
         let config_file = state_dir.join("state.json");
@@ -79,8 +79,8 @@ impl Player {
         if let Some(repeat) = data["repeat"].as_u64() {
             self.repeat = RepeatMode::try_from(repeat as u8).unwrap_or_default();
         }
-        self.workspace_idx = match data["workspace_idx"].as_u64() {
-            Some(x) if (x as usize) < self.workspaces.len() => x as usize,
+        self.playlist_idx = match data["playlist_idx"].as_u64() {
+            Some(x) if (x as usize) < self.playlists.len() => x as usize,
             _ => 0,
         };
         self.autosave = data["autosave"].as_bool().is_some_and(|value| value);
@@ -126,82 +126,82 @@ impl Player {
         Ok(())
     }
 
-    fn save_workspaces(&mut self) -> anyhow::Result<()> {
+    fn save_playlists(&mut self) -> anyhow::Result<()> {
         let project_dirs = project_dirs();
         let data_dir = project_dirs.data_dir();
-        let workspace_dir = data_dir.join("workspaces");
-        let workspace_dir_rel = PathBuf::from(".").join("workspaces");
-        fs::create_dir_all(&workspace_dir)?;
+        let playlist_dir = data_dir.join("playlists");
+        let playlist_dir_rel = PathBuf::from(".").join("playlists");
+        fs::create_dir_all(&playlist_dir)?;
 
-        for file in fs::read_dir(&workspace_dir)? {
+        for file in fs::read_dir(&playlist_dir)? {
             let filepath = file?.path();
             remove_file(filepath)?;
         }
 
-        let mut workspace_list = vec![];
-        for i in 0..self.workspaces.len() {
-            let workspace = &mut self.workspaces[i];
-            let filename = generate_workspace_filename(workspace, i);
+        let mut playlist_list = vec![];
+        for i in 0..self.playlists.len() {
+            let playlist = &mut self.playlists[i];
+            let filename = generate_playlist_filename(playlist, i);
 
-            // Relative if builtin storage ("./workspaces/filename.json"), absolute if portable
-            let filepath = workspace
+            // Relative if builtin storage ("./playlists/filename.json"), absolute if portable
+            let filepath = playlist
                 .get_portable_path()
-                .unwrap_or_else(|| workspace_dir_rel.join(&filename))
+                .unwrap_or_else(|| playlist_dir_rel.join(&filename))
                 .to_str()
-                .expect("Workspace filepath string conversion failed.")
+                .expect("Playlist filepath string conversion failed.")
                 .to_owned();
-            workspace_list.push(WorkspaceListEntry {
+            playlist_list.push(PlaylistListEntry {
                 filepath,
-                portable: workspace.is_portable(),
+                portable: playlist.is_portable(),
             });
 
-            if !workspace.is_portable() {
-                let abs_path = workspace
+            if !playlist.is_portable() {
+                let abs_path = playlist
                     .get_portable_path()
-                    .unwrap_or_else(|| workspace_dir.join(filename));
-                let mut workspace_file = File::create(&abs_path)?;
-                workspace_file.write_all(Value::from(&*workspace).to_string().as_bytes())?;
+                    .unwrap_or_else(|| playlist_dir.join(filename));
+                let mut playlist_file = File::create(&abs_path)?;
+                playlist_file.write_all(Value::from(&*playlist).to_string().as_bytes())?;
             } else if self.autosave {
-                let _ = workspace.save_portable();
+                let _ = playlist.save_portable();
             }
         }
 
-        let filepath = data_dir.join("workspaces.json");
-        let data = json!(workspace_list);
+        let filepath = data_dir.join("playlists.json");
+        let data = json!(playlist_list);
         let mut file = File::create(filepath)?;
         file.write_all(data.to_string().as_bytes())?;
 
         Ok(())
     }
 
-    fn load_workspaces(&mut self) -> anyhow::Result<()> {
+    fn load_playlists(&mut self) -> anyhow::Result<()> {
         let project_dirs = project_dirs();
         let data_dir = project_dirs.data_dir();
 
-        let filepath = data_dir.join("workspaces.json");
+        let filepath = data_dir.join("playlists.json");
         let data_string = std::fs::read_to_string(filepath)?;
-        let data: Vec<WorkspaceListEntry> = serde_json::from_str(&data_string)?;
+        let data: Vec<PlaylistListEntry> = serde_json::from_str(&data_string)?;
 
         for entry in data {
-            let workspace = if entry.portable {
-                Workspace::open_portable(entry.filepath.into())?
+            let playlist = if entry.portable {
+                Playlist::open_portable(entry.filepath.into())?
             } else {
                 let wksp_path = data_dir.join(entry.filepath);
                 let wksp_str = std::fs::read_to_string(wksp_path)?;
                 let wksp_data: Value = serde_json::from_str(&wksp_str)?;
-                Workspace::from(wksp_data)
+                Playlist::from(wksp_data)
             };
-            self.workspaces.push(workspace);
+            self.playlists.push(playlist);
         }
 
         Ok(())
     }
 }
 
-fn generate_workspace_filename(workspace: &Workspace, idx: usize) -> String {
+fn generate_playlist_filename(playlist: &Playlist, idx: usize) -> String {
     format!(
         "{idx:02}_{}.json",
-        workspace
+        playlist
             .name
             .replace(|c: char| !c.is_ascii_alphanumeric(), "")
             .to_lowercase()

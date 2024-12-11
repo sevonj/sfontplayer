@@ -23,15 +23,12 @@ pub fn playback_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 }
 
 fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
-    let (back_enabled, skip_enabled) = if player.get_playing_workspace().queue.is_empty() {
+    let (back_enabled, skip_enabled) = if player.get_playing_playlist().queue.is_empty() {
         (false, false)
     } else if player.get_repeat() == RepeatMode::Queue && player.is_playing() {
         (true, true)
-    } else if let Some(idx) = player.get_playing_workspace().queue_idx {
-        (
-            idx > 0,
-            idx < player.get_playing_workspace().queue.len() - 1,
-        )
+    } else if let Some(idx) = player.get_playing_playlist().queue_idx {
+        (idx > 0, idx < player.get_playing_playlist().queue.len() - 1)
     } else {
         (false, false)
     };
@@ -44,20 +41,20 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         } else {
             "playing"
         },
-        player.get_playing_workspace().get_song_idx().map_or_else(
+        player.get_playing_playlist().get_song_idx().map_or_else(
             || "Nothing".into(),
-            |index| player.get_playing_workspace().get_songs()[index].get_name()
+            |index| player.get_playing_playlist().get_songs()[index].get_name()
         )
     );
     if ui
         .add_enabled(
-            player.get_playing_workspace().get_song_idx().is_some(),
+            player.get_playing_playlist().get_song_idx().is_some(),
             Button::new(RichText::new("🎵").size(ICON_SIZE)).frame(false),
         )
         .on_hover_text(current_hover_text)
         .clicked()
     {
-        let _ = player.switch_to_workspace(player.get_playing_workspace_idx());
+        let _ = player.switch_to_playlist(player.get_playing_playlist_idx());
         gui.update_flags.scroll_to_song = true;
     }
 
