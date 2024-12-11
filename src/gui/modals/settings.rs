@@ -6,6 +6,7 @@ use eframe::egui::{
 use egui_extras::{Column, TableBuilder};
 
 use crate::{
+    gui::actions,
     player::{soundfont_library::FontLibrary, Player},
     GuiState,
 };
@@ -16,15 +17,14 @@ pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     let window_size = ctx.input(InputState::screen_rect).size() - Vec2 { x: 32., y: 64. };
     let modal_size = window_size.min(Vec2 { x: 600., y: 800. });
 
+    let mut show_settings_modal = gui.show_settings_modal;
     Window::new("Settings")
         .collapsible(false)
         .fixed_size(modal_size)
         .anchor(Align2::CENTER_CENTER, vec2(0., 0.))
-        .open(&mut gui.show_settings_modal)
+        .open(&mut show_settings_modal)
         .show(ctx, |ui| {
-            //ui.set_height(window_rect.height());
             ScrollArea::vertical().show(ui, |ui| {
-                //ui.set_width(window_rect.width());
                 ui.horizontal(|ui| {
                     ui.add_space(8.);
                     ui.vertical(|ui| {
@@ -47,7 +47,7 @@ pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
 
                         category_heading(ui, "Soundfont library");
 
-                        font_lib_paths(ui, &mut player.font_lib);
+                        font_lib_paths(ui, &mut player.font_lib, gui);
 
                         if ui
                             .add(toggle_row(
@@ -74,6 +74,7 @@ pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
                 });
             });
         });
+    gui.show_settings_modal = show_settings_modal;
 }
 
 fn category_heading<S>(ui: &mut Ui, title: S)
@@ -165,7 +166,7 @@ fn theme_control(ui: &mut Ui) {
     ui.add_space(8.);
 }
 
-fn font_lib_paths(ui: &mut Ui, font_lib: &mut FontLibrary) {
+fn font_lib_paths(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) {
     let title = "Paths";
     let subtitle = "Paths to search soundfonts from";
 
@@ -181,7 +182,7 @@ fn font_lib_paths(ui: &mut Ui, font_lib: &mut FontLibrary) {
         if font_lib.get_paths().is_empty() {
             ui.label("No paths added.");
         } else {
-            font_lib_table(ui, font_lib);
+            font_lib_table(ui, font_lib, gui);
         }
         ui.add_space(8.);
 
@@ -201,7 +202,7 @@ fn font_lib_paths(ui: &mut Ui, font_lib: &mut FontLibrary) {
     ui.add_space(8.);
 }
 
-fn font_lib_table(ui: &mut Ui, font_lib: &mut FontLibrary) {
+fn font_lib_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) {
     let tablebuilder = TableBuilder::new(ui)
         .striped(true)
         .column(Column::exact(16.))
@@ -228,42 +229,29 @@ fn font_lib_table(ui: &mut Ui, font_lib: &mut FontLibrary) {
                     let _ = font_lib.remove_path(index);
                 }
             });
-            // Filename
+
+            // Path string
             row.col(|ui| {
                 ui.horizontal(|ui| {
-                    //if let Err(e) = &status {
-                    //    ui.label(RichText::new("？")).on_hover_text(e.to_string());
-                    //}
                     ui.add(
                         Label::new(path.to_string_lossy())
                             .wrap_mode(TextWrapMode::Truncate)
                             .selectable(false),
-                    )
-                    .on_hover_text(path.to_string_lossy())
-                    .on_disabled_hover_text(path.to_string_lossy());
+                    );
                 });
             });
 
             // Context menu
             row.response().context_menu(|ui| {
-                //ui.add_enabled_ui(
-                //    player.get_workspace().get_song_list_mode() == FileListMode::Manual,
-                //    |ui| {
-                //        if ui.button("Remove").clicked() {
-                //            let _ = player.get_workspace_mut().remove_song(index);
-                //            ui.close_menu();
-                //        }
-                //    },
-                //);
-                //actions::open_file_dir(
-                //    ui,
-                //    &player.get_workspace().get_songs()[index].get_path(),
-                //    gui,
-                //);
+                if ui.button("Remove").clicked() {
+                    let _ = font_lib.remove_path(index);
+                    ui.close_menu();
+                }
+                actions::open_file_dir(ui, &font_lib.get_paths()[index], gui);
                 if ui.button("Copy path").clicked() {
                     ui.output_mut(|o| o.copied_text = path.to_string_lossy().into());
                     ui.close_menu();
-                    //gui.toast_success("Copied");
+                    gui.toast_success("Copied");
                 }
             });
         });
