@@ -33,7 +33,7 @@ pub fn open_file_dir(ui: &mut Ui, filepath: &Path, gui: &mut GuiState) {
     }
 }
 
-pub fn pick_dir_button(dir: &Option<PathBuf>, ui: &mut Ui) -> Option<PathBuf> {
+pub fn pick_dir_button(dir: Option<&PathBuf>, ui: &mut Ui) -> Option<PathBuf> {
     let folder_text = if dir.is_some() { "🗁" } else { "🗀" };
     if circle_button(folder_text, ui)
         .on_hover_text("Select directory")

@@ -147,8 +147,8 @@ impl Workspace {
     pub const fn get_font_list_mode(&self) -> FileListMode {
         self.font_list_mode
     }
-    pub const fn get_font_dir(&self) -> &Option<PathBuf> {
-        &self.font_dir
+    pub const fn get_font_dir(&self) -> Option<&PathBuf> {
+        self.font_dir.as_ref()
     }
     pub fn set_font_dir(&mut self, path: PathBuf) {
         if self.font_list_mode == FileListMode::Manual {
@@ -348,8 +348,8 @@ impl Workspace {
     pub const fn get_song_list_mode(&self) -> FileListMode {
         self.song_list_mode
     }
-    pub const fn get_song_dir(&self) -> &Option<PathBuf> {
-        &self.midi_dir
+    pub const fn get_song_dir(&self) -> Option<&PathBuf> {
+        self.midi_dir.as_ref()
     }
     pub fn set_song_dir(&mut self, path: PathBuf) {
         if self.song_list_mode == FileListMode::Manual {
