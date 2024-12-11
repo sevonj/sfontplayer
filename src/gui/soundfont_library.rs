@@ -5,8 +5,8 @@ use size_format::SizeFormatterBinary;
 use super::{actions, TBL_ROW_H};
 use crate::{
     player::{
+        playlist::{enums::FileListMode, font_meta::FontMeta},
         soundfont_list::FontSort,
-        workspace::{enums::FileListMode, font_meta::FontMeta},
         Player,
     },
     GuiState,

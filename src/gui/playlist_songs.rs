@@ -10,7 +10,7 @@ use super::{
     GuiState, TBL_ROW_H,
 };
 use crate::player::{
-    workspace::enums::{FileListMode, SongSort},
+    playlist::enums::{FileListMode, SongSort},
     Player,
 };
 
