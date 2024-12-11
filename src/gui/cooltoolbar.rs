@@ -58,15 +58,6 @@ fn file_menu(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
 fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
     ui.menu_button("Options", |ui| {
-        //if ui
-        //    .add(
-        //        Button::new("Toggle soundfonts")
-        //            .shortcut_text(ui.ctx().format_shortcut(&GUI_SHOWFONTS)),
-        //    )
-        //    .clicked()
-        //{
-        //    gui.show_playlist_fonts = !gui.show_playlist_fonts;
-        //}
         if ui
             .add(Button::new("Settings").shortcut_text(ui.ctx().format_shortcut(&GUI_SETTINGS)))
             .clicked()
