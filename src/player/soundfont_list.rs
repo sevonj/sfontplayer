@@ -119,20 +119,18 @@ impl FontList {
     pub const fn get_fonts(&self) -> &Vec<FontMeta> {
         &self.fonts
     }
-    /*
-    pub fn get(&self, index: usize) -> Result<&FontMeta, FontListError> {
+    pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
         if index >= self.fonts.len() {
             return Err(FontListError::IndexOutOfRange);
         }
         Ok(&self.fonts[index])
     }
-    pub fn get_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
+    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
         if index >= self.fonts.len() {
             return Err(FontListError::IndexOutOfRange);
         }
         Ok(&mut self.fonts[index])
     }
-    */
     pub fn get_selected(&self) -> Option<&FontMeta> {
         let index = self.selected?;
         Some(&self.fonts[index])

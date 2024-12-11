@@ -4,7 +4,11 @@ use size_format::SizeFormatterBinary;
 
 use super::{actions, TBL_ROW_H};
 use crate::{
-    player::{soundfont_library::FontLibrary, soundfont_list::FontSort, Player},
+    player::{
+        soundfont_list::FontSort,
+        workspace::{enums::FileListMode, font_meta::FontMeta},
+        Player,
+    },
     GuiState,
 };
 
@@ -15,7 +19,7 @@ pub fn soundfont_library(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     if player.font_lib.get_fonts().is_empty() {
         empty_lib_placeholder(ui, gui);
     } else {
-        soundfont_table(ui, &mut player.font_lib, gui);
+        soundfont_table(ui, player, gui);
     }
 }
 
@@ -30,7 +34,8 @@ fn empty_lib_placeholder(ui: &mut Ui, gui: &mut GuiState) {
     });
 }
 
-fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) {
+#[allow(clippy::too_many_lines)]
+fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     let name_w = ui.available_width() - 64.;
     let tablebuilder = TableBuilder::new(ui)
         .striped(true)
@@ -39,7 +44,7 @@ fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) 
         .column(Column::remainder());
 
     let table = tablebuilder.header(20.0, |mut header| {
-        let font_sort = font_lib.get_sort();
+        let font_sort = player.font_lib.get_sort();
 
         header.col(|ui| {
             let title = match font_sort {
@@ -55,7 +60,7 @@ fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) 
                 )
                 .clicked()
             {
-                font_lib.set_sort(match font_sort {
+                player.font_lib.set_sort(match font_sort {
                     FontSort::NameAsc => FontSort::NameDesc,
                     _ => FontSort::NameAsc,
                 });
@@ -71,7 +76,7 @@ fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) 
                 .frame(false)
                 .wrap_mode(TextWrapMode::Extend);
             if ui.add(widget).clicked() {
-                font_lib.set_sort(match font_sort {
+                player.font_lib.set_sort(match font_sort {
                     FontSort::SizeAsc => FontSort::SizeDesc,
                     _ => FontSort::SizeAsc,
                 });
@@ -80,15 +85,15 @@ fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) 
     });
 
     table.body(|body| {
-        body.rows(TBL_ROW_H, font_lib.get_fonts().len(), |mut row| {
+        body.rows(TBL_ROW_H, player.font_lib.get_fonts().len(), |mut row| {
             let index = row.index();
-            let fontref = &font_lib.get_fonts()[index];
+            let fontref = &player.font_lib.get_fonts()[index];
             let filename = fontref.get_name();
             let filepath = fontref.get_path();
             let filesize = fontref.get_size();
             let status = fontref.get_status();
 
-            row.set_selected(Some(index) == font_lib.get_selected_index());
+            row.set_selected(Some(index) == player.font_lib.get_selected_index());
 
             // Filename
             row.col(|ui| {
@@ -106,6 +111,7 @@ fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) 
                     .on_disabled_hover_text(filepath.to_string_lossy());
                 });
             });
+
             // File size
             row.col(|ui| {
                 let size_str = filesize.map_or_else(
@@ -121,30 +127,34 @@ fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) 
 
             // Select
             if row.response().clicked() {
-                let _ = font_lib.select(Some(index));
-                println!("{:?}", font_lib.get_selected_index());
+                let _ = player.font_lib.select(Some(index));
+                println!("{:?}", player.font_lib.get_selected_index());
             }
+
             // Context menu
             row.response().context_menu(|ui| {
-                //if ui.button("Refresh").clicked() {
-                //    font_lib.get_workspace_mut().get_fonts_mut()[index].refresh();
-                //    ui.close_menu();
-                //}
-                actions::open_file_dir(ui, &font_lib.get_fonts()[index].get_path(), gui);
-
-                /*ui.menu_button("Add to workspace", |ui| {
-                    let filepath = font_lib.get_fonts()[index].get_path();
-                    if ui.button("➕ New workspace").clicked() {
-                        font_lib.new_workspace();
-                        let workspace_index = font_lib.get_workspaces().len() - 1;
-                        let _ = font_lib.get_workspaces_mut()[workspace_index]
-                            .add_font(filepath.clone());
+                if ui.button("Refresh").clicked() {
+                    if let Ok(font) = player.font_lib.get_font_mut(index) {
+                        font.refresh();
                     }
-                    for i in 0..font_lib.get_workspaces().len() {
-                        if i == font_lib.get_workspace_idx() {
-                            continue;
-                        }
-                        let workspace = &font_lib.get_workspaces_mut()[i];
+                    ui.close_menu();
+                }
+                actions::open_file_dir(ui, &player.font_lib.get_fonts()[index].get_path(), gui);
+
+                ui.menu_button("Add to workspace", |ui| {
+                    let Ok(filepath) = player.font_lib.get_font(index).map(FontMeta::get_path)
+                    else {
+                        ui.label("Failed to get font");
+                        return;
+                    };
+                    if ui.button("➕ New workspace").clicked() {
+                        player.new_workspace();
+                        let workspace_index = player.get_workspaces().len() - 1;
+                        let _ =
+                            player.get_workspaces_mut()[workspace_index].add_font(filepath.clone());
+                    }
+                    for i in 0..player.get_workspaces().len() {
+                        let workspace = &player.get_workspaces_mut()[i];
 
                         let already_contains = workspace.contains_font(&filepath);
                         let dir_list = workspace.get_font_list_mode() != FileListMode::Manual;
@@ -165,11 +175,12 @@ fn soundfont_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) 
                             .on_disabled_hover_text(hovertext)
                             .clicked()
                         {
-                            let _ = font_lib.get_workspaces_mut()[i].add_font(filepath.clone());
+                            let _ = player.get_workspaces_mut()[i].add_font(filepath.clone());
                             ui.close_menu();
                         }
                     }
-                });*/
+                });
+
                 if ui.button("Copy path").clicked() {
                     ui.output_mut(|o| o.copied_text = filepath.to_string_lossy().into());
                     ui.close_menu();

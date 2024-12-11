@@ -72,6 +72,12 @@ impl FontLibrary {
     pub const fn get_fonts(&self) -> &Vec<FontMeta> {
         self.fontlist.get_fonts()
     }
+    pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
+        self.fontlist.get_font(index)
+    }
+    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
+        self.fontlist.get_font_mut(index)
+    }
     pub fn get_selected(&self) -> Option<&FontMeta> {
         self.fontlist.get_selected()
     }
