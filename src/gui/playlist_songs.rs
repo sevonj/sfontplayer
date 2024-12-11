@@ -1,99 +1,28 @@
-use eframe::egui::{Align, Button, ComboBox, Label, Layout, RichText, Sense, TextWrapMode, Ui};
+use eframe::egui::{Align, Button, Label, Layout, RichText, Sense, TextWrapMode, Ui};
 use egui_extras::{Column, TableBuilder};
-use rfd::FileDialog;
 use size_format::SizeFormatterBinary;
 use std::time::Duration;
 
-use super::{actions, conversions::format_duration, GuiState, TBL_ROW_H};
+use super::{
+    actions,
+    conversions::format_duration,
+    custom_controls::{circle_button, subheading},
+    GuiState, TBL_ROW_H,
+};
 use crate::player::{
     workspace::enums::{FileListMode, SongSort},
     Player,
 };
 
-pub fn song_titlebar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
-    ui.horizontal(|ui| {
-        // Manually add files
-        if player.get_workspace().get_song_list_mode() == FileListMode::Manual {
-            if ui
-                .add(Button::new("➕").frame(false))
-                .on_hover_text("Add")
-                .clicked()
-            {
-                if let Some(paths) = FileDialog::new()
-                    .add_filter("Midi files", &["mid"])
-                    .pick_files()
-                {
-                    for path in paths {
-                        let _ = player.get_workspace_mut().add_song(path);
-                    }
-                }
-            }
-        }
-        // Select directory
-        else {
-            let folder_text = if player.get_workspace().get_song_dir().is_some() {
-                "🗁"
-            } else {
-                "🗀"
-            };
-            if ui
-                .add(Button::new(folder_text).frame(false))
-                .on_hover_text("Select directory")
-                .clicked()
-            {
-                if let Some(path) = FileDialog::new().pick_folder() {
-                    player.get_workspace_mut().set_song_dir(path);
-                }
-            }
-        }
-
-        // Title
-        ui.heading("Midi files");
-
-        // Dir path
-        if player.get_workspace().get_song_list_mode() != FileListMode::Manual {
-            if ui
-                .add(Button::new("🔃").frame(false))
-                .on_hover_text("Refresh content")
-                .clicked()
-            {
-                player.get_workspace_mut().refresh_song_list();
-            }
-
-            if let Some(dir) = &player.get_workspace().get_song_dir() {
-                ui.label(dir.to_string_lossy()).context_menu(|ui| {
-                    if ui.button("Go to directory").clicked() {
-                        actions::open_dir(ui, dir, gui);
-                    }
-                });
-            } else {
-                ui.label("No directory.");
-            }
-        }
-
-        // Content mode select
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            let mut list_mode = player.get_workspace().get_song_list_mode();
-            ComboBox::from_id_salt("mode_select")
-                .selected_text(format!("Content: {list_mode:?}"))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut list_mode, FileListMode::Manual, "Manual");
-                    ui.selectable_value(&mut list_mode, FileListMode::Directory, "Directory");
-                    ui.selectable_value(
-                        &mut list_mode,
-                        FileListMode::Subdirectories,
-                        "Subdirectories",
-                    );
-                });
-            if list_mode != player.get_workspace().get_song_list_mode() {
-                player.get_workspace_mut().set_song_list_mode(list_mode);
-            }
-        });
-    });
-}
-
 #[allow(clippy::too_many_lines)]
-pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
+pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
+    ui.horizontal(|ui| {
+        ui.add(subheading("Playlist"));
+        content_controls(ui, player);
+    });
+
+    ui.separator();
+
     let is_active_workspace =
         !player.is_playing() || player.get_workspace_idx() == player.get_playing_workspace_idx();
     if !is_active_workspace {
@@ -122,6 +51,7 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         let song_sort = player.get_workspace().get_song_sort();
 
         header.col(|_| {});
+
         header.col(|ui| {
             let title = match song_sort {
                 SongSort::NameAsc => "Name ⏶",
@@ -324,5 +254,35 @@ pub fn song_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 });
             },
         );
+    });
+}
+
+fn content_controls(ui: &mut Ui, player: &mut Player) {
+    ui.horizontal(|ui| {
+        let mut list_mode = player.get_workspace().get_song_list_mode();
+        ui.add(actions::content_mode_selector(&mut list_mode));
+        if list_mode != player.get_workspace().get_song_list_mode() {
+            player.get_workspace_mut().set_song_list_mode(list_mode);
+        }
+
+        ui.with_layout(Layout::right_to_left(eframe::egui::Align::Center), |ui| {
+            if player.get_workspace().get_song_list_mode() != FileListMode::Manual {
+                if let Some(path) =
+                    actions::pick_dir_button(player.get_workspace().get_song_dir(), ui)
+                {
+                    player.get_workspace_mut().set_song_dir(path);
+                }
+                if circle_button("🔃", ui)
+                    .on_hover_text("Refresh content")
+                    .clicked()
+                {
+                    player.get_workspace_mut().refresh_song_list();
+                }
+            } else if let Some(paths) = actions::pick_midifiles_button(ui) {
+                for path in paths {
+                    player.get_workspace_mut().set_song_dir(path);
+                }
+            }
+        });
     });
 }

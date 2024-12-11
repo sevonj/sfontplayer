@@ -1,4 +1,7 @@
-use crate::{gui::GuiState, player::Player};
+use crate::{
+    gui::GuiState,
+    player::{soundfont_library::FontLibrary, Player},
+};
 use rfd::FileDialog;
 
 pub fn open_workspace(player: &mut Player, gui: &mut GuiState) {
@@ -22,5 +25,34 @@ pub fn save_workspace_as(player: &mut Player, idx: usize, gui: &mut GuiState) {
         if let Err(e) = player.save_workspace_as(idx, filepath) {
             gui.toast_error(e.to_string());
         }
+    }
+}
+
+// Add files and add dirs are separate because file dialog doesn't support mixed picking.
+pub fn add_font_lib_files(font_lib: &mut FontLibrary /* , gui: &mut GuiState */) {
+    if let Some(paths) = FileDialog::new()
+        .add_filter("Soundfonts", &["sf2"])
+        .set_title("Add files")
+        .pick_files()
+    {
+        for path in paths {
+            if let Err(_e) = font_lib.add_path(path) {
+                // gui.toast_error(e.to_string());
+            }
+        }
+        font_lib.refresh();
+    }
+}
+pub fn add_font_lib_dirs(font_lib: &mut FontLibrary /* , gui: &mut GuiState */) {
+    if let Some(paths) = FileDialog::new()
+        .set_title("Add directories")
+        .pick_folders()
+    {
+        for path in paths {
+            if let Err(_e) = font_lib.add_path(path) {
+                // gui.toast_error(e.to_string());
+            }
+        }
+        font_lib.refresh();
     }
 }

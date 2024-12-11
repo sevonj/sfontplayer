@@ -1,96 +1,36 @@
-use eframe::egui::{Align, Button, ComboBox, Label, Layout, RichText, Sense, TextWrapMode, Ui};
+use eframe::egui::{Button, Label, Layout, RichText, Sense, TextWrapMode, Ui};
 use egui_extras::{Column, TableBuilder};
-use rfd::FileDialog;
 use size_format::SizeFormatterBinary;
 
-use super::{actions, GuiState, TBL_ROW_H};
+use super::{
+    actions,
+    custom_controls::{circle_button, collapse_button, subheading},
+    GuiState, TBL_ROW_H,
+};
 use crate::player::{
-    workspace::enums::{FileListMode, FontSort},
+    soundfont_list::FontSort,
+    workspace::{enums::FileListMode, font_meta::FontMeta},
     Player,
 };
 
-pub fn font_titlebar(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
-    ui.horizontal(|ui| {
-        // Manually add files
-        if player.get_workspace().get_font_list_mode() == FileListMode::Manual {
-            if ui
-                .add(Button::new("➕").frame(false))
-                .on_hover_text("Add")
-                .clicked()
-            {
-                if let Some(paths) = FileDialog::new()
-                    .add_filter("Soundfonts", &["sf2"])
-                    .pick_files()
-                {
-                    for path in paths {
-                        let _ = player.get_workspace_mut().add_font(path);
-                    }
-                }
-            }
-        }
-        // Select directory
-        else {
-            let folder_text = if player.get_workspace().get_font_dir().is_some() {
-                "🗁"
-            } else {
-                "🗀"
-            };
-            if ui
-                .add(Button::new(folder_text).frame(false))
-                .on_hover_text("Select directory")
-                .clicked()
-            {
-                if let Some(path) = FileDialog::new().pick_folder() {
-                    player.get_workspace_mut().set_font_dir(path);
-                }
-            }
-        }
-
-        // Title
-        ui.heading("Soundfonts");
-
-        // Dir path
-        if player.get_workspace().get_font_list_mode() != FileListMode::Manual {
-            if ui
-                .add(Button::new("🔃").frame(false))
-                .on_hover_text("Refresh content")
-                .clicked()
-            {
-                player.get_workspace_mut().refresh_font_list();
-            }
-
-            if let Some(dir) = &player.get_workspace().get_font_dir() {
-                ui.label(dir.to_string_lossy()).context_menu(|ui| {
-                    actions::open_dir(ui, dir, gui);
-                });
-            } else {
-                ui.label("No directory.");
-            }
-        }
-
-        // Content mode select
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            let mut list_mode = player.get_workspace().get_font_list_mode();
-            ComboBox::from_id_salt("mode_select")
-                .selected_text(format!("Content: {list_mode:?}"))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut list_mode, FileListMode::Manual, "Manual");
-                    ui.selectable_value(&mut list_mode, FileListMode::Directory, "Directory");
-                    ui.selectable_value(
-                        &mut list_mode,
-                        FileListMode::Subdirectories,
-                        "Subdirectories",
-                    );
-                });
-            if list_mode != player.get_workspace().get_font_list_mode() {
-                player.get_workspace_mut().set_font_list_mode(list_mode);
-            }
-        });
-    });
-}
-
 #[allow(clippy::too_many_lines)]
 pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
+    ui.horizontal(|ui| {
+        ui.add(collapse_button(&mut gui.show_playlist_fonts));
+        ui.add(subheading("Playlist soundfonts"))
+            .on_hover_text("Soundfonts included with the playlist");
+    });
+
+    ui.add_space(4.);
+
+    if !gui.show_playlist_fonts {
+        return;
+    }
+
+    content_controls(ui, player);
+
+    ui.separator();
+
     let is_active_workspace =
         !player.is_playing() || player.get_workspace_idx() == player.get_playing_workspace_idx();
     if !is_active_workspace {
@@ -98,20 +38,22 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
         ui.style_mut().visuals.selection.stroke = ui.style().visuals.widgets.active.fg_stroke;
     }
+    let manual_files = player.get_workspace().get_font_list_mode() == FileListMode::Manual;
 
-    let width = ui.available_width() - 192.;
+    let name_w = ui.available_width() - 64.;
 
     let tablebuilder = TableBuilder::new(ui)
         .striped(true)
         .sense(Sense::click())
-        .column(Column::exact(16.))
-        .column(Column::initial(width).resizable(true))
+        .column(Column::exact(if manual_files { 16. } else { 0. }))
+        .column(Column::exact(name_w))
         .column(Column::remainder());
 
     let table = tablebuilder.header(20.0, |mut header| {
         let font_sort = player.get_workspace().get_font_sort();
 
         header.col(|_| {});
+
         header.col(|ui| {
             let title = match font_sort {
                 FontSort::NameAsc => "Name ⏶",
@@ -165,8 +107,6 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 let filepath = fontref.get_path();
                 let filesize = fontref.get_size();
                 let status = fontref.get_status();
-                let manual_files =
-                    player.get_workspace().get_font_list_mode() == FileListMode::Manual;
 
                 row.set_selected(Some(index) == player.get_workspace().get_font_idx());
 
@@ -277,15 +217,52 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         ui.close_menu();
                         gui.toast_success("Copied");
                     }
-                    if ui.button("Make default").clicked() {
-                        player.set_default_soundfont(Some(
-                            player.get_workspace().get_fonts()[index].clone(),
-                        ));
+                    if ui
+                        .add_enabled(
+                            !player.font_lib.contains_font(&filepath),
+                            Button::new("Add to library"),
+                        )
+                        .on_disabled_hover_text("Already in library")
+                        .clicked()
+                    {
+                        let _ = player
+                            .font_lib
+                            .add_path(player.get_workspace().get_fonts()[index].get_path());
                         ui.close_menu();
                     }
                 });
             },
         );
+    });
+}
+
+fn content_controls(ui: &mut Ui, player: &mut Player) {
+    ui.horizontal(|ui| {
+        let mut list_mode = player.get_workspace().get_font_list_mode();
+        ui.add(actions::content_mode_selector(&mut list_mode));
+        if list_mode != player.get_workspace().get_font_list_mode() {
+            player.get_workspace_mut().set_font_list_mode(list_mode);
+        }
+
+        ui.with_layout(Layout::right_to_left(eframe::egui::Align::Center), |ui| {
+            if player.get_workspace().get_font_list_mode() != FileListMode::Manual {
+                if let Some(path) =
+                    actions::pick_dir_button(player.get_workspace().get_font_dir(), ui)
+                {
+                    player.get_workspace_mut().set_font_dir(path);
+                }
+                if circle_button("🔃", ui)
+                    .on_hover_text("Refresh content")
+                    .clicked()
+                {
+                    player.get_workspace_mut().refresh_font_list();
+                }
+            } else if let Some(paths) = actions::pick_soundfonts_button(ui) {
+                for path in paths {
+                    player.get_workspace_mut().set_font_dir(path);
+                }
+            }
+        });
     });
 }
 
@@ -304,7 +281,7 @@ fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Playe
                 font_ok = false;
             } else if let Err(e) = &player
                 .get_default_soundfont()
-                .map_or_else(|| Ok(()), |font| font.get_status())
+                .map_or_else(|| Ok(()), FontMeta::get_status)
             {
                 ui.label(RichText::new("？")).on_hover_text(e.to_string());
                 font_ok = false;
@@ -313,7 +290,7 @@ fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Playe
             }
             let filename = player
                 .get_default_soundfont()
-                .map_or("None".into(), |font| font.get_name());
+                .map_or("None".into(), FontMeta::get_name);
             let text = format!("None (use default: {filename})");
             let filename_response = ui.add_enabled(
                 font_ok,

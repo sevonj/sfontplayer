@@ -24,7 +24,7 @@ impl fmt::Display for FontMetaError {
 }
 
 /// Reference to a font file with metadata
-#[derive(Default, Clone, Serialize)]
+#[derive(Debug, Default, Clone, Serialize)]
 pub struct FontMeta {
     filepath: PathBuf,
     filesize: Option<u64>,

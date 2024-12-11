@@ -1,32 +1,36 @@
 pub mod actions;
 pub mod conversions;
 mod cooltoolbar;
-mod fonts;
+pub mod custom_controls;
 pub mod keyboard_shortcuts;
 pub mod modals;
 mod playback_controls;
-mod songs;
+mod playlist_fonts;
+mod playlist_songs;
+pub mod soundfont_library;
 mod workspace_select;
 
 use crate::player::Player;
 use cooltoolbar::toolbar;
-use eframe::egui::{CentralPanel, Context, TopBottomPanel, Ui};
+use eframe::egui::{vec2, CentralPanel, Context, Frame, SidePanel, TopBottomPanel, Ui};
 use egui_notify::Toasts;
-use fonts::{font_titlebar, soundfont_table};
 use keyboard_shortcuts::consume_shortcuts;
 use modals::{about_modal::about_modal, settings::settings_modal, shortcuts::shortcut_modal};
 use modals::{unsaved_close_dialog, unsaved_quit_dialog};
 use playback_controls::playback_panel;
-use songs::{song_table, song_titlebar};
+use playlist_fonts::soundfont_table;
+use playlist_songs::playlist_song_panel;
+use soundfont_library::soundfont_library;
 use workspace_select::workspace_tabs;
 
 const TBL_ROW_H: f32 = 16.;
 
 /// For gui stuff that doesn't count as app logic.
-#[derive(serde::Deserialize, serde::Serialize, Default)]
+#[derive(Default, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct GuiState {
-    pub show_soundfonts: bool,
+    pub show_playlist_fonts: bool,
+    pub show_font_library: bool,
     #[serde(skip)]
     pub show_about_modal: bool,
     #[serde(skip)]
@@ -81,46 +85,64 @@ pub fn draw_gui(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
 
     TopBottomPanel::top("top_bar")
         .resizable(false)
+        .show_separator_line(false)
+        .frame(
+            Frame::default()
+                .inner_margin(vec2(8., 2.))
+                .fill(ctx.style().visuals.widgets.open.weak_bg_fill),
+        )
         .show(ctx, |ui| {
             toolbar(ui, player, gui);
-            workspace_tabs(ui, player, gui);
         });
 
     TopBottomPanel::bottom("playback_panel").show(ctx, |ui| {
         playback_panel(ui, player, gui);
     });
 
-    if gui.show_soundfonts {
-        TopBottomPanel::top("font_titlebar")
-            .show_separator_line(false)
+    if gui.show_font_library {
+        SidePanel::right("soundfont_library")
+            .exact_width(256.)
             .resizable(false)
+            .frame(Frame::default())
             .show(ctx, |ui| {
                 disable_if_modal(ui, gui);
-                font_titlebar(ui, player, gui);
-            });
-        TopBottomPanel::top("font_table")
-            .resizable(true)
-            .show(ctx, |ui| {
-                disable_if_modal(ui, gui);
-                soundfont_table(ui, player, gui);
+
+                TopBottomPanel::bottom("playlist_fonts")
+                    .resizable(true)
+                    .show_inside(ui, |ui| {
+                        ui.add_space(6.);
+
+                        soundfont_table(ui, player, gui);
+                    });
+
+                CentralPanel::default().show_inside(ui, |ui| {
+                    soundfont_library(ui, player, gui);
+                });
             });
     }
 
-    TopBottomPanel::top("song_titlebar")
-        .show_separator_line(false)
-        .resizable(false)
-        .show(ctx, |ui| {
-            disable_if_modal(ui, gui);
-            song_titlebar(ui, player, gui);
-        });
-    CentralPanel::default().show(ctx, |ui| {
-        disable_if_modal(ui, gui);
-        song_table(ui, player, gui);
-    });
+    playlist_panel(ctx, player, gui);
 
     gui.toasts.show(ctx);
     consume_shortcuts(ctx, player, gui);
     handle_dropped_files(ctx);
+}
+
+fn playlist_panel(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
+    TopBottomPanel::top("tab_bar")
+        .resizable(false)
+        .show_separator_line(false)
+        .show(ctx, |ui| {
+            workspace_tabs(ui, player, gui);
+        });
+
+    CentralPanel::default()
+        .frame(Frame::central_panel(&ctx.style()).inner_margin(vec2(8., 2.)))
+        .show(ctx, |ui| {
+            disable_if_modal(ui, gui);
+
+            playlist_song_panel(ui, player, gui);
+        });
 }
 
 /// TODO: Drag files into the window to add them
