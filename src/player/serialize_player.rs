@@ -12,13 +12,20 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use super::{playlist::Playlist, Player, RepeatMode};
+use super::{
+    playlist::{enums::SongSort, Playlist},
+    soundfont_list::FontSort,
+    Player, RepeatMode,
+};
 use crate::player::{playlist::font_meta::FontMeta, PlayerError};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlaylistListEntry {
     pub filepath: String,
     pub portable: bool,
+    /// Playlist state is packed into a JSON string to avoid invalidating the
+    /// more important members if/when the scheme changes.
+    pub state: String,
 }
 
 impl Player {
@@ -149,9 +156,19 @@ impl Player {
                 .to_str()
                 .expect("Playlist filepath string conversion failed.")
                 .to_owned();
+
+            let state = json!({
+                "font_idx": playlist.get_font_idx(),
+                "font_sort": playlist.get_font_sort() as u8,
+                "song_idx": playlist.get_song_idx(),
+                "song_sort": playlist.get_song_sort() as u8,
+            })
+            .to_string();
+
             playlist_list.push(PlaylistListEntry {
                 filepath,
                 portable: playlist.is_portable(),
+                state,
             });
 
             if !playlist.is_portable() {
@@ -181,7 +198,7 @@ impl Player {
         let data: Vec<PlaylistListEntry> = serde_json::from_str(&data_string)?;
 
         for entry in data {
-            let playlist = if entry.portable {
+            let mut playlist = if entry.portable {
                 Playlist::open_portable(entry.filepath.into())?
             } else {
                 let wksp_path = data_dir.join(entry.filepath);
@@ -189,6 +206,27 @@ impl Player {
                 let wksp_data: Value = serde_json::from_str(&wksp_str)?;
                 Playlist::from(wksp_data)
             };
+
+            let entry_state: Result<Value, serde_json::Error> = serde_json::from_str(&entry.state);
+            if let Ok(state) = entry_state {
+                if let Some(font_idx) = state["font_idx"].as_u64() {
+                    let _ = playlist.set_font_idx(Some(font_idx as usize));
+                }
+                if let Some(font_sort) = state["font_sort"].as_u64() {
+                    if let Ok(sort) = FontSort::try_from(font_sort as u8) {
+                        playlist.set_font_sort(sort);
+                    }
+                }
+                if let Some(song_idx) = state["song_idx"].as_u64() {
+                    let _ = playlist.set_song_idx(Some(song_idx as usize));
+                }
+                if let Some(song_sort) = state["song_sort"].as_u64() {
+                    if let Ok(sort) = SongSort::try_from(song_sort as u8) {
+                        playlist.set_song_sort(sort);
+                    }
+                }
+            }
+
             self.playlists.push(playlist);
         }
 
