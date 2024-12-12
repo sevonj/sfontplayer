@@ -142,6 +142,10 @@ impl FontLibrary {
         self.fontlist.clear();
     }
     pub fn refresh(&mut self) {
+        let mut found_files = vec![];
+        let selected_font_path = self.get_selected().map(FontMeta::get_path);
+
+        self.fontlist.clear();
         for input_path in &self.paths {
             if !input_path.exists() {
                 continue;
@@ -152,33 +156,34 @@ impl FontLibrary {
                         .into_iter()
                         .filter_map(std::result::Result::ok)
                     {
-                        let filepath = entry.path();
+                        let filepath = entry.path().to_owned();
                         if filepath.is_file() && filepath.extension().is_some_and(|s| s == "sf2") {
-                            let _ = self.fontlist.add(FontMeta::new(filepath.to_owned()));
+                            found_files.push(filepath);
                         }
                     }
                 } else if let Ok(paths) = fs::read_dir(input_path) {
                     for entry in paths.filter_map(std::result::Result::ok) {
-                        let path = entry.path();
-                        if self.contains_font(&path) {
+                        let filepath = entry.path().clone();
+                        if self.contains_font(&filepath) {
                             continue;
                         }
-                        if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
-                            let _ = self.fontlist.add(FontMeta::new(path.clone()));
+                        if filepath.is_file() && filepath.extension().is_some_and(|s| s == "sf2") {
+                            found_files.push(filepath);
                         }
                     }
                 }
             } else if input_path.is_file() {
-                let _ = self.fontlist.add(FontMeta::new(input_path.to_owned()));
+                found_files.push(input_path.to_owned());
             }
         }
 
-        // handle missing dir search entries
-        for index in 0..self.fontlist.get_fonts().len() {
-            let path = self.get_fonts()[index].get_path();
-            if !path.exists() && !self.paths.contains(&path) {
-                let _ = self.fontlist.remove(index);
-            }
+        for filepath in found_files {
+            let _ = self.fontlist.add(FontMeta::new(filepath));
+        }
+
+        if let Some(path) = selected_font_path {
+            let _ = self.select(None);
+            let _ = self.select_by_path(path);
         }
 
         self.sort();
