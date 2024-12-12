@@ -671,12 +671,12 @@ dependencies = [
 
 [[package]]
 name = "build-info"
-version = "0.0.38"
+version = "0.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3465eaabbf2f3bf2a28a4ee66d16316071ef63c1ab9f336e833ea67f519c0348"
+checksum = "24c8169feaff1e5d9686706c0a56a54ed0422d2df41fa1c543e53f7cea0e70d4"
 dependencies = [
  "bincode",
- "build-info-common",
+ "build-info-common 0.0.39",
  "build-info-proc",
 ]
 
@@ -689,7 +689,7 @@ dependencies = [
  "anyhow",
  "base64 0.22.1",
  "bincode",
- "build-info-common",
+ "build-info-common 0.0.38",
  "cargo_metadata",
  "chrono",
  "git2",
@@ -713,19 +713,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "build-info-proc"
-version = "0.0.38"
+name = "build-info-common"
+version = "0.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58463d44fa27e9afbf377c0f5661eaf8d3b69b1a4a45b0fa601b822ccf7512e8"
+checksum = "8b6fa54101dfbd88efc3981859e92c3d47c729ff54d5df73ec36505c337e5c5e"
+dependencies = [
+ "chrono",
+ "derive_more",
+ "semver",
+ "serde",
+]
+
+[[package]]
+name = "build-info-proc"
+version = "0.0.39"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c5458d2f0ed8bb88f7f6b5706460ca55fab08db16456ea03b920691b4cac163"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "bincode",
- "build-info-common",
+ "build-info-common 0.0.39",
  "chrono",
  "num-bigint",
  "num-traits",
- "proc-macro-error",
+ "proc-macro-error2",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -3236,27 +3248,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro-error"
-version = "1.0.4"
+name = "proc-macro-error-attr2"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+checksum = "96de42df36bb9bba5542fe9f1a054b8cc87e172759a1868aa05c1f3acc89dfc5"
 dependencies = [
- "proc-macro-error-attr",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
- "version_check",
 ]
 
 [[package]]
-name = "proc-macro-error-attr"
-version = "1.0.4"
+name = "proc-macro-error2"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+checksum = "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802"
 dependencies = [
+ "proc-macro-error-attr2",
  "proc-macro2",
  "quote",
- "version_check",
+ "syn 2.0.90",
 ]
 
 [[package]]
