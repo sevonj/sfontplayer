@@ -2,7 +2,7 @@
 //!
 
 use serde::Serialize;
-use std::{error, fmt, path::PathBuf};
+use std::{error, fmt, fs, path::PathBuf};
 use walkdir::WalkDir;
 
 use super::{
@@ -147,13 +147,25 @@ impl FontLibrary {
                 continue;
             }
             if input_path.is_dir() {
-                for entry in WalkDir::new(input_path)
-                    .into_iter()
-                    .filter_map(std::result::Result::ok)
-                {
-                    let filepath = entry.path();
-                    if filepath.is_file() && filepath.extension().is_some_and(|s| s == "sf2") {
-                        let _ = self.fontlist.add(FontMeta::new(filepath.to_owned()));
+                if self.crawl_subdirs {
+                    for entry in WalkDir::new(input_path)
+                        .into_iter()
+                        .filter_map(std::result::Result::ok)
+                    {
+                        let filepath = entry.path();
+                        if filepath.is_file() && filepath.extension().is_some_and(|s| s == "sf2") {
+                            let _ = self.fontlist.add(FontMeta::new(filepath.to_owned()));
+                        }
+                    }
+                } else if let Ok(paths) = fs::read_dir(input_path) {
+                    for entry in paths.filter_map(std::result::Result::ok) {
+                        let path = entry.path();
+                        if self.contains_font(&path) {
+                            continue;
+                        }
+                        if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
+                            let _ = self.fontlist.add(FontMeta::new(path.clone()));
+                        }
                     }
                 }
             } else if input_path.is_file() {
