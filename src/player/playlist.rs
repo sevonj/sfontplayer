@@ -94,7 +94,6 @@ impl Playlist {
             }
             None => self.font_idx = None,
         }
-        self.unsaved_changes = true;
         Ok(())
     }
     pub fn add_font(&mut self, path: PathBuf) -> Result<(), PlaylistError> {
@@ -269,7 +268,6 @@ impl Playlist {
     pub fn set_font_sort(&mut self, sort: FontSort) {
         self.font_sort = sort;
         self.refresh_font_list();
-        self.unsaved_changes = true;
     }
 
     // --- Midi files
@@ -295,7 +293,6 @@ impl Playlist {
             }
             None => self.midi_idx = None,
         }
-        self.unsaved_changes = true;
         Ok(())
     }
     pub fn add_song(&mut self, path: PathBuf) -> Result<(), PlaylistError> {
@@ -477,7 +474,6 @@ impl Playlist {
     pub fn set_song_sort(&mut self, sort: SongSort) {
         self.song_sort = sort;
         self.refresh_song_list();
-        self.unsaved_changes = true;
     }
 
     // --- Playback Queue
@@ -712,17 +708,19 @@ mod tests {
     }
 
     #[test]
-    fn test_set_unsaved_flag() {
-        // Set index
+    fn test_unsaved_flag_fontsong_idx() {
+        // (Doesn't count, not stored in playlist)
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.set_font_idx(None).unwrap();
-        assert!(playlist.unsaved_changes);
+        assert!(!playlist.unsaved_changes);
         playlist.unsaved_changes = false;
         playlist.set_song_idx(None).unwrap();
-        assert!(playlist.unsaved_changes);
+        assert!(!playlist.unsaved_changes);
+    }
 
-        // Add / Remove
+    #[test]
+    fn test_unsaved_flag_fontsong_add_rm() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.add_font("fakepath".into()).unwrap();
@@ -737,8 +735,10 @@ mod tests {
         playlist.unsaved_changes = false;
         playlist.remove_song(0).unwrap();
         assert!(playlist.unsaved_changes);
+    }
 
-        // Force add / Force remove
+    #[test]
+    fn test_unsaved_flag_fontsong_force_add_rm() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.force_add_font("fakepath".into());
@@ -752,8 +752,10 @@ mod tests {
         playlist.unsaved_changes = false;
         playlist.force_remove_song(0).unwrap();
         assert!(playlist.unsaved_changes);
+    }
 
-        // Clear
+    #[test]
+    fn test_unsaved_flag_fontsong_clear() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.clear_fonts();
@@ -761,8 +763,10 @@ mod tests {
         playlist.unsaved_changes = false;
         playlist.clear_songs();
         assert!(playlist.unsaved_changes);
+    }
 
-        // Set list mode
+    #[test]
+    fn test_unsaved_flag_fontsong_listmode() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.set_font_list_mode(FileListMode::Manual);
@@ -770,8 +774,10 @@ mod tests {
         playlist.unsaved_changes = false;
         playlist.set_song_list_mode(FileListMode::Manual);
         assert!(playlist.unsaved_changes);
+    }
 
-        // Set list dir
+    #[test]
+    fn test_unsaved_flag_fontsong_listdir() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.set_font_dir("fakepath".into());
@@ -785,33 +791,42 @@ mod tests {
         playlist.song_list_mode = FileListMode::Directory;
         playlist.set_song_dir("fakepath".into());
         assert!(playlist.unsaved_changes);
+    }
 
-        // Refresh list
+    #[test]
+    fn test_unsaved_flag_fontsong_refresh_list() {
         // (Doesn't count, refreshed automatically)
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.refresh_font_list();
         playlist.refresh_song_list();
         assert!(!playlist.unsaved_changes);
+    }
 
-        // Sort
+    #[test]
+    fn test_unsaved_flag_fontsong_sort() {
         // (Doesn't count, refreshed automatically)
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.sort_fonts();
         playlist.sort_songs();
         assert!(!playlist.unsaved_changes);
+    }
 
-        // Set sort mode
+    #[test]
+    fn test_unsaved_flag_fontsong_sortmode() {
+        // (Doesn't count, not stored in playlist)
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.set_font_sort(FontSort::NameAsc);
-        assert!(playlist.unsaved_changes);
+        assert!(!playlist.unsaved_changes);
         playlist.unsaved_changes = false;
         playlist.set_song_sort(SongSort::NameAsc);
-        assert!(playlist.unsaved_changes);
+        assert!(!playlist.unsaved_changes);
+    }
 
-        // Set portable
+    #[test]
+    fn test_unsaved_flag_fontsong_setportable() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.set_portable_path(None);
