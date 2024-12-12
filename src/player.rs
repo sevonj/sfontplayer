@@ -16,7 +16,7 @@ use std::{error, fmt, fs::File, io::Write, path::PathBuf, sync::Arc, time::Durat
 pub mod audio;
 mod mediacontrols;
 pub mod playlist;
-mod serialize_player;
+pub mod serialize_player;
 pub mod soundfont_library;
 pub mod soundfont_list;
 
