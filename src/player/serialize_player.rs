@@ -127,8 +127,7 @@ impl Player {
     }
 
     fn save_playlists(&mut self) -> anyhow::Result<()> {
-        let project_dirs = project_dirs();
-        let data_dir = project_dirs.data_dir();
+        let data_dir = data_dir();
         let playlist_dir = data_dir.join("playlists");
         let playlist_dir_rel = PathBuf::from(".").join("playlists");
         fs::create_dir_all(&playlist_dir)?;
@@ -175,8 +174,7 @@ impl Player {
     }
 
     fn load_playlists(&mut self) -> anyhow::Result<()> {
-        let project_dirs = project_dirs();
-        let data_dir = project_dirs.data_dir();
+        let data_dir = data_dir();
 
         let filepath = data_dir.join("playlists.json");
         let data_string = std::fs::read_to_string(filepath)?;
@@ -208,7 +206,11 @@ fn generate_playlist_filename(playlist: &Playlist, idx: usize) -> String {
     )
 }
 
-fn state_dir() -> PathBuf {
+pub fn data_dir() -> PathBuf {
+    project_dirs().data_dir().into()
+}
+
+pub fn state_dir() -> PathBuf {
     project_dirs()
         .state_dir()
         .map(std::borrow::ToOwned::to_owned)

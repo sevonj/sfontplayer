@@ -70,6 +70,29 @@ pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
                             "Turning this on will prevent anything being saved",
                             &mut player.debug_block_saving,
                         ));
+                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                            ui.vertical(|ui| {
+                                ui.set_width(ui.available_width() - 32.);
+                                ui.heading("App directories");
+                                ui.label("Configuration and app memory");
+                            });
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                if ui.button("data dir").clicked() {
+                                    if let Err(e) = open::that(
+                                        crate::player::serialize_player::data_dir().as_path(),
+                                    ) {
+                                        gui.toast_error(e.to_string());
+                                    }
+                                }
+                                if ui.button("state dir").clicked() {
+                                    if let Err(e) = open::that(
+                                        crate::player::serialize_player::state_dir().as_path(),
+                                    ) {
+                                        gui.toast_error(e.to_string());
+                                    }
+                                }
+                            });
+                        });
                     });
                 });
             });
