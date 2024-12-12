@@ -139,7 +139,6 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             // Select
             if row.response().clicked() {
                 let _ = player.font_lib.select(Some(index));
-                println!("{:?}", player.font_lib.get_selected_index());
             }
 
             // Context menu

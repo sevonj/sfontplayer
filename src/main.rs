@@ -140,8 +140,8 @@ impl eframe::App for SfontPlayer {
         eframe::set_value(storage, eframe::APP_KEY, self);
 
         if let Err(e) = player.save_state() {
-            println!("{e}");
-            self.gui_state.toast_error("Saving app state failed.");
+            self.gui_state
+                .toast_error(format!("Saving app state failed: {e}"));
         }
     }
 
