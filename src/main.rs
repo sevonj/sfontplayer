@@ -85,7 +85,10 @@ impl SfontPlayer {
             if i == 0 {
                 continue;
             }
-            if arg.ends_with(".sfontspace") {
+            if std::path::Path::new(arg)
+                .extension()
+                .map_or(false, |ext| ext.eq_ignore_ascii_case("midpl"))
+            {
                 if let Err(e) = player.open_portable_playlist(arg.into()) {
                     self.gui_state.toast_error(e.to_string());
                 }

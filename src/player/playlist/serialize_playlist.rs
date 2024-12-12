@@ -266,7 +266,7 @@ mod tests {
     fn test_save_portable_unchecks_flag() {
         fs::create_dir_all("temp").unwrap();
         let mut playlist = Playlist::default();
-        playlist.set_portable_path(Some(PathBuf::from("temp/testfile.sfontspace")));
+        playlist.set_portable_path(Some(PathBuf::from("temp/testfile.midpl")));
         assert!(playlist.has_unsaved_changes());
         playlist.save_portable().unwrap();
         assert!(!playlist.has_unsaved_changes());
