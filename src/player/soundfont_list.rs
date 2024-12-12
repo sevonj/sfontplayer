@@ -106,14 +106,6 @@ impl FontList {
         self.fonts.push(font);
         Ok(())
     }
-    #[allow(dead_code)]
-    pub fn remove(&mut self, index: usize) -> Result<(), FontListError> {
-        if index >= self.fonts.len() {
-            return Err(FontListError::IndexOutOfRange);
-        }
-        self.fonts.remove(index);
-        Ok(())
-    }
     pub fn clear(&mut self) {
         self.fonts.clear();
     }

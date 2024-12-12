@@ -259,7 +259,7 @@ fn content_controls(ui: &mut Ui, player: &mut Player) {
                 }
             } else if let Some(paths) = actions::pick_soundfonts_button(ui) {
                 for path in paths {
-                    player.get_playlist_mut().set_font_dir(path);
+                    let _ = player.get_playlist_mut().add_font(path);
                 }
             }
         });

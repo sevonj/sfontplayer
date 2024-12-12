@@ -280,7 +280,7 @@ fn content_controls(ui: &mut Ui, player: &mut Player) {
                 }
             } else if let Some(paths) = actions::pick_midifiles_button(ui) {
                 for path in paths {
-                    player.get_playlist_mut().set_song_dir(path);
+                    let _ = player.get_playlist_mut().add_song(path);
                 }
             }
         });
