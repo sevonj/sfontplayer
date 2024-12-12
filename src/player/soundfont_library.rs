@@ -163,7 +163,7 @@ impl FontLibrary {
                     }
                 } else if let Ok(paths) = fs::read_dir(input_path) {
                     for entry in paths.filter_map(std::result::Result::ok) {
-                        let filepath = entry.path().to_owned();
+                        let filepath = entry.path().clone();
                         if self.contains_font(&filepath) {
                             continue;
                         }
