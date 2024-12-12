@@ -448,10 +448,11 @@ impl Playlist {
             SongSort::TimeAsc => self
                 .midis
                 .sort_by_key(|f| f.get_duration().unwrap_or(Duration::ZERO)),
-            SongSort::TimeDesc => self
-                .midis
-                .sort_by_key(|f| f.get_duration().unwrap_or(Duration::ZERO)),
-
+            SongSort::TimeDesc => {
+                self.midis
+                    .sort_by_key(|f| f.get_duration().unwrap_or(Duration::ZERO));
+                self.midis.reverse();
+            }
             SongSort::SizeAsc => self.midis.sort_by_key(midi_meta::MidiMeta::get_size),
             SongSort::SizeDesc => {
                 self.midis.sort_by_key(midi_meta::MidiMeta::get_size);
