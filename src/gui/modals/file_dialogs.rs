@@ -6,7 +6,7 @@ use rfd::FileDialog;
 
 pub fn open_playlist(player: &mut Player, gui: &mut GuiState) {
     if let Some(path) = FileDialog::new()
-        .add_filter("Playlist file", &["sfontspace"])
+        .add_filter("Midi playlist", &["midpl"])
         .pick_file()
     {
         if let Err(e) = player.open_portable_playlist(path) {
@@ -17,9 +17,9 @@ pub fn open_playlist(player: &mut Player, gui: &mut GuiState) {
 
 pub fn save_playlist_as(player: &mut Player, idx: usize, gui: &mut GuiState) {
     if let Some(filepath) = FileDialog::new()
-        .add_filter("Playlist file", &["sfontspace"])
+        .add_filter("Midi playlist", &["midpl"])
         .set_title("Save Playlist As")
-        .set_file_name(format!("{}.sfontspace", &player.get_playlist().name))
+        .set_file_name(format!("{}.midpl", &player.get_playlist().name))
         .save_file()
     {
         if let Err(e) = player.save_playlist_as(idx, filepath) {
