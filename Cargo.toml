@@ -27,7 +27,7 @@ rustysynth = "1.3" # midi
 
 # -- Misc
 rand = "0.8"
-build-info = "0.0.38" # For dependency listing
+build-info = "0.0.39" # For dependency listing
 walkdir = "2.5"
 size_format = "1.0"   # File sizes into string
 open = "5.3"          # Open path in file exprorer
@@ -38,7 +38,7 @@ directories = "5.0"
 relative-path = "1.9.3"
 
 [build-dependencies]
-build-info-build = "0.0.38" # For dependency listing
+build-info-build = "0.0.39" # For dependency listing
 
 [lints.rust]
 unsafe_code = "forbid"
