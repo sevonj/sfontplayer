@@ -1,11 +1,17 @@
 //! Audio backend module
 
-use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    fs::{self, File},
+    path::PathBuf,
+    sync::Arc,
+    time::Duration,
+};
 
 use error::PlayerError;
+use midi_msg::MidiFile;
 use midisource::MidiSource;
 use rodio::Sink;
-use rustysynth::{MidiFile, SoundFont};
+use rustysynth::SoundFont;
 
 mod error;
 mod midisource;
@@ -83,10 +89,10 @@ impl AudioPlayer {
         };
 
         let soundfont = Arc::new(load_soundfont(path_sf)?);
-        let midifile = Arc::new(load_midifile(path_mid)?);
-        self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
+        let midifile = load_midifile(path_mid)?;
+        //self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
 
-        let source = MidiSource::new(&soundfont, &midifile);
+        let source = MidiSource::new(&soundfont, midifile);
         sink.append(source);
         sink.play();
         Ok(())
@@ -133,7 +139,6 @@ impl AudioPlayer {
 
 // --- Private --- //
 
-/// Private: Load soundfont file.
 fn load_soundfont(path: &PathBuf) -> anyhow::Result<SoundFont> {
     match File::open(path) {
         Ok(mut file) => match SoundFont::new(&mut file) {
@@ -147,16 +152,17 @@ fn load_soundfont(path: &PathBuf) -> anyhow::Result<SoundFont> {
     }
 }
 
-/// Private: Load midi file.
-fn load_midifile(path: &PathBuf) -> anyhow::Result<MidiFile> {
-    match File::open(path) {
-        Ok(mut file) => match MidiFile::new(&mut file) {
-            Ok(midifile) => Ok(midifile),
-            Err(e) => anyhow::bail!(PlayerError::InvalidMidi { source: e }),
-        },
-        Err(e) => anyhow::bail!(PlayerError::CantAccessFile {
-            path: path.clone(),
-            source: e,
-        }),
-    }
+fn load_midifile(filepath: &PathBuf) -> anyhow::Result<MidiFile> {
+    let bytes = fs::read(filepath)?;
+    Ok(midi_msg::MidiFile::from_midi(bytes.as_slice())?)
+    //match File::open(path) {
+    //    Ok(mut file) => match MidiFile::new(&mut file) {
+    //        Ok(midifile) => Ok(midifile),
+    //        Err(e) => anyhow::bail!(PlayerError::InvalidMidi { source: e }),
+    //    },
+    //    Err(e) => anyhow::bail!(PlayerError::CantAccessFile {
+    //        path: path.clone(),
+    //        source: e,
+    //    }),
+    //}
 }

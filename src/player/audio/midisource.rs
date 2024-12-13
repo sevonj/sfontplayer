@@ -1,6 +1,6 @@
 use super::error::PlayerError;
-use midi_msg::{Division, Track};
-use rustysynth::{MidiFile, MidiFileSequencer, SoundFont, Synthesizer, SynthesizerSettings};
+use midi_msg::{Division, MidiFile, MidiMsg, Track, TrackEvent};
+use rustysynth::{/*MidiFile, MidiFileSequencer,*/ SoundFont, Synthesizer, SynthesizerSettings,};
 use std::{fs, path::Path, sync::Arc, time::Duration};
 
 const SAMPLERATE: u32 = 44100;
@@ -15,7 +15,7 @@ enum Channel {
 /// them. The disposable struct is consumed by audio sink for each song.
 pub struct MidiSource {
     /// The actual midi player
-    sequencer: MidiFileSequencer,
+    sequencer: Sequencer,
     /// We need to cache the R channel sample.
     cached_sample: f32,
     /// Which channel was played last
@@ -25,13 +25,13 @@ pub struct MidiSource {
 impl MidiSource {
     /// New `MidiSource` that immediately starts playing.
     #[allow(clippy::cast_possible_wrap)] // It's ok to cast here
-    pub fn new(sf: &Arc<SoundFont>, midifile: &Arc<MidiFile>) -> Self {
+    pub fn new(sf: &Arc<SoundFont>, midifile: MidiFile) -> Self {
         let settings = SynthesizerSettings::new(SAMPLERATE as i32);
         let mut synthesizer =
             Synthesizer::new(sf, &settings).expect("Could not create synthesizer");
         synthesizer.set_master_volume(1.0);
-        let mut sequencer = MidiFileSequencer::new(synthesizer);
-        sequencer.play(midifile, false);
+        let mut sequencer = Sequencer::new(synthesizer);
+        sequencer.play(midifile);
 
         Self {
             sequencer,
@@ -58,11 +58,11 @@ impl Iterator for MidiSource {
         if self.next_ch == Channel::L {
             self.next_ch = Channel::R;
 
-            let mut l = [0.; 1];
-            let mut r = [0.; 1];
-            self.sequencer.render(&mut l, &mut r);
-            self.cached_sample = r[0];
-            Some(l[0])
+            //let mut l = [0.; 1];
+            //let mut r = [0.; 1];
+            let samples = self.sequencer.render();
+            self.cached_sample = samples[1]; // R
+            Some(samples[0]) // L
         }
         // Right: Generate nothing and return cached R ch. sample.
         else {
@@ -75,14 +75,15 @@ impl Iterator for MidiSource {
 
 impl rodio::Source for MidiSource {
     fn current_frame_len(&self) -> Option<usize> {
-        let len = match self.sequencer.get_midi_file() {
-            Some(midifile) => midifile.get_length(),
-            None => return None,
-        };
-        let pos = self.sequencer.get_position();
-        let remaining = len - pos;
-        let remaining_samples = remaining * f64::from(SAMPLERATE);
-        Some(remaining_samples as usize)
+        //let len = match self.sequencer.get_midi_file() {
+        //    Some(midifile) => midifile.get_length(),
+        //    None => return None,
+        //};
+        //let pos = self.sequencer.get_position();
+        //let remaining = len - pos;
+        //let remaining_samples = remaining * f64::from(SAMPLERATE);
+        //Some(remaining_samples as usize)
+        None
     }
 
     fn channels(&self) -> u16 {
@@ -94,48 +95,53 @@ impl rodio::Source for MidiSource {
     }
 
     fn total_duration(&self) -> Option<Duration> {
-        self.sequencer
-            .get_midi_file()
-            .map(|midifile| Duration::from_secs_f64(midifile.get_length()))
+        None
+        //self.sequencer
+        //    .get_midi_file()
+        //    .map(|midifile| Duration::from_secs_f64(midifile.get_length()))
     }
 }
 
 /// MIDI Sequencer
 pub(crate) struct Sequencer {
     synthesizer: Synthesizer,
-    midifile: Option<midi_msg::MidiFile>,
-    //division: Division,
+    midifile: Option<MidiFile>,
     bpm: f64,
-    //tracks: Vec<Track>,
     /// Index of next event for each track
     track_positions: Vec<usize>,
     /// Song position in samples
     position: usize,
 }
 impl Sequencer {
-    pub fn new(synthesizer: Synthesizer) -> Result<Self, PlayerError> {
-        //
-        //let bytes = fs::read(filepath)?;
-        //let midifile = midi_msg::MidiFile::from_midi(bytes.as_slice())?;
-        //
-        //let mut tracks = vec![];
-        //let mut track_positions = vec![];
-        //for track in midifile.tracks {
-        //    if let Track::Midi(_) = track {
-        //        tracks.push(track.clone());
-        //        track_positions.push(0);
-        //    }
-        //}
-
-        Ok(Self {
+    pub fn new(synthesizer: Synthesizer) -> Self {
+        Self {
             synthesizer,
             midifile: None,
-            //division: midifile.header.division.clone(),
             bpm: 120.,
-            //tracks,
             track_positions: vec![],
             position: 0,
-        })
+        }
+    }
+
+    /// Are there no more messages left?
+    pub fn end_of_sequence(&self) -> bool {
+        let Some(midifile) = &self.midifile else {
+            return true;
+        };
+        for (i, track) in midifile.tracks.iter().enumerate() {
+            if self.track_positions[i] >= track.events().len() {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    pub fn play(&mut self, midifile: MidiFile) {
+        self.position = 0;
+        self.track_positions = vec![0, midifile.tracks.len()];
+        self.midifile = Some(midifile);
+
+        self.synthesizer.reset();
     }
 
     pub fn render(&mut self) -> [f32; 2] {
@@ -167,7 +173,36 @@ impl Sequencer {
 
         self.position += 1;
 
-        todo!()
+        for event in events {
+            match event.event {
+                MidiMsg::ChannelVoice { .. }
+                | MidiMsg::RunningChannelVoice { .. }
+                | MidiMsg::ChannelMode { .. }
+                | MidiMsg::RunningChannelMode { .. } => {
+                    let raw = event.event.to_midi();
+                    if raw.len() != 3 {
+                        panic!("Raw length wasn't 3. Data: {raw:02X?}")
+                    }
+                    let channel = raw[0] & 0x0f;
+                    let command = raw[0] & 0xf0;
+                    self.synthesizer.process_midi_message(
+                        channel.into(),
+                        command.into(),
+                        raw[1].into(),
+                        raw[2].into(),
+                    );
+                }
+                //midi_msg::MidiMsg::SystemCommon { msg } => todo!(),
+                //midi_msg::MidiMsg::SystemRealTime { msg } => todo!(),
+                //midi_msg::MidiMsg::SystemExclusive { msg } => todo!(),
+                //midi_msg::MidiMsg::Meta { msg } => todo!(),
+                _ => continue,
+            }
+        }
+        let mut left = [0.];
+        let mut right = [0.];
+        self.synthesizer.render(&mut left, &mut right);
+        return [left[0], right[0]];
     }
 
     fn get_current_tick(&self) -> usize {
