@@ -9,6 +9,7 @@ use rustysynth::{MidiFile, SoundFont};
 
 mod error;
 mod midisource;
+mod sequencer;
 
 /// Audio backend struct
 #[derive(Default)]
