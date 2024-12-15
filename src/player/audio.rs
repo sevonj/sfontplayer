@@ -155,14 +155,4 @@ fn load_soundfont(path: &PathBuf) -> anyhow::Result<SoundFont> {
 fn load_midifile(filepath: &PathBuf) -> anyhow::Result<MidiFile> {
     let bytes = fs::read(filepath)?;
     Ok(midi_msg::MidiFile::from_midi(bytes.as_slice())?)
-    //match File::open(path) {
-    //    Ok(mut file) => match MidiFile::new(&mut file) {
-    //        Ok(midifile) => Ok(midifile),
-    //        Err(e) => anyhow::bail!(PlayerError::InvalidMidi { source: e }),
-    //    },
-    //    Err(e) => anyhow::bail!(PlayerError::CantAccessFile {
-    //        path: path.clone(),
-    //        source: e,
-    //    }),
-    //}
 }
