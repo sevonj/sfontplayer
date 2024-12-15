@@ -219,6 +219,7 @@ impl Player {
         let shuffle = self.shuffle;
         self.get_playing_playlist_mut().rebuild_queue(shuffle);
         if let Err(e) = self.play_selected_song() {
+            println!("{e}");
             self.push_error(e.to_string());
         }
     }
