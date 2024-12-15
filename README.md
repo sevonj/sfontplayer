@@ -12,6 +12,8 @@ A simple midi player that makes soundfont comparison easy.
   This was my sole reason to start this project.
 - **Workspaces**  
   Playlists can be set to automatically track the contents of a directory (and subdirectories).
+- **Tools** (upcoming)  
+  Miscellaneous tools / detailed file info
 
 ## Download
 
