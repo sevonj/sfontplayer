@@ -1,7 +1,6 @@
-use super::error::PlayerError;
-use midi_msg::{Division, MidiFile, MidiMsg, Track, TrackEvent};
-use rustysynth::{/*MidiFile, MidiFileSequencer,*/ SoundFont, Synthesizer, SynthesizerSettings,};
-use std::{fs, path::Path, sync::Arc, time::Duration};
+use midi_msg::{Division, Meta, MidiFile, MidiMsg, TimeCodeType, TrackEvent};
+use rustysynth::{SoundFont, Synthesizer, SynthesizerSettings};
+use std::{sync::Arc, time::Duration};
 
 const SAMPLERATE: u32 = 44100;
 
@@ -104,7 +103,7 @@ impl rodio::Source for MidiSource {
 }
 
 /// MIDI Sequencer
-pub(crate) struct Sequencer {
+struct Sequencer {
     synthesizer: Synthesizer,
     midifile: Option<MidiFile>,
     bpm: f64,
@@ -114,7 +113,7 @@ pub(crate) struct Sequencer {
     position: usize,
 }
 impl Sequencer {
-    pub fn new(synthesizer: Synthesizer) -> Self {
+    pub const fn new(synthesizer: Synthesizer) -> Self {
         Self {
             synthesizer,
             midifile: None,
@@ -143,7 +142,7 @@ impl Sequencer {
                 self.track_positions[i]
             );
         }
-        return true;
+        true
     }
 
     pub fn play(&mut self, midifile: MidiFile) {
@@ -155,13 +154,35 @@ impl Sequencer {
     }
 
     pub fn render(&mut self) -> [f32; 2] {
-        //println!("rend: pos {}", self.position);
-        let Some(midifile) = &self.midifile else {
+        let Some(events) = self.get_events() else {
             return [0., 0.];
         };
 
-        let tick = self.get_current_tick();
-        // println!("t: {tick}");
+        self.position += 1;
+
+        for event in events {
+            match event.event {
+                MidiMsg::ChannelVoice { .. }
+                | MidiMsg::RunningChannelVoice { .. }
+                | MidiMsg::ChannelMode { .. }
+                | MidiMsg::RunningChannelMode { .. } => self.handle_channel_event(&event),
+                midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
+                _ => continue,
+            }
+        }
+
+        let mut left = [0.];
+        let mut right = [0.];
+        self.synthesizer.render(&mut left, &mut right);
+        [left[0], right[0]]
+    }
+
+    fn get_events(&mut self) -> Option<Vec<TrackEvent>> {
+        let Some(midifile) = &self.midifile else {
+            return None;
+        };
+
+        let current_tick = self.get_current_tick();
 
         let mut events = vec![];
         for (i, track) in midifile.tracks.iter().enumerate() {
@@ -176,107 +197,60 @@ impl Sequencer {
                     .division
                     .beat_or_frame_to_tick(event.beat_or_frame)
                     as usize;
-                if tick >= event_tick {
+                if current_tick >= event_tick {
                     self.track_positions[i] += 1;
                     events.push(event.clone());
-                    if tick > event_tick {
-                        println!("Somehow an event was missed! Playing it late. event: {event:?}");
+                    if current_tick > event_tick {
+                        println!("Somehow an event was missed! Playing it late. {event:?}");
                     }
                 } else {
                     break;
                 }
             }
         }
+        Some(events)
+    }
 
-        self.position += 1;
-
-        for event in events {
-            //println!("{event:?}");
-            match event.event {
-                MidiMsg::ChannelVoice { .. }
-                | MidiMsg::RunningChannelVoice { .. }
-                | MidiMsg::ChannelMode { .. }
-                | MidiMsg::RunningChannelMode { .. } => {
-                    let raw = event.event.to_midi();
-                    let channel = raw[0] & 0x0f;
-                    let command = raw[0] & 0xf0;
-                    let data1;
-                    let data2;
-
-                    match raw.len() {
-                        2 => {
-                            data1 = raw[1];
-                            data2 = 0;
-                        }
-                        3 => {
-                            data1 = raw[1];
-                            data2 = raw[2];
-                        }
-                        _ => {
-                            println!("Raw length was {}. event: {event:?}", raw.len());
-                            continue;
-                        }
-                    }
-
-                    self.synthesizer.process_midi_message(
-                        channel.into(),
-                        command.into(),
-                        data1.into(),
-                        data2.into(),
-                    );
-
-                    /* match event.event {
-                        MidiMsg::ChannelVoice { msg, .. } => match msg {
-                            //midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => todo!(),
-                            //midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => todo!(),
-                            midi_msg::ChannelVoiceMsg::ControlChange { control } => (),
-                            midi_msg::ChannelVoiceMsg::HighResNoteOn { note, velocity } => todo!(),
-                            midi_msg::ChannelVoiceMsg::HighResNoteOff { note, velocity } => todo!(),
-                            midi_msg::ChannelVoiceMsg::PolyPressure { note, pressure } => todo!(),
-                            midi_msg::ChannelVoiceMsg::ChannelPressure { pressure } => todo!(),
-                            midi_msg::ChannelVoiceMsg::ProgramChange { program } => {
-                                self.synthesizer.process_midi_message(
-                                    channel.into(),
-                                    command.into(),
-                                    raw[1].into(),
-                                    0,
-                                );
-                            }
-                            //midi_msg::ChannelVoiceMsg::PitchBend { bend } => todo!(),
-                            _ => unreachable!(),
-                        },
-                        _ => (),
-                    }*/
-                }
-                //midi_msg::MidiMsg::SystemCommon { msg } => todo!(),
-                //midi_msg::MidiMsg::SystemRealTime { msg } => todo!(),
-                //midi_msg::MidiMsg::SystemExclusive { msg } => todo!(),
-                midi_msg::MidiMsg::Meta { msg } => match msg {
-                    //midi_msg::Meta::SequenceNumber(_) => todo!(),
-                    //midi_msg::Meta::Text(_) => todo!(),
-                    //midi_msg::Meta::Copyright(_) => todo!(),
-                    //midi_msg::Meta::TrackName(_) => todo!(),
-                    //midi_msg::Meta::InstrumentName(_) => todo!(),
-                    //midi_msg::Meta::Lyric(_) => todo!(),
-                    //midi_msg::Meta::Marker(_) => todo!(),
-                    //midi_msg::Meta::CuePoint(_) => todo!(),
-                    //midi_msg::Meta::ChannelPrefix(channel) => todo!(),
-                    //midi_msg::Meta::EndOfTrack => todo!(),
-                    midi_msg::Meta::SetTempo(tempo) => self.bpm = 60_000_000. / tempo as f64,
-                    //midi_msg::Meta::SmpteOffset(high_res_time_code) => todo!(),
-                    //midi_msg::Meta::TimeSignature(file_time_signature) => todo!(),
-                    //midi_msg::Meta::KeySignature(key_signature) => todo!(),
-                    //midi_msg::Meta::SequencerSpecific(vec) => todo!(),
-                    //midi_msg::Meta::Unknown { meta_type, data } => todo!(),
-                    _ => (),
-                },
-                _ => continue,
+    fn send_raw_event(&mut self, raw: &[u8]) {
+        let channel = raw[0] & 0x0f;
+        let command = raw[0] & 0xf0;
+        let data1;
+        let data2;
+        match raw.len() {
+            2 => {
+                data1 = raw[1];
+                data2 = 0;
             }
+            3 => {
+                data1 = raw[1];
+                data2 = raw[2];
+            }
+            _ => panic!("This shouldn't happen. Don't call if len > 3."),
         }
-        let mut left = [0.];
-        let mut right = [0.];
-        self.synthesizer.render(&mut left, &mut right);
-        return [left[0], right[0]];
+        self.synthesizer.process_midi_message(
+            channel.into(),
+            command.into(),
+            data1.into(),
+            data2.into(),
+        );
+    }
+
+    fn handle_channel_event(&mut self, event: &TrackEvent) {
+        let raw = event.event.to_midi();
+
+        if let 2..=3 = raw.len() {
+            self.send_raw_event(&raw);
+            return;
+        }
+
+        // Unexpected message length
+        println!("Unhandled event: raw: {raw:02X?}, event: {event:?}");
+    }
+
+    fn handle_meta_event(&mut self, msg: &Meta) {
+        if let Meta::SetTempo(tempo) = msg {
+            self.bpm = 60_000_000. / f64::from(*tempo);
+        }
     }
 
     fn get_current_tick(&self) -> usize {
@@ -286,32 +260,19 @@ impl Sequencer {
 
         // in seconds
         let tick_duration = match midifile.header.division {
-            Division::TicksPerQuarterNote(ticks) => 60. / self.bpm / ticks as f64,
+            Division::TicksPerQuarterNote(ticks) => 60. / self.bpm / f64::from(ticks),
             Division::TimeCode {
                 frames_per_second,
                 ticks_per_frame,
             } => {
                 let fps = match frames_per_second {
-                    midi_msg::TimeCodeType::FPS24 => 24.,
-                    midi_msg::TimeCodeType::FPS25 => 25.,
-                    midi_msg::TimeCodeType::DF30 => 30.,
-                    midi_msg::TimeCodeType::NDF30 => 30.,
+                    TimeCodeType::FPS24 => 24.,
+                    TimeCodeType::FPS25 => 25.,
+                    TimeCodeType::DF30 | TimeCodeType::NDF30 => 30.,
                 };
-                1. / fps / ticks_per_frame as f64
+                1. / fps / f64::from(ticks_per_frame)
             }
         };
-        self.position / (tick_duration * self.synthesizer.get_sample_rate() as f64) as usize
-    }
-
-    fn assert_trackpos_len(&self) {
-        let Some(midifile) = &self.midifile else {
-            return;
-        };
-        println!(
-            "assert_trackpos_len - pos: {} mid: {}",
-            self.track_positions.len(),
-            midifile.tracks.len()
-        );
-        assert_eq!(self.track_positions.len(), midifile.tracks.len());
+        self.position / (tick_duration * f64::from(self.synthesizer.get_sample_rate())) as usize
     }
 }

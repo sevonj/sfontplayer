@@ -1,7 +1,6 @@
-use std::{fmt, path::PathBuf};
-
 use midi_msg::MidiFileParseError;
-use rustysynth::{MidiFileError, SoundFontError};
+use rustysynth::SoundFontError;
+use std::{fmt, path::PathBuf};
 
 #[derive(Debug)]
 pub enum PlayerError {
@@ -19,9 +18,6 @@ pub enum PlayerError {
         source: SoundFontError,
     },
     InvalidMidi {
-        source: MidiFileError,
-    },
-    InvalidMidi2 {
         source: MidiFileParseError,
     },
 }
@@ -43,9 +39,6 @@ impl fmt::Display for PlayerError {
             Self::InvalidMidi { source } => {
                 write!(f, "Invalid midi file: {source}")
             }
-            Self::InvalidMidi2 { source } => {
-                write!(f, "Invalid midi file: {source}")
-            }
         }
     }
 }
@@ -56,6 +49,6 @@ impl From<std::io::Error> for PlayerError {
 }
 impl From<MidiFileParseError> for PlayerError {
     fn from(source: MidiFileParseError) -> Self {
-        Self::InvalidMidi2 { source }
+        Self::InvalidMidi { source }
     }
 }
