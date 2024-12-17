@@ -267,6 +267,16 @@ impl Player {
         Ok(())
     }
 
+    /// For changing soundfont on the go.
+    pub fn reload_font(&mut self) -> anyhow::Result<()> {
+        let sf = self.get_soundfont()?;
+        let sf_path = sf.get_path();
+        sf.refresh();
+        sf.get_status()?;
+        self.audioplayer.set_soundfont(sf_path);
+        Ok(())
+    }
+
     /// Stop playback
     pub fn stop(&mut self) {
         let _ = self.audioplayer.stop_playback();

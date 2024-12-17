@@ -44,6 +44,15 @@ impl AudioPlayer {
     /// Choose new soundfont
     pub(crate) fn set_soundfont(&mut self, path: PathBuf) {
         self.path_soundfont = Some(path);
+
+        if let Some(sink) = &self.sink {
+            if !sink.empty() {
+                let pos = sink.get_pos();
+                sink.clear();
+                let _ = self.start_playback();
+                let _ = self.seek_to(pos);
+            }
+        };
     }
     /// Choose new midi file
     pub(crate) fn set_midifile(&mut self, path: PathBuf) {
