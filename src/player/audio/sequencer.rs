@@ -1,7 +1,6 @@
-use std::time::Duration;
-
-use midi_msg::{Division, Meta, MidiFile, MidiMsg, TimeCodeType, TrackEvent};
+use midi_msg::{ChannelVoiceMsg, Division, Meta, MidiFile, MidiMsg, TimeCodeType, TrackEvent};
 use rustysynth::Synthesizer;
+use std::time::Duration;
 
 /// MIDI Sequencer
 pub struct Sequencer {
@@ -99,7 +98,8 @@ impl Sequencer {
         }
     }
 
-    fn update_events_fast(&mut self) {
+    /// For seeking. Ignore `NoteOn`.
+    fn update_events_quiet(&mut self) {
         let Some(events) = self.get_events() else {
             return;
         };
@@ -114,10 +114,15 @@ impl Sequencer {
 
         for event in events {
             match event.event {
-                MidiMsg::ChannelVoice { .. }
-                | MidiMsg::RunningChannelVoice { .. }
-                | MidiMsg::ChannelMode { .. }
-                | MidiMsg::RunningChannelMode { .. } => (), //self.handle_channel_event(&event),
+                MidiMsg::ChannelVoice { msg, .. } | MidiMsg::RunningChannelVoice { msg, .. } => {
+                    match msg {
+                        ChannelVoiceMsg::NoteOn { .. } | ChannelVoiceMsg::HighResNoteOn { .. } => {}
+                        _ => self.handle_channel_event(&event),
+                    }
+                }
+                MidiMsg::ChannelMode { .. } | MidiMsg::RunningChannelMode { .. } => {
+                    self.handle_channel_event(&event);
+                }
                 midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
                 _ => (),
             }
@@ -305,7 +310,6 @@ impl Sequencer {
     }
 
     pub fn seek_to(&mut self, t: Duration) {
-        println!("SEEEK");
         let Some(midifile) = &self.midifile else {
             return;
         };
@@ -320,8 +324,7 @@ impl Sequencer {
         }
 
         while self.song_position < t {
-            //println!("seeking: {:?}", self.song_position);
-            self.update_events_fast();
+            self.update_events_quiet();
         }
     }
 }
