@@ -6,6 +6,8 @@ use rustysynth::Synthesizer;
 /// MIDI Sequencer
 pub struct Sequencer {
     synthesizer: Synthesizer,
+    /// Sample duration
+    delta_t: Duration,
     midifile: Option<MidiFile>,
     bpm: f64,
     /// Index of next event for each track
@@ -14,17 +16,21 @@ pub struct Sequencer {
     tick: usize,
     tick_timer: Duration,
     song_length: Duration,
+    song_position: Duration,
 }
 impl Sequencer {
-    pub const fn new(synthesizer: Synthesizer) -> Self {
+    pub fn new(synthesizer: Synthesizer) -> Self {
+        let delta_t = Duration::from_secs_f64(1. / f64::from(synthesizer.get_sample_rate()));
         Self {
             synthesizer,
+            delta_t,
             midifile: None,
             bpm: 120.,
             track_positions: vec![],
             tick: 0,
             tick_timer: Duration::ZERO,
             song_length: Duration::ZERO,
+            song_position: Duration::ZERO,
         }
     }
 
@@ -60,12 +66,21 @@ impl Sequencer {
     }
 
     pub fn render(&mut self) -> [f32; 2] {
+        self.update_events();
+
+        let mut left = [0.];
+        let mut right = [0.];
+        self.synthesizer.render(&mut left, &mut right);
+        [left[0], right[0]]
+    }
+
+    fn update_events(&mut self) {
         let Some(events) = self.get_events() else {
-            return [0., 0.];
+            return;
         };
 
-        self.tick_timer +=
-            Duration::from_secs_f64(1. / f64::from(self.synthesizer.get_sample_rate()));
+        self.song_position += self.delta_t;
+        self.tick_timer += self.delta_t;
         let tick_duration = self.get_tick_duration();
         if self.tick_timer >= tick_duration {
             self.tick_timer -= tick_duration;
@@ -82,11 +97,31 @@ impl Sequencer {
                 _ => (),
             }
         }
+    }
 
-        let mut left = [0.];
-        let mut right = [0.];
-        self.synthesizer.render(&mut left, &mut right);
-        [left[0], right[0]]
+    fn update_events_fast(&mut self) {
+        let Some(events) = self.get_events() else {
+            return;
+        };
+
+        self.song_position += self.delta_t;
+        self.tick_timer += self.delta_t;
+        let tick_duration = self.get_tick_duration();
+        if self.tick_timer >= tick_duration {
+            self.tick_timer -= tick_duration;
+            self.tick += 1;
+        }
+
+        for event in events {
+            match event.event {
+                MidiMsg::ChannelVoice { .. }
+                | MidiMsg::RunningChannelVoice { .. }
+                | MidiMsg::ChannelMode { .. }
+                | MidiMsg::RunningChannelMode { .. } => (), //self.handle_channel_event(&event),
+                midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
+                _ => (),
+            }
+        }
     }
 
     fn get_events(&mut self) -> Option<Vec<TrackEvent>> {
@@ -259,5 +294,34 @@ impl Sequencer {
 
     pub const fn get_song_length(&self) -> Duration {
         self.song_length
+    }
+
+    pub const fn get_song_position(&self) -> Duration {
+        self.song_position
+    }
+
+    pub fn get_sample_rate(&self) -> i32 {
+        self.synthesizer.get_sample_rate()
+    }
+
+    pub fn seek_to(&mut self, t: Duration) {
+        println!("SEEEK");
+        let Some(midifile) = &self.midifile else {
+            return;
+        };
+
+        if t < self.song_position {
+            self.bpm = 120.;
+            self.track_positions = vec![0; midifile.tracks.len()];
+            self.tick = 0;
+            self.tick_timer = Duration::ZERO;
+            self.song_position = Duration::ZERO;
+            self.synthesizer.reset();
+        }
+
+        while self.song_position < t {
+            //println!("seeking: {:?}", self.song_position);
+            self.update_events_fast();
+        }
     }
 }

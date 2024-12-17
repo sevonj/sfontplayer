@@ -108,6 +108,13 @@ impl AudioPlayer {
         sink.pause();
         Ok(())
     }
+    pub(crate) fn seek_to(&self, pos: Duration) -> anyhow::Result<()> {
+        let Some(sink) = &self.sink else {
+            anyhow::bail!(PlayerError::NoSink);
+        };
+        let _ = sink.try_seek(pos);
+        Ok(())
+    }
 
     // --- Playback State
 

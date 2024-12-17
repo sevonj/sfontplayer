@@ -52,7 +52,6 @@ impl Iterator for MidiSource {
     type Item = f32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        //println!("next");
         if self.sequencer.end_of_sequence() {
             return None;
         }
@@ -79,7 +78,9 @@ impl Iterator for MidiSource {
 
 impl rodio::Source for MidiSource {
     fn current_frame_len(&self) -> Option<usize> {
-        None
+        let time_left = self.sequencer.get_song_length() - self.sequencer.get_song_position();
+        let samples_left = time_left.as_secs_f64() * f64::from(self.sequencer.get_sample_rate());
+        Some(samples_left as usize)
     }
 
     fn channels(&self) -> u16 {
@@ -92,5 +93,10 @@ impl rodio::Source for MidiSource {
 
     fn total_duration(&self) -> Option<Duration> {
         Some(self.sequencer.get_song_length())
+    }
+
+    fn try_seek(&mut self, pos: Duration) -> Result<(), rodio::source::SeekError> {
+        self.sequencer.seek_to(pos);
+        Ok(())
     }
 }
