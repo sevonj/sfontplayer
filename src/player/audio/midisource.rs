@@ -79,14 +79,6 @@ impl Iterator for MidiSource {
 
 impl rodio::Source for MidiSource {
     fn current_frame_len(&self) -> Option<usize> {
-        //let len = match self.sequencer.get_midi_file() {
-        //    Some(midifile) => midifile.get_length(),
-        //    None => return None,
-        //};
-        //let pos = self.sequencer.get_position();
-        //let remaining = len - pos;
-        //let remaining_samples = remaining * f64::from(SAMPLERATE);
-        //Some(remaining_samples as usize)
         None
     }
 
@@ -99,9 +91,6 @@ impl rodio::Source for MidiSource {
     }
 
     fn total_duration(&self) -> Option<Duration> {
-        None
-        //self.sequencer
-        //    .get_midi_file()
-        //    .map(|midifile| Duration::from_secs_f64(midifile.get_length()))
+        Some(self.sequencer.get_song_length())
     }
 }
