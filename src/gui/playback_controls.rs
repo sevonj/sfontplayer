@@ -2,6 +2,7 @@ use eframe::egui::{
     include_image, Button, Image, ImageSource, Response, RichText, SelectableLabel, Sense, Slider,
     Ui, UiBuilder,
 };
+use std::time::Duration;
 
 use crate::{
     player::{Player, RepeatMode},
@@ -128,21 +129,27 @@ fn icon_button(ui: &mut Ui, source: ImageSource, id: &str) -> Response {
 }
 
 /// Song position slider
-fn position_control(ui: &mut Ui, player: &Player, width: f32) {
+fn position_control(ui: &mut Ui, player: &mut Player, width: f32) {
     let len = player.get_playback_length();
     let pos = player.get_playback_position();
+    let mut pos_float = pos.as_secs_f64();
 
     // This stops the slider from showing halfway if len is zero.
     let slider_len = if len.is_zero() { 1. } else { len.as_secs_f64() };
 
     ui.horizontal(|ui| {
         ui.spacing_mut().slider_width = width;
-        ui.add_enabled(
-            !len.is_zero(),
-            Slider::new(&mut pos.as_secs_f64(), 0.0..=slider_len)
-                .show_value(false)
-                .trailing_fill(true),
-        );
+        if ui
+            .add_enabled(
+                !len.is_zero(),
+                Slider::new(&mut pos_float, 0.0..=slider_len)
+                    .show_value(false)
+                    .trailing_fill(true),
+            )
+            .changed()
+        {
+            player.seek_to(Duration::from_secs_f64(pos_float));
+        };
     });
 
     ui.label(format!("{}/{}", format_duration(pos), format_duration(len)));

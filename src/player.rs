@@ -276,6 +276,11 @@ impl Player {
 
         self.mediacontrol_update_song();
     }
+    pub fn seek_to(&mut self, t: Duration) {
+        if let Err(e) = self.audioplayer.seek_to(t) {
+            self.push_error(e.to_string());
+        }
+    }
     /// Unpause
     pub fn play(&mut self) {
         if self.is_playing {
