@@ -153,6 +153,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 // Select
                 if row.response().clicked() {
                     let _ = player.get_playlist_mut().set_font_idx(Some(index));
+                    let _ = player.reload_font();
                 }
                 // Context menu
                 row.response().context_menu(|ui| {
