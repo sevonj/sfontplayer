@@ -58,8 +58,6 @@ impl Iterator for MidiSource {
         if self.next_ch == Channel::L {
             self.next_ch = Channel::R;
 
-            //let mut l = [0.; 1];
-            //let mut r = [0.; 1];
             let samples = self.sequencer.render();
             self.cached_sample = samples[1]; // R
             Some(samples[0]) // L
@@ -109,8 +107,9 @@ struct Sequencer {
     bpm: f64,
     /// Index of next event for each track
     track_positions: Vec<usize>,
-    /// Song position in samples
-    position: usize,
+    /// Song position
+    tick: usize,
+    tick_timer: Duration,
 }
 impl Sequencer {
     pub const fn new(synthesizer: Synthesizer) -> Self {
@@ -119,7 +118,8 @@ impl Sequencer {
             midifile: None,
             bpm: 120.,
             track_positions: vec![],
-            position: 0,
+            tick: 0,
+            tick_timer: Duration::ZERO,
         }
     }
 
@@ -146,7 +146,7 @@ impl Sequencer {
     }
 
     pub fn play(&mut self, midifile: MidiFile) {
-        self.position = 0;
+        self.tick = 0;
         self.track_positions = vec![0; midifile.tracks.len()];
         self.midifile = Some(midifile);
 
@@ -158,7 +158,13 @@ impl Sequencer {
             return [0., 0.];
         };
 
-        self.position += 1;
+        self.tick_timer +=
+            Duration::from_secs_f64(1. / f64::from(self.synthesizer.get_sample_rate()));
+        let tick_duration = self.get_tick_duration();
+        if self.tick_timer >= tick_duration {
+            self.tick_timer -= tick_duration;
+            self.tick += 1;
+        }
 
         for event in events {
             match event.event {
@@ -182,8 +188,6 @@ impl Sequencer {
             return None;
         };
 
-        let current_tick = self.get_current_tick();
-
         let mut events = vec![];
         for (i, track) in midifile.tracks.iter().enumerate() {
             loop {
@@ -197,11 +201,12 @@ impl Sequencer {
                     .division
                     .beat_or_frame_to_tick(event.beat_or_frame)
                     as usize;
-                if current_tick >= event_tick {
+                if self.tick >= event_tick {
                     self.track_positions[i] += 1;
                     events.push(event.clone());
-                    if current_tick > event_tick {
-                        println!("Somehow an event was missed! Playing it late. {event:?}");
+                    if self.tick > event_tick {
+                        let late = self.tick - event_tick;
+                        println!("Somehow an event was missed! Playing it late ({late} ticks). {event:?}");
                     }
                 } else {
                     break;
@@ -225,7 +230,7 @@ impl Sequencer {
                 data1 = raw[1];
                 data2 = raw[2];
             }
-            _ => panic!("This shouldn't happen. Don't call if len > 3."),
+            _ => panic!("This shouldn't happen. Check length before calling."),
         }
         self.synthesizer.process_midi_message(
             channel.into(),
@@ -243,7 +248,6 @@ impl Sequencer {
             return;
         }
 
-        // Unexpected message length
         println!("Unhandled event: raw: {raw:02X?}, event: {event:?}");
     }
 
@@ -253,13 +257,11 @@ impl Sequencer {
         }
     }
 
-    fn get_current_tick(&self) -> usize {
+    fn get_tick_duration(&self) -> Duration {
         let Some(midifile) = &self.midifile else {
-            return 0;
+            return Duration::ZERO;
         };
-
-        // in seconds
-        let tick_duration = match midifile.header.division {
+        let in_secs = match midifile.header.division {
             Division::TicksPerQuarterNote(ticks) => 60. / self.bpm / f64::from(ticks),
             Division::TimeCode {
                 frames_per_second,
@@ -273,6 +275,6 @@ impl Sequencer {
                 1. / fps / f64::from(ticks_per_frame)
             }
         };
-        self.position / (tick_duration * f64::from(self.synthesizer.get_sample_rate())) as usize
+        Duration::from_secs_f64(in_secs)
     }
 }
