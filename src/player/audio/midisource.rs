@@ -173,7 +173,7 @@ impl Sequencer {
                 | MidiMsg::ChannelMode { .. }
                 | MidiMsg::RunningChannelMode { .. } => self.handle_channel_event(&event),
                 midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
-                _ => continue,
+                _ => (),
             }
         }
 
@@ -246,6 +246,17 @@ impl Sequencer {
         if let 2..=3 = raw.len() {
             self.send_raw_event(&raw);
             return;
+        }
+
+        if raw.len() == 5 {
+            // Break a message that contains MSB and LSB into two separate ones
+            if raw[1] == 0x64 {
+                let lsb = &raw[0..3];
+                let msb = vec![raw[0], raw[3], raw[4]];
+                self.send_raw_event(lsb);
+                self.send_raw_event(&msb);
+                return;
+            }
         }
 
         println!("Unhandled event: raw: {raw:02X?}, event: {event:?}");
