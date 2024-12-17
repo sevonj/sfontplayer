@@ -38,6 +38,10 @@ impl MidiSource {
             cached_sample: 0.,
         }
     }
+
+    pub const fn get_song_length(&self) -> Duration {
+        self.sequencer.get_song_length()
+    }
 }
 
 // Rodio requires Iterator implementation.
@@ -110,6 +114,7 @@ struct Sequencer {
     /// Song position
     tick: usize,
     tick_timer: Duration,
+    song_length: Duration,
 }
 impl Sequencer {
     pub const fn new(synthesizer: Synthesizer) -> Self {
@@ -120,6 +125,7 @@ impl Sequencer {
             track_positions: vec![],
             tick: 0,
             tick_timer: Duration::ZERO,
+            song_length: Duration::ZERO,
         }
     }
 
@@ -151,6 +157,7 @@ impl Sequencer {
         self.midifile = Some(midifile);
 
         self.synthesizer.reset();
+        self.update_song_length();
     }
 
     pub fn render(&mut self) -> [f32; 2] {
@@ -287,5 +294,74 @@ impl Sequencer {
             }
         };
         Duration::from_secs_f64(in_secs)
+    }
+
+    fn update_song_length(&mut self) {
+        let Some(midifile) = &self.midifile else {
+            self.song_length = Duration::ZERO;
+            return;
+        };
+
+        let mut track_positions = vec![0; midifile.tracks.len()];
+        let mut tick = 0;
+        let mut duration = Duration::ZERO;
+        let mut bpm = 120.;
+        loop {
+            let mut done = true;
+            for (i, track) in midifile.tracks.iter().enumerate() {
+                loop {
+                    let event_idx = track_positions[i];
+                    if event_idx >= track.len() {
+                        break;
+                    }
+                    done = false;
+
+                    let event = &track.events()[event_idx];
+                    let event_tick = midifile
+                        .header
+                        .division
+                        .beat_or_frame_to_tick(event.beat_or_frame)
+                        as usize;
+                    if tick >= event_tick {
+                        track_positions[i] += 1;
+                        match &event.event {
+                            MidiMsg::Meta { msg } => match msg {
+                                Meta::SetTempo(tempo) => {
+                                    bpm = 60_000_000. / f64::from(*tempo);
+                                }
+                                _ => (),
+                            },
+                            _ => (),
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+            tick += 1;
+            let tick_duration = match midifile.header.division {
+                Division::TicksPerQuarterNote(ticks) => 60. / bpm / f64::from(ticks),
+                Division::TimeCode {
+                    frames_per_second,
+                    ticks_per_frame,
+                } => {
+                    let fps = match frames_per_second {
+                        TimeCodeType::FPS24 => 24.,
+                        TimeCodeType::FPS25 => 25.,
+                        TimeCodeType::DF30 | TimeCodeType::NDF30 => 30.,
+                    };
+                    1. / fps / f64::from(ticks_per_frame)
+                }
+            };
+            duration += Duration::from_secs_f64(tick_duration);
+            if done {
+                break;
+            }
+        }
+        self.song_length = duration;
+    }
+
+    pub const fn get_song_length(&self) -> Duration {
+        self.song_length
     }
 }

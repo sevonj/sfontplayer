@@ -90,9 +90,10 @@ impl AudioPlayer {
 
         let soundfont = Arc::new(load_soundfont(path_sf)?);
         let midifile = load_midifile(path_mid)?;
-        //self.midifile_duration = Some(Duration::from_secs_f64(midifile.get_length()));
 
         let source = MidiSource::new(&soundfont, midifile);
+        self.midifile_duration = Some(source.get_song_length());
+
         sink.append(source);
         sink.play();
         Ok(())
