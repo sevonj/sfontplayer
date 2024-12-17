@@ -1,8 +1,8 @@
-use std::time::Duration;
 use eframe::egui::{
     include_image, Button, Image, ImageSource, Response, RichText, SelectableLabel, Sense, Slider,
     Ui, UiBuilder,
 };
+use std::time::Duration;
 
 use crate::{
     player::{Player, RepeatMode},
