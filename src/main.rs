@@ -1,3 +1,8 @@
+use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
+use gui::{draw_gui, GuiState};
+use midi_inspector::MidiInspector;
+use player::{playlist::Playlist, Player};
+use rodio::{OutputStream, Sink};
 use std::{
     env,
     sync::Arc,
@@ -5,12 +10,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
-use gui::{draw_gui, GuiState};
-use player::{playlist::Playlist, Player};
-use rodio::{OutputStream, Sink};
-
 mod gui;
+mod midi_inspector;
 mod player;
 
 fn main() {
@@ -36,6 +37,8 @@ struct SfontPlayer {
     #[serde(skip)]
     player: Arc<Mutex<Player>>,
     #[serde(skip)]
+    midi_inspector: Option<MidiInspector>,
+    #[serde(skip)]
     stream: OutputStream,
     gui_state: GuiState,
 }
@@ -50,6 +53,7 @@ impl Default for SfontPlayer {
         }
         let sfontplayer = Self {
             player: Arc::new(Mutex::new(player)),
+            midi_inspector: None,
             gui_state: GuiState::default(),
             stream,
         };
@@ -146,23 +150,30 @@ impl eframe::App for SfontPlayer {
     }
 
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+        // App logic
         {
             let mut player = self.player.lock();
-
-            // Run app logic
             player.update();
             handle_events(&mut player, &mut self.gui_state, ctx);
-
-            // Draw gui
-            egui_extras::install_image_loaders(ctx);
-            draw_gui(ctx, &mut player, &mut self.gui_state);
-            self.gui_state.update_flags.clear();
-
             // Repaint continuously while playing
             if !player.is_paused() {
                 ctx.request_repaint();
             }
         }
+
+        // Draw
+        egui_extras::install_image_loaders(ctx);
+        draw_gui(ctx, self);
+
+        if self.gui_state.update_flags.close_midi_inspector {
+            self.midi_inspector = None;
+        } else if let Some(filepath) = &self.gui_state.update_flags.open_midi_inspector {
+            if let Ok(insp) = MidiInspector::new(filepath) {
+                self.midi_inspector = Some(insp);
+            }
+        }
+
+        self.gui_state.update_flags.clear();
         self.quit_check(ctx);
     }
 }
