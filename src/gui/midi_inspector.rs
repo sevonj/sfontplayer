@@ -101,7 +101,7 @@ fn midi_track_panel(ui: &mut Ui, i: usize, content: &[TrackEvent]) {
             });
 
             table.body(|body| {
-                body.rows(24., content.len(), |mut row| {
+                body.rows(28., content.len(), |mut row| {
                     let index = row.index();
                     let track_event = &content[index];
                     let delta_t = track_event.delta_time;
@@ -122,7 +122,10 @@ fn midi_track_panel(ui: &mut Ui, i: usize, content: &[TrackEvent]) {
                             .fill(event_color(ui.style(), event))
                             .show(ui, |ui| {
                                 ui.set_width(ui.available_width());
-                                ui.strong(format!("{event:?}",));
+                                ui.horizontal(|ui| {
+                                    ui.strong(format!("{event:?}"));
+                                    ui.strong(format!("raw: {:02X?}", event.to_midi()));
+                                });
                             });
                     });
                 });
