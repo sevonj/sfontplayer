@@ -190,6 +190,12 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
 
                 // Context menu
                 row.response().context_menu(|ui| {
+                    ui.add_enabled_ui(status.is_ok(), |ui| {
+                        if ui.button("Open in inspector").clicked() {
+                            gui.update_flags.open_midi_inspector = Some(filepath.clone());
+                            ui.close_menu();
+                        }
+                    });
                     if ui.button("Refresh").clicked() {
                         player.get_playlist_mut().get_songs_mut()[index].refresh();
                         ui.close_menu();
