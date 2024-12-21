@@ -2,6 +2,11 @@ use midi_msg::{ChannelVoiceMsg, Division, Meta, MidiFile, MidiMsg, TimeCodeType,
 use rustysynth::Synthesizer;
 use std::time::Duration;
 
+struct TrackEventWrap {
+    pub track_event: TrackEvent,
+    pub track_idx: usize,
+    pub event_idx: usize,
+}
 /// MIDI Sequencer
 pub struct Sequencer {
     synthesizer: Synthesizer,
@@ -86,12 +91,20 @@ impl Sequencer {
             self.tick += 1;
         }
 
-        for event in events {
-            match event.event {
+        for wrap in events {
+            match wrap.track_event.event {
                 MidiMsg::ChannelVoice { .. }
                 | MidiMsg::RunningChannelVoice { .. }
                 | MidiMsg::ChannelMode { .. }
-                | MidiMsg::RunningChannelMode { .. } => self.handle_channel_event(&event),
+                | MidiMsg::RunningChannelMode { .. } => {
+                    if self.handle_channel_event(&wrap.track_event).is_err() {
+                        let trk = wrap.track_idx;
+                        let ev = wrap.event_idx;
+                        let event = wrap.track_event.event;
+                        let raw = event.to_midi();
+                        println!("T{trk}/E{ev} Unhandled event: raw: {raw:02X?}, event: {event:?}");
+                    }
+                }
                 midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
                 _ => (),
             }
@@ -112,16 +125,18 @@ impl Sequencer {
             self.tick += 1;
         }
 
-        for event in events {
-            match event.event {
+        for wrap in events {
+            match wrap.track_event.event {
                 MidiMsg::ChannelVoice { msg, .. } | MidiMsg::RunningChannelVoice { msg, .. } => {
                     match msg {
                         ChannelVoiceMsg::NoteOn { .. } | ChannelVoiceMsg::HighResNoteOn { .. } => {}
-                        _ => self.handle_channel_event(&event),
+                        _ => {
+                            let _ = self.handle_channel_event(&wrap.track_event);
+                        }
                     }
                 }
                 MidiMsg::ChannelMode { .. } | MidiMsg::RunningChannelMode { .. } => {
-                    self.handle_channel_event(&event);
+                    let _ = self.handle_channel_event(&wrap.track_event);
                 }
                 midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
                 _ => (),
@@ -129,15 +144,15 @@ impl Sequencer {
         }
     }
 
-    fn get_events(&mut self) -> Option<Vec<TrackEvent>> {
+    fn get_events(&mut self) -> Option<Vec<TrackEventWrap>> {
         let Some(midifile) = &self.midifile else {
             return None;
         };
 
         let mut events = vec![];
-        for (i, track) in midifile.tracks.iter().enumerate() {
+        for (track_idx, track) in midifile.tracks.iter().enumerate() {
             loop {
-                let event_idx = self.track_positions[i];
+                let event_idx = self.track_positions[track_idx];
                 if event_idx >= track.len() {
                     break;
                 }
@@ -148,12 +163,16 @@ impl Sequencer {
                     .beat_or_frame_to_tick(event.beat_or_frame)
                     as usize;
                 if self.tick >= event_tick {
-                    self.track_positions[i] += 1;
-                    events.push(event.clone());
+                    events.push(TrackEventWrap {
+                        track_event: event.clone(),
+                        track_idx,
+                        event_idx: self.track_positions[track_idx],
+                    });
                     if self.tick > event_tick {
                         let late = self.tick - event_tick;
                         println!("Somehow an event was missed! Playing it late ({late} ticks). {event:?}");
                     }
+                    self.track_positions[track_idx] += 1;
                 } else {
                     break;
                 }
@@ -186,12 +205,13 @@ impl Sequencer {
         );
     }
 
-    fn handle_channel_event(&mut self, event: &TrackEvent) {
+    /// Returns Err if event can't be passed to the synth
+    fn handle_channel_event(&mut self, event: &TrackEvent) -> Result<(), ()> {
         let raw = event.event.to_midi();
 
         if let 2..=3 = raw.len() {
             self.send_raw_event(&raw);
-            return;
+            return Ok(());
         }
 
         if raw.len() == 5 {
@@ -201,11 +221,11 @@ impl Sequencer {
                 let msb = vec![raw[0], raw[3], raw[4]];
                 self.send_raw_event(lsb);
                 self.send_raw_event(&msb);
-                return;
+                return Ok(());
             }
         }
 
-        println!("Unhandled event: raw: {raw:02X?}, event: {event:?}");
+        Err(())
     }
 
     fn handle_meta_event(&mut self, msg: &Meta) {
