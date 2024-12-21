@@ -216,11 +216,12 @@ impl Sequencer {
 
         if raw.len() == 5 {
             // Break a message that contains MSB and LSB into two separate ones
-            if raw[1] == 0x64 {
-                let lsb = &raw[0..3];
+            // for rustysynth synth.
+            if let 0x62 | 0x64 = raw[1] {
                 let msb = vec![raw[0], raw[3], raw[4]];
-                self.send_raw_event(lsb);
+                let lsb = &raw[0..3];
                 self.send_raw_event(&msb);
+                self.send_raw_event(lsb);
                 return Ok(());
             }
         }
