@@ -1,40 +1,51 @@
 use midi_msg::{ChannelVoiceMsg, Division, Meta, MidiFile, MidiMsg, TimeCodeType, TrackEvent};
-use rustysynth::Synthesizer;
-use std::time::Duration;
+use std::{fmt::Display, time::Duration};
 
+/// Ability to receive messages
+pub trait MidiSink {
+    /// Returns Err if event couldn't be used.
+    fn receive_midi(&mut self, msg: &MidiMsg) -> Result<(), ()>;
+    fn reset(&mut self);
+}
+
+/// [`TrackEvent`] wrapper with some context for debugging.
 struct TrackEventWrap {
     pub track_event: TrackEvent,
     pub track_idx: usize,
     pub event_idx: usize,
 }
+impl Display for TrackEventWrap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let trk = self.track_idx;
+        let ev = self.event_idx;
+        let event = &self.track_event.event;
+        let raw = event.to_midi();
+        write!(f, "T{trk}/E{ev} raw: {raw:02X?}, event: {event:?}")
+    }
+}
+
 /// MIDI Sequencer
-pub struct Sequencer {
-    synthesizer: Synthesizer,
-    /// Sample duration
-    delta_t: Duration,
+pub struct MidiSequencer {
     midifile: Option<MidiFile>,
     bpm: f64,
     /// Index of next event for each track
     track_positions: Vec<usize>,
     /// Song position
     tick: usize,
-    tick_timer: Duration,
-    song_length: Duration,
-    song_position: Duration,
+    since_last_tick: Duration,
+    song_len: Duration,
+    song_pos: Duration,
 }
-impl Sequencer {
-    pub fn new(synthesizer: Synthesizer) -> Self {
-        let delta_t = Duration::from_secs_f64(1. / f64::from(synthesizer.get_sample_rate()));
+impl MidiSequencer {
+    pub const fn new() -> Self {
         Self {
-            synthesizer,
-            delta_t,
             midifile: None,
             bpm: 120.,
             track_positions: vec![],
             tick: 0,
-            tick_timer: Duration::ZERO,
-            song_length: Duration::ZERO,
-            song_position: Duration::ZERO,
+            since_last_tick: Duration::ZERO,
+            song_len: Duration::ZERO,
+            song_pos: Duration::ZERO,
         }
     }
 
@@ -65,29 +76,22 @@ impl Sequencer {
         self.track_positions = vec![0; midifile.tracks.len()];
         self.midifile = Some(midifile);
 
-        self.synthesizer.reset();
         self.update_song_length();
     }
 
-    pub fn render(&mut self) -> [f32; 2] {
-        self.update_events();
-
-        let mut left = [0.];
-        let mut right = [0.];
-        self.synthesizer.render(&mut left, &mut right);
-        [left[0], right[0]]
-    }
-
-    fn update_events(&mut self) {
+    pub fn update_events<R>(&mut self, event_sink: &mut R, delta_t: Duration)
+    where
+        R: MidiSink,
+    {
         let Some(events) = self.get_events() else {
             return;
         };
 
-        self.song_position += self.delta_t;
-        self.tick_timer += self.delta_t;
-        let tick_duration = self.get_tick_duration();
-        if self.tick_timer >= tick_duration {
-            self.tick_timer -= tick_duration;
+        self.song_pos += delta_t;
+        self.since_last_tick += delta_t;
+        let tick_duration = self.get_current_tick_duration();
+        if self.since_last_tick >= tick_duration {
+            self.since_last_tick -= tick_duration;
             self.tick += 1;
         }
 
@@ -97,14 +101,11 @@ impl Sequencer {
                 | MidiMsg::RunningChannelVoice { .. }
                 | MidiMsg::ChannelMode { .. }
                 | MidiMsg::RunningChannelMode { .. } => {
-                    if self.handle_channel_event(&wrap.track_event).is_err() {
-                        let trk = wrap.track_idx;
-                        let ev = wrap.event_idx;
-                        let event = wrap.track_event.event;
-                        let raw = event.to_midi();
-                        println!("T{trk}/E{ev} Unhandled event: raw: {raw:02X?}, event: {event:?}");
+                    if event_sink.receive_midi(&wrap.track_event.event).is_err() {
+                        println!("Unhandled: {wrap}");
                     }
                 }
+
                 midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
                 _ => (),
             }
@@ -112,18 +113,16 @@ impl Sequencer {
     }
 
     /// For seeking. Ignore `NoteOn`.
-    fn update_events_quiet(&mut self) {
+    fn update_events_quiet<R>(&mut self, event_sink: &mut R)
+    where
+        R: MidiSink,
+    {
         let Some(events) = self.get_events() else {
             return;
         };
 
-        self.song_position += self.delta_t;
-        self.tick_timer += self.delta_t;
-        let tick_duration = self.get_tick_duration();
-        if self.tick_timer >= tick_duration {
-            self.tick_timer -= tick_duration;
-            self.tick += 1;
-        }
+        self.song_pos += self.get_current_tick_duration();
+        self.tick += 1;
 
         for wrap in events {
             match wrap.track_event.event {
@@ -131,12 +130,12 @@ impl Sequencer {
                     match msg {
                         ChannelVoiceMsg::NoteOn { .. } | ChannelVoiceMsg::HighResNoteOn { .. } => {}
                         _ => {
-                            let _ = self.handle_channel_event(&wrap.track_event);
+                            let _ = event_sink.receive_midi(&wrap.track_event.event);
                         }
                     }
                 }
                 MidiMsg::ChannelMode { .. } | MidiMsg::RunningChannelMode { .. } => {
-                    let _ = self.handle_channel_event(&wrap.track_event);
+                    let _ = event_sink.receive_midi(&wrap.track_event.event);
                 }
                 midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
                 _ => (),
@@ -181,61 +180,13 @@ impl Sequencer {
         Some(events)
     }
 
-    fn send_raw_event(&mut self, raw: &[u8]) {
-        let channel = raw[0] & 0x0f;
-        let command = raw[0] & 0xf0;
-        let data1;
-        let data2;
-        match raw.len() {
-            2 => {
-                data1 = raw[1];
-                data2 = 0;
-            }
-            3 => {
-                data1 = raw[1];
-                data2 = raw[2];
-            }
-            _ => panic!("This shouldn't happen. Check length before calling."),
-        }
-        self.synthesizer.process_midi_message(
-            channel.into(),
-            command.into(),
-            data1.into(),
-            data2.into(),
-        );
-    }
-
-    /// Returns Err if event can't be passed to the synth
-    fn handle_channel_event(&mut self, event: &TrackEvent) -> Result<(), ()> {
-        let raw = event.event.to_midi();
-
-        if let 2..=3 = raw.len() {
-            self.send_raw_event(&raw);
-            return Ok(());
-        }
-
-        if raw.len() == 5 {
-            // Break a message that contains MSB and LSB into two separate ones
-            // for rustysynth synth.
-            if let 0x62 | 0x64 = raw[1] {
-                let msb = vec![raw[0], raw[3], raw[4]];
-                let lsb = &raw[0..3];
-                self.send_raw_event(&msb);
-                self.send_raw_event(lsb);
-                return Ok(());
-            }
-        }
-
-        Err(())
-    }
-
     fn handle_meta_event(&mut self, msg: &Meta) {
         if let Meta::SetTempo(tempo) = msg {
             self.bpm = 60_000_000. / f64::from(*tempo);
         }
     }
 
-    fn get_tick_duration(&self) -> Duration {
+    fn get_current_tick_duration(&self) -> Duration {
         let Some(midifile) = &self.midifile else {
             return Duration::ZERO;
         };
@@ -258,7 +209,7 @@ impl Sequencer {
 
     fn update_song_length(&mut self) {
         let Some(midifile) = &self.midifile else {
-            self.song_length = Duration::ZERO;
+            self.song_len = Duration::ZERO;
             return;
         };
 
@@ -315,37 +266,37 @@ impl Sequencer {
                 break;
             }
         }
-        self.song_length = duration;
+        self.song_len = duration;
     }
 
     pub const fn get_song_length(&self) -> Duration {
-        self.song_length
+        self.song_len
     }
 
     pub const fn get_song_position(&self) -> Duration {
-        self.song_position
+        self.song_pos
     }
 
-    pub fn get_sample_rate(&self) -> i32 {
-        self.synthesizer.get_sample_rate()
-    }
-
-    pub fn seek_to(&mut self, t: Duration) {
+    pub fn seek_to<R>(&mut self, event_sink: &mut R, pos: Duration)
+    where
+        R: MidiSink,
+    {
         let Some(midifile) = &self.midifile else {
             return;
         };
 
-        if t < self.song_position {
+        if pos < self.song_pos {
             self.bpm = 120.;
             self.track_positions = vec![0; midifile.tracks.len()];
             self.tick = 0;
-            self.tick_timer = Duration::ZERO;
-            self.song_position = Duration::ZERO;
-            self.synthesizer.reset();
+            self.song_pos = Duration::ZERO;
+            event_sink.reset();
         }
 
-        while self.song_position < t {
-            self.update_events_quiet();
+        self.since_last_tick = Duration::ZERO;
+
+        while self.song_pos < pos {
+            self.update_events_quiet(event_sink);
         }
     }
 }
