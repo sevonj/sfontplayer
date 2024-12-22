@@ -61,3 +61,4 @@ style = { level = "warn", priority = 9 }
 unwrap_used = { level = "deny", priority = 10 }
 # expect_used = { level = "deny", priority = 11 }
 struct_excessive_bools = { level = "allow", priority = 12 }
+similar_names = { level = "allow", priority = 13 }

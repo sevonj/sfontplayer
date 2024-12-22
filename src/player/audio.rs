@@ -14,8 +14,9 @@ use rodio::Sink;
 use rustysynth::SoundFont;
 
 mod error;
+mod midisequencer;
 mod midisource;
-mod sequencer;
+mod midisynth;
 
 /// Audio backend struct
 #[derive(Default)]
