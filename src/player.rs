@@ -362,12 +362,13 @@ impl Player {
     }
     pub fn set_volume(&mut self, volume: f32) {
         self.volume = f32::clamp(volume, 0., 100.);
+        self.update_volume();
         self.mediacontrol_update_volume();
     }
     /// Sends current volume setting to backend
     pub fn update_volume(&self) {
         // Not dividing the volume by 100 is a mistake you only make once.
-        let _ = self.audioplayer.set_volume(self.volume * 0.001);
+        let _ = self.audioplayer.set_volume(self.volume * 0.01);
     }
     // When previous song has ended, advance queue or stop.
     fn advance_queue(&mut self) -> anyhow::Result<()> {
