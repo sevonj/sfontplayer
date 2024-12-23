@@ -77,8 +77,8 @@ impl Iterator for MidiSource {
             let mut right = [0.];
             self.synthesizer.render(&mut left, &mut right);
 
-            self.cached_sample = right[0];
-            Some(left[0])
+            self.cached_sample = right[0] / 10.;
+            Some(left[0] / 10.)
         }
         // Right: Generate nothing and return cached R ch. sample.
         else {
