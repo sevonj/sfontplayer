@@ -9,3 +9,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      egui:
+        # Egui crates should be updated as one
+        patterns:
+          - "eframe"
+          - "egui_extras"
