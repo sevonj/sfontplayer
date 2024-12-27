@@ -59,14 +59,14 @@ impl GuiState {
     pub fn toast_error<S: AsRef<str>>(&mut self, caption: S) {
         self.toasts
             .error(caption.as_ref())
-            .set_show_progress_bar(false)
-            .set_closable(true);
+            .show_progress_bar(false)
+            .closable(true);
     }
     pub fn toast_success<S: AsRef<str>>(&mut self, caption: S) {
         self.toasts
             .success(caption.as_ref())
-            .set_show_progress_bar(false)
-            .set_closable(true);
+            .show_progress_bar(false)
+            .closable(true);
     }
 }
 
