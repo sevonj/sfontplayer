@@ -3609,9 +3609,9 @@ checksum = "0e819f2bc632f285be6d7cd36e25940d45b2391dd6d9b939e79de557f7014248"
 
 [[package]]
 name = "rustysynth"
-version = "1.3.2"
+version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bff572eb558d73c5f5e0fd82c19dd82bb010234d2a65d54f52e93da5856241c7"
+checksum = "823453b5c67fe77ffaa8cfea959270bf1aa187d9402905741f87fd4b81b55ea1"
 
 [[package]]
 name = "ryu"
