@@ -6,14 +6,22 @@
 
 A simple midi player that makes soundfont comparison easy.
 
-## Main features:
+## Features:
 
 - **Changing between soundfonts takes one click**  
-  This was my sole reason to start this project.
+  This was the sole reason to start this project.
 - **Workspaces**  
   Playlists can be set to automatically track the contents of a directory (and subdirectories).
-- **Tools** (upcoming)  
-  Miscellaneous tools / detailed file info
+
+## Advanced Features
+
+<details>
+<summary>Expand this if you're an advanced user</summary>
+
+- **MIDI Inspector**  
+  Examine MIDI files at event level
+
+</details>
 
 ## Download
 
@@ -22,6 +30,9 @@ A simple midi player that makes soundfont comparison easy.
 Prebuilt binaries are available for Linux and Windows.
 
 ## Development
+
+<details>
+<summary>Expand this if you're a developer</summary>
 
 [➜ Project management](https://github.com/users/sevonj/projects/12)
 
@@ -42,3 +53,5 @@ Pull requests are gatekept by [this workflow.](https://github.com/sevonj/sfontpl
 - passes unit tests (run `cargo test`)
 - has linter warnings (run `cargo clippy`)
 - is formatted (run `cargo fmt`)
+
+</details>
