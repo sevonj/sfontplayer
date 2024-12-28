@@ -18,6 +18,7 @@ A simple midi player that makes soundfont comparison easy.
 <details>
 <summary>Expand this if you're an advanced user</summary>
 
+___
 - **MIDI Inspector**  
   Examine MIDI files at event level
 
@@ -30,9 +31,6 @@ A simple midi player that makes soundfont comparison easy.
 Prebuilt binaries are available for Linux and Windows.
 
 ## Development
-
-<details>
-<summary>Expand this if you're a developer</summary>
 
 [➜ Project management](https://github.com/users/sevonj/projects/12)
 
@@ -53,5 +51,3 @@ Pull requests are gatekept by [this workflow.](https://github.com/sevonj/sfontpl
 - passes unit tests (run `cargo test`)
 - has linter warnings (run `cargo clippy`)
 - is formatted (run `cargo fmt`)
-
-</details>
