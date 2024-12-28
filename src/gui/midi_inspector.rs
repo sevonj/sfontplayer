@@ -1,27 +1,26 @@
-use super::GuiState;
-use crate::midi_inspector::MidiInspector;
-use eframe::egui::{Color32, Frame, ScrollArea, Style, Ui};
+use super::{custom_controls::collapse_button, GuiState};
+use crate::midi_inspector::{MidiInspector, MidiInspectorTrack};
+use eframe::egui::{Color32, Frame, Label, RichText, ScrollArea, Style, TextWrapMode, Ui};
 use egui_extras::{Column, TableBuilder};
-use midi_msg::{MidiMsg, Track, TrackEvent};
+use midi_msg::{MidiMsg, Track};
 use std::path::Path;
 
 const TRACKHEAD_WIDTH: f32 = 128.;
 
-pub fn midi_inspector(ui: &mut Ui, inspector: &MidiInspector, gui: &mut GuiState) {
-    let midifile = &inspector.midifile;
-
+pub fn midi_inspector(ui: &mut Ui, inspector: &mut MidiInspector, gui: &mut GuiState) {
     inspector_toolbar(ui, gui);
     ui.separator();
 
     ScrollArea::vertical().show(ui, |ui| {
         ui.set_width(ui.available_width());
 
-        header_panel(ui, &midifile.header, &inspector.filepath);
-        for (i, track) in midifile.tracks.iter().enumerate() {
+        header_panel(ui, &inspector.header, &inspector.filepath);
+        for i in 0..inspector.tracks.len() {
+            let track = &mut inspector.tracks[i];
             ui.separator();
-            ui.push_id(format!("track_ui_{i}"), |ui| match track {
-                Track::Midi(content) => midi_track_panel(ui, i, content),
-                Track::AlienChunk(content) => nonstandard_track_panel(ui, i, content),
+            ui.push_id(format!("track_ui_{i}"), |ui| match &track.track {
+                Track::Midi(..) => midi_track_panel(ui, i, track),
+                Track::AlienChunk(..) => nonstandard_track_panel(ui, i, track),
             });
         }
     });
@@ -36,6 +35,7 @@ fn inspector_toolbar(ui: &mut Ui, gui: &mut GuiState) {
     });
 }
 
+/// MIDI Header
 fn header_panel(ui: &mut Ui, header: &midi_msg::Header, filepath: &Path) {
     Frame::group(ui.style())
         .fill(ui.style().visuals.panel_fill)
@@ -49,30 +49,50 @@ fn header_panel(ui: &mut Ui, header: &midi_msg::Header, filepath: &Path) {
         });
 }
 
-fn nonstandard_track_panel(ui: &mut Ui, i: usize, content: &[u8]) {
+/// MIDI Track - Unknown track type placeholder.
+fn nonstandard_track_panel(ui: &mut Ui, i: usize, track: &MidiInspectorTrack) {
     Frame::group(ui.style()).show(ui, |ui| {
         ui.set_width(ui.available_width());
 
-        ui.label(format!("Track {i}"));
-        ui.label("Unknown");
+        ui.label(format!("Track {i} [UNKNOWN]"));
         ui.label(format!(
             "This is a nonstandard track. Length: {:?} bytes",
-            content.len()
+            track.track.len()
         ));
     });
 }
 
-fn midi_track_panel(ui: &mut Ui, i: usize, content: &[TrackEvent]) {
+/// MIDI Track - Normal
+fn midi_track_panel(ui: &mut Ui, i: usize, track: &mut MidiInspectorTrack) {
+    let content = track.track.events();
+    let bgcol = ui.visuals().code_bg_color;
+
     ui.horizontal(|ui| {
         Frame::group(ui.style()).show(ui, |ui| {
             ui.set_width(TRACKHEAD_WIDTH);
 
             ui.vertical(|ui| {
-                ui.label(format!("Track {i}"));
-                ui.label("MIDI track");
+                ui.add(Label::new(format!("Track {i} [MIDI]")).wrap_mode(TextWrapMode::Truncate));
+                ui.horizontal(|ui| {
+                    ui.label("Name:");
+                    ui.add_enabled_ui(track.name.is_some(), |ui| {
+                        let name_str = track.name.as_deref().unwrap_or("[NO NAME]");
+                        ui.add(
+                            Label::new(RichText::new(name_str).background_color(bgcol))
+                                .wrap_mode(TextWrapMode::Truncate),
+                        );
+                    });
+                });
                 ui.label(format!("Events:   {:?}", content.len()));
             });
         });
+
+        let open = &mut track.open;
+        ui.add(collapse_button(open));
+
+        if !track.open {
+            return;
+        }
 
         ui.vertical(|ui| {
             let tablebuilder = TableBuilder::new(ui)
