@@ -143,7 +143,7 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
     handle_dropped_files(ctx);
 }
 
-fn midi_inspector_panel(ctx: &Context, inspector: &MidiInspector, gui: &mut GuiState) {
+fn midi_inspector_panel(ctx: &Context, inspector: &mut MidiInspector, gui: &mut GuiState) {
     CentralPanel::default()
         .frame(Frame::central_panel(&ctx.style()).inner_margin(vec2(8., 2.)))
         .show(ctx, |ui| {
