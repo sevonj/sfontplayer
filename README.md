@@ -2,7 +2,7 @@
 
 ![ci badge](https://github.com/sevonj/sfontplayer/actions/workflows/rust.yml/badge.svg)
 
-![image](https://github.com/user-attachments/assets/cfc01da3-3ace-4b2e-a6cc-34c7ef213080)
+![image](packaging/res/screenshot_2.png)
 
 A simple midi player that makes soundfont comparison easy.
 
@@ -18,7 +18,8 @@ A simple midi player that makes soundfont comparison easy.
 <details>
 <summary>Expand this if you're an advanced user</summary>
 
-___
+![image](packaging/res/screenshot_3.png)
+
 - **MIDI Inspector**  
   Examine MIDI files at event level
 
