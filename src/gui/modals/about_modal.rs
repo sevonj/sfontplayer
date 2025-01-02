@@ -43,7 +43,6 @@ fn info_self(ui: &mut Ui) {
 
     ui.horizontal(|ui| {
         ui.add_space(62.);
-        //ui.label(RichText::new("🎵").size(60.0));
         ui.add(
             Image::new(include_image!("../../assets/icon_sfontplayer.svg"))
                 .fit_to_exact_size(vec2(64., 64.)),
