@@ -1,7 +1,7 @@
 use build_info::{build_info, CrateInfo};
 use eframe::egui::{
-    vec2, Align2, CollapsingHeader, Context, Frame, Label, Link, OpenUrl, Response, RichText,
-    ScrollArea, Sense, Stroke, Ui, Vec2, Window,
+    include_image, vec2, Align2, CollapsingHeader, Context, Frame, Image, Label, Link, OpenUrl,
+    Response, RichText, ScrollArea, Sense, Stroke, Ui, Vec2, Window,
 };
 
 use crate::GuiState;
@@ -43,9 +43,12 @@ fn info_self(ui: &mut Ui) {
 
     ui.horizontal(|ui| {
         ui.add_space(62.);
-        ui.label(RichText::new("🎵").size(60.0));
+        ui.add(
+            Image::new(include_image!("../../assets/icon_sfontplayer.svg"))
+                .fit_to_exact_size(vec2(64., 64.)),
+        );
         ui.vertical(|ui| {
-            ui.add_space(12.);
+            ui.add_space(4.);
             ui.heading(RichText::new("SfontPlayer").strong());
             ui.label("by Sevonj & Co.");
             ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
