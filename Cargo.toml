@@ -24,7 +24,7 @@ serde_json = "1.0.134"
 
 # -- Audio
 rodio = "0.20.1"     # Audio
-rustysynth = "1.3.3" # midi
+rustysynth = "1.3.4" # midi
 midi-msg = "0.7.5"   # midi types
 
 # -- Misc
