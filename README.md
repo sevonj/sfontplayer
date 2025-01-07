@@ -23,6 +23,8 @@ A simple midi player that makes soundfont comparison easy.
 - **MIDI Inspector**  
   Examine MIDI files at event level
 
+...and more coming up!
+
 </details>
 
 ## Download
