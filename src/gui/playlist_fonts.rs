@@ -7,11 +7,7 @@ use super::{
     custom_controls::{circle_button, collapse_button, subheading},
     GuiState, TBL_ROW_H,
 };
-use crate::player::{
-    playlist::{enums::FileListMode, font_meta::FontMeta},
-    soundfont_list::FontSort,
-    Player,
-};
+use crate::player::{playlist::enums::FileListMode, soundfont_list::FontSort, Player};
 
 #[allow(clippy::too_many_lines)]
 pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
@@ -272,33 +268,12 @@ fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Playe
 
     // Remove button
     row.col(|_| {});
+
     // Filename
     row.col(|ui| {
         ui.horizontal(|ui| {
-            let font_ok;
-            if player.get_default_soundfont().is_none() {
-                ui.label(RichText::new("？"))
-                    .on_hover_text("No default soundfont set.");
-                font_ok = false;
-            } else if let Err(e) = &player
-                .get_default_soundfont()
-                .map_or_else(|| Ok(()), FontMeta::get_status)
-            {
-                ui.label(RichText::new("？")).on_hover_text(e.to_string());
-                font_ok = false;
-            } else {
-                font_ok = true;
-            }
-            let filename = player
-                .get_default_soundfont()
-                .map_or("None".into(), FontMeta::get_name);
-            let text = format!("None (use default: {filename})");
-            let filename_response = ui.add_enabled(
-                font_ok,
-                Label::new(RichText::new(text).weak())
-                    .wrap_mode(TextWrapMode::Truncate)
-                    .selectable(false),
-            );
+            let filename_response =
+                ui.add(Label::new("None - Use library selection").selectable(false));
             if let Some(font) = &player.get_default_soundfont() {
                 filename_response
                     .on_hover_text(font.get_path().to_string_lossy())
@@ -306,11 +281,13 @@ fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Playe
             }
         });
     });
+
     // File size
     row.col(|_| {});
 
     // Select
     if row.response().clicked() {
         let _ = player.get_playlist_mut().set_font_idx(None);
+        let _ = player.reload_font();
     }
 }
