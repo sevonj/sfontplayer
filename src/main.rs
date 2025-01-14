@@ -1,7 +1,10 @@
 use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
 use midi_inspector::MidiInspector;
-use player::{playlist::Playlist, Player};
+use player::{
+    playlist::{midi_meta::MidiMeta, Playlist},
+    Player,
+};
 use rodio::{OutputStream, Sink};
 use std::{
     env,
@@ -167,9 +170,13 @@ impl eframe::App for SfontPlayer {
 
         if self.gui_state.update_flags.close_midi_inspector {
             self.midi_inspector = None;
+            self.player.lock().clear_midi_override();
         } else if let Some(filepath) = &self.gui_state.update_flags.open_midi_inspector {
             if let Ok(insp) = MidiInspector::new(filepath) {
                 self.midi_inspector = Some(insp);
+                self.player
+                    .lock()
+                    .set_midi_override(MidiMeta::new(filepath.into()));
             }
         }
 

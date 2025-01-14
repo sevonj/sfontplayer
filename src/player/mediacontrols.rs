@@ -109,8 +109,12 @@ impl Player {
                             self.pause();
                         }
                     }
-                    MediaControlEvent::Next => self.skip(),
-                    MediaControlEvent::Previous => self.skip_back(),
+                    MediaControlEvent::Next => {
+                        let _ = self.skip();
+                    }
+                    MediaControlEvent::Previous => {
+                        let _ = self.skip_back();
+                    }
                     MediaControlEvent::Stop => self.stop(),
                     MediaControlEvent::SetVolume(vol) => self.set_volume(vol as f32 * 100.0),
 

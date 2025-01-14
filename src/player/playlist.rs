@@ -10,10 +10,9 @@ use std::{fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
 
 pub mod enums;
+pub mod error;
 pub mod font_meta;
 pub mod midi_meta;
-
-mod error;
 mod serialize_playlist;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -281,14 +280,14 @@ impl Playlist {
     pub const fn get_song_idx(&self) -> Option<usize> {
         self.midi_idx
     }
-    pub fn set_song_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
+    pub fn set_song_idx(&mut self, value: Option<usize>) -> Result<(), PlaylistError> {
         match value {
             Some(index) => {
                 self.midi_idx = if index < self.midis.len() {
                     self.midis[index].refresh();
                     Some(index)
                 } else {
-                    bail!(PlaylistError::InvalidSongIndex { index });
+                    return Err(PlaylistError::InvalidSongIndex { index });
                 }
             }
             None => self.midi_idx = None,
