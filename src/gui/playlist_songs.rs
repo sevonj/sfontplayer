@@ -217,7 +217,7 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
                     ui.menu_button("Add to playlist", |ui| {
                         let filepath = player.get_playlist().get_songs()[index].get_path();
                         if ui.button("➕ New playlist").clicked() {
-                            player.new_playlist();
+                            let _ = player.new_playlist();
                             let playlist_index = player.get_playlists().len() - 1;
                             let _ = player.get_playlists_mut()[playlist_index]
                                 .add_song(filepath.clone());

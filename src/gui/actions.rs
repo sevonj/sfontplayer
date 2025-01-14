@@ -70,7 +70,7 @@ pub fn new_playlist(ui: &mut Ui, player: &mut Player) {
         .on_hover_text("Create a new playlist")
         .clicked()
     {
-        player.new_playlist();
+        let _ = player.new_playlist();
         ui.close_menu();
     }
 }
@@ -212,7 +212,7 @@ pub fn reopen_playlist(ui: &mut Ui, player: &mut Player) {
         .on_disabled_hover_text("Reopen last closed playlist")
         .clicked()
     {
-        player.reopen_removed_playlist();
+        let _ = player.reopen_removed_playlist();
         ui.close_menu();
     }
 }

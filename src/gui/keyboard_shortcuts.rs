@@ -71,7 +71,7 @@ fn consume_2_modifiers(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             let _ = player.duplicate_playlist(player.get_playlist_idx());
         }
         if input.consume_shortcut(&PLAYLIST_REOPEN) {
-            player.reopen_removed_playlist();
+            let _ = player.reopen_removed_playlist();
         }
     });
 }
@@ -107,7 +107,7 @@ fn consume_1_modifier(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
             }
         }
         if input.consume_shortcut(&PLAYLIST_CREATE) {
-            player.new_playlist();
+            let _ = player.new_playlist();
             let _ = player.switch_to_playlist(player.get_playlists().len() - 1);
         }
         if input.consume_shortcut(&PLAYLIST_REMOVE) {
@@ -155,10 +155,10 @@ fn consume_no_modifiers(ctx: &Context, player: &mut Player, _gui: &GuiState) {
             }
         }
         if input.consume_shortcut(&PLAYBACK_SKIP) {
-            player.skip();
+            let _ = player.skip();
         }
         if input.consume_shortcut(&PLAYBACK_SKIPBACK) {
-            player.skip_back();
+            let _ = player.skip_back();
         }
         if input.consume_shortcut(&PLAYBACK_SHUFFLE) {
             player.toggle_shuffle();

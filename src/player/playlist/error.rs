@@ -11,6 +11,7 @@ pub enum PlaylistError {
     ModifyAutoFontList { mode: FileListMode },
     ModifyAutoSongList { mode: FileListMode },
     UnknownFileFormat { path: PathBuf },
+    FailedToOpen { path: PathBuf },
 }
 
 impl Error for PlaylistError {}
@@ -37,6 +38,7 @@ impl fmt::Display for PlaylistError {
                 )
             }
             Self::UnknownFileFormat { path } => write!(f, "Unknown file format: {path:?}"),
+            Self::FailedToOpen { path } => write!(f, "Failed to open file: {path:?}"),
         }
     }
 }

@@ -1,7 +1,10 @@
 use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
 use midi_inspector::MidiInspector;
-use player::{playlist::Playlist, Player};
+use player::{
+    playlist::{midi_meta::MidiMeta, Playlist},
+    Player,
+};
 use rodio::{OutputStream, Sink};
 use std::{
     env,
@@ -91,7 +94,7 @@ impl SfontPlayer {
             }
             if std::path::Path::new(arg)
                 .extension()
-                .map_or(false, |ext| ext.eq_ignore_ascii_case("midpl"))
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("midpl"))
             {
                 if let Err(e) = player.open_portable_playlist(arg.into()) {
                     self.gui_state.toast_error(e.to_string());
@@ -167,9 +170,13 @@ impl eframe::App for SfontPlayer {
 
         if self.gui_state.update_flags.close_midi_inspector {
             self.midi_inspector = None;
+            self.player.lock().clear_midi_override();
         } else if let Some(filepath) = &self.gui_state.update_flags.open_midi_inspector {
             if let Ok(insp) = MidiInspector::new(filepath) {
                 self.midi_inspector = Some(insp);
+                self.player
+                    .lock()
+                    .set_midi_override(MidiMeta::new(filepath.into()));
             }
         }
 

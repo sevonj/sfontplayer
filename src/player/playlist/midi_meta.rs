@@ -4,7 +4,7 @@ use anyhow::bail;
 use rustysynth::MidiFile;
 use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum MidiMetaError {
     CantAccessFile { filename: String, message: String },
     InvalidFile { filename: String, message: String },
@@ -101,9 +101,9 @@ impl MidiMeta {
     pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
-    pub fn get_status(&self) -> anyhow::Result<()> {
+    pub fn get_status(&self) -> Result<(), MidiMetaError> {
         if let Some(e) = &self.error {
-            bail!(e.clone())
+            return Err(e.clone());
         }
         Ok(())
     }

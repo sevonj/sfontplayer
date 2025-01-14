@@ -3,7 +3,9 @@
 
 use std::{convert::Into, fs::File, io::Write, path::PathBuf};
 
-use super::{enums::FileListMode, font_meta::FontMeta, midi_meta::MidiMeta, Playlist};
+use super::{
+    enums::FileListMode, error::PlaylistError, font_meta::FontMeta, midi_meta::MidiMeta, Playlist,
+};
 use anyhow::bail;
 use relative_path::{PathExt, RelativePath};
 use serde_json::{json, Value};
@@ -135,9 +137,14 @@ impl From<Value> for Playlist {
 }
 
 impl Playlist {
-    pub fn open_portable(filepath: PathBuf) -> anyhow::Result<Self> {
-        let json_str = std::fs::read_to_string(&filepath)?;
-        let data: Value = serde_json::from_str(&json_str)?;
+    pub fn open_portable(filepath: PathBuf) -> Result<Self, PlaylistError> {
+        let Ok(json_str) = std::fs::read_to_string(&filepath) else {
+            return Err(PlaylistError::FailedToOpen { path: filepath });
+        };
+        let Ok(data): Result<Value, _> = serde_json::from_str(&json_str) else {
+            return Err(PlaylistError::FailedToOpen { path: filepath });
+        };
+
         let mut playlist = Self::from(data);
 
         // Make paths absolute

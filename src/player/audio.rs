@@ -7,13 +7,13 @@ use std::{
     time::Duration,
 };
 
-use error::PlayerError;
+use error::AudioPlayerError;
 use midi_msg::MidiFile;
 use midisource::MidiSource;
 use rodio::Sink;
 use rustysynth::SoundFont;
 
-mod error;
+pub mod error;
 mod midisequencer;
 mod midisource;
 mod midisynth;
@@ -65,7 +65,7 @@ impl AudioPlayer {
     /// Unpause
     pub(crate) fn play(&self) -> anyhow::Result<()> {
         let Some(sink) = &self.sink else {
-            anyhow::bail!(PlayerError::NoSink);
+            anyhow::bail!(AudioPlayerError::NoSink);
         };
         sink.play();
         Ok(())
@@ -73,7 +73,7 @@ impl AudioPlayer {
     /// Pause
     pub(crate) fn pause(&self) -> anyhow::Result<()> {
         let Some(sink) = &self.sink else {
-            anyhow::bail!(PlayerError::NoSink);
+            anyhow::bail!(AudioPlayerError::NoSink);
         };
         sink.pause();
         Ok(())
@@ -81,21 +81,21 @@ impl AudioPlayer {
     /// Standard volume range is 0.0..=1.0
     pub(crate) fn set_volume(&self, volume: f32) -> anyhow::Result<()> {
         let Some(sink) = &self.sink else {
-            anyhow::bail!(PlayerError::NoSink);
+            anyhow::bail!(AudioPlayerError::NoSink);
         };
         sink.set_volume(volume);
         Ok(())
     }
     /// Load currently selected midi & font and start playing
-    pub(crate) fn start_playback(&mut self) -> anyhow::Result<()> {
+    pub(crate) fn start_playback(&mut self) -> Result<(), AudioPlayerError> {
         let Some(path_sf) = &self.path_soundfont else {
-            anyhow::bail!(PlayerError::NoFont);
+            return Err(AudioPlayerError::NoFont);
         };
         let Some(path_mid) = &self.path_midifile else {
-            anyhow::bail!(PlayerError::NoMidi);
+            return Err(AudioPlayerError::NoMidi);
         };
         let Some(sink) = &self.sink else {
-            anyhow::bail!(PlayerError::NoSink);
+            return Err(AudioPlayerError::NoSink);
         };
 
         let soundfont = Arc::new(load_soundfont(path_sf)?);
@@ -109,18 +109,18 @@ impl AudioPlayer {
         Ok(())
     }
     /// Full stop.
-    pub(crate) fn stop_playback(&mut self) -> anyhow::Result<()> {
+    pub(crate) fn stop_playback(&mut self) -> Result<(), AudioPlayerError> {
         let Some(sink) = &self.sink else {
-            anyhow::bail!(PlayerError::NoSink);
+            return Err(AudioPlayerError::NoSink);
         };
         self.midifile_duration = None;
         sink.clear();
         sink.pause();
         Ok(())
     }
-    pub(crate) fn seek_to(&self, pos: Duration) -> anyhow::Result<()> {
+    pub(crate) fn seek_to(&self, pos: Duration) -> Result<(), AudioPlayerError> {
         let Some(sink) = &self.sink else {
-            anyhow::bail!(PlayerError::NoSink);
+            return Err(AudioPlayerError::NoSink);
         };
         let _ = sink.try_seek(pos);
         Ok(())
@@ -157,20 +157,20 @@ impl AudioPlayer {
 
 // --- Private --- //
 
-fn load_soundfont(path: &PathBuf) -> anyhow::Result<SoundFont> {
+fn load_soundfont(path: &PathBuf) -> Result<SoundFont, AudioPlayerError> {
     match File::open(path) {
         Ok(mut file) => match SoundFont::new(&mut file) {
             Ok(soundfont) => Ok(soundfont),
-            Err(e) => anyhow::bail!(PlayerError::InvalidFont { source: e }),
+            Err(e) => Err(AudioPlayerError::InvalidFont { source: e }),
         },
-        Err(e) => anyhow::bail!(PlayerError::CantAccessFile {
+        Err(e) => Err(AudioPlayerError::CantAccessFile {
             path: path.clone(),
             source: e,
         }),
     }
 }
 
-fn load_midifile(filepath: &PathBuf) -> anyhow::Result<MidiFile> {
+fn load_midifile(filepath: &PathBuf) -> Result<MidiFile, AudioPlayerError> {
     let bytes = fs::read(filepath)?;
     Ok(midi_msg::MidiFile::from_midi(bytes.as_slice())?)
 }

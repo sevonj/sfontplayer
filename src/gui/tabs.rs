@@ -24,7 +24,7 @@ pub fn playlist_tabs(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         .on_hover_text("Create new playlist")
                         .clicked()
                     {
-                        player.new_playlist();
+                        let _ = player.new_playlist();
                         let _ = player.switch_to_playlist(player.get_playlists().len() - 1);
                     }
                 });

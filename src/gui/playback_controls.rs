@@ -5,7 +5,7 @@ use eframe::egui::{
 use std::time::Duration;
 
 use crate::{
-    player::{Player, RepeatMode},
+    player::{playlist::midi_meta::MidiMeta, Player, RepeatMode},
     GuiState,
 };
 
@@ -24,28 +24,36 @@ pub fn playback_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 }
 
 fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
-    let (back_enabled, skip_enabled) = if player.get_playing_playlist().queue.is_empty() {
-        (false, false)
-    } else if player.get_repeat() == RepeatMode::Queue && player.is_playing() {
-        (true, true)
-    } else if let Some(idx) = player.get_playing_playlist().queue_idx {
-        (idx > 0, idx < player.get_playing_playlist().queue.len() - 1)
-    } else {
-        (false, false)
-    };
+    let midi_override = player.get_midi_override();
+    let (back_enabled, skip_enabled) =
+        if player.get_playing_playlist().queue.is_empty() || midi_override.is_some() {
+            (false, false)
+        } else if player.get_repeat() == RepeatMode::Queue && player.is_playing() {
+            (true, true)
+        } else if let Some(idx) = player.get_playing_playlist().queue_idx {
+            (idx > 0, idx < player.get_playing_playlist().queue.len() - 1)
+        } else {
+            (false, false)
+        };
+
+    let current_song_name = midi_override.map_or_else(
+        || {
+            player.get_playing_playlist().get_song_idx().map_or_else(
+                || "Nothing".into(),
+                |index| player.get_playing_playlist().get_songs()[index].get_name(),
+            )
+        },
+        MidiMeta::get_name,
+    );
 
     // Current song info
     let current_hover_text = format!(
-        "Currently {}: {}",
+        "Currently {}: {current_song_name}",
         if player.is_empty() {
             "selected"
         } else {
             "playing"
         },
-        player.get_playing_playlist().get_song_idx().map_or_else(
-            || "Nothing".into(),
-            |index| player.get_playing_playlist().get_songs()[index].get_name()
-        )
     );
     if ui
         .add_enabled(
@@ -88,7 +96,7 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     // Skip back
     ui.add_enabled_ui(back_enabled, |ui| {
         if icon_button(ui, include_image!("../assets/icon_prev.svg"), "back").clicked() {
-            player.skip_back();
+            let _ = player.skip_back();
         }
     });
     // Playpause
@@ -106,7 +114,7 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     // Skip
     ui.add_enabled_ui(skip_enabled, |ui| {
         if icon_button(ui, include_image!("../assets/icon_next.svg"), "skip").clicked() {
-            player.skip();
+            let _ = player.skip();
         }
     });
     // Skip
