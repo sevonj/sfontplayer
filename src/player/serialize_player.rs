@@ -210,7 +210,7 @@ impl Player {
             let entry_state: Result<Value, serde_json::Error> = serde_json::from_str(&entry.state);
             if let Ok(state) = entry_state {
                 if let Some(font_idx) = state["font_idx"].as_u64() {
-                    let _ = playlist.set_font_idx(Some(font_idx as usize));
+                    let _ = playlist.select_font(font_idx as usize);
                 }
                 if let Some(font_sort) = state["font_sort"].as_u64() {
                     if let Ok(sort) = FontSort::try_from(font_sort as u8) {

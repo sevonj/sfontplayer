@@ -214,7 +214,7 @@ fn update_thread(player: Arc<Mutex<Player>>) {
             t_since_file_refresh += now - prev_update;
             if t_since_file_refresh >= FILELIST_REFRESH_INTERVAL {
                 t_since_file_refresh -= FILELIST_REFRESH_INTERVAL;
-                player.lock().get_playlist_mut().refresh_font_list();
+                player.lock().get_playlist_mut().recrawl_fonts();
                 player.lock().get_playlist_mut().refresh_song_list();
             }
 

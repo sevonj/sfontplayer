@@ -3,6 +3,8 @@
 
 use std::{convert::Into, fs::File, io::Write, path::PathBuf};
 
+use crate::player::soundfont_list::FontList;
+
 use super::{
     enums::FileListMode, error::PlaylistError, font_meta::FontMeta, midi_meta::MidiMeta, Playlist,
 };
@@ -18,7 +20,7 @@ impl From<&Playlist> for Value {
                 // Normal playlist: save as is
                 json! ({"name": playlist.name,
 
-                     "fonts": playlist.fonts,
+                     "fonts": playlist.fonts.get_fonts(),
                      "font_list_mode": playlist.font_list_mode as u8,
                      "font_dir": playlist.font_dir,
 
@@ -31,7 +33,7 @@ impl From<&Playlist> for Value {
             |root| {
                 // Portable file: translate all paths into relative
 
-                let mut fonts = playlist.fonts.clone();
+                let mut fonts = playlist.fonts.get_fonts().clone();
                 for font in &mut fonts {
                     let absolute_path = font.get_path();
                     if let Ok(relative_path) = absolute_path.relative_to(&root) {
@@ -77,7 +79,7 @@ impl From<Value> for Playlist {
         let mut playlist = Self {
             name: value["name"].as_str().unwrap_or("Name Missing!").into(),
 
-            fonts: vec![],
+            fonts: FontList::default(),
             font_list_mode: value["font_list_mode"]
                 .as_u64()
                 .map_or_else(FileListMode::default, |int| {
@@ -110,7 +112,7 @@ impl From<Value> for Playlist {
                     };
                     meta
                 };
-                playlist.fonts.push(fontmeta);
+                let _ = playlist.fonts.add(fontmeta);
             }
         }
 
@@ -149,7 +151,10 @@ impl Playlist {
 
         // Make paths absolute
         let root: &PathBuf = &filepath;
-        for font in &mut playlist.fonts {
+        for i in 0..playlist.get_fonts().len() {
+            let Ok(font) = playlist.get_font_mut(i) else {
+                continue;
+            };
             if let Ok(relative_path) = RelativePath::from_path(&font.get_path()) {
                 font.set_path(relative_path.to_logical_path(root));
             };

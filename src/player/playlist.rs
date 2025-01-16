@@ -1,6 +1,5 @@
-use super::soundfont_list::FontSort;
+use super::soundfont_list::{FontList, FontListError, FontSort};
 
-use anyhow::bail;
 use enums::{FileListMode, SongSort};
 use error::PlaylistError;
 use font_meta::FontMeta;
@@ -33,11 +32,9 @@ pub struct Playlist {
     unsaved_changes: bool,
     pub deletion_status: DeletionStatus,
 
-    fonts: Vec<FontMeta>,
-    font_idx: Option<usize>,
+    fonts: FontList,
     font_list_mode: FileListMode,
     font_dir: Option<PathBuf>,
-    font_sort: FontSort,
 
     midis: Vec<MidiMeta>,
     midi_idx: Option<usize>,
@@ -70,128 +67,153 @@ impl Playlist {
         Err(PlaylistError::UnknownFileFormat { path })
     }
 
-    // --- Soundfonts
+    // --- FontList
+
+    pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
+        self.fonts.get_font(index)
+    }
+
+    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
+        self.fonts.get_font_mut(index)
+    }
+
+    pub fn get_selected_font(&self) -> Option<&FontMeta> {
+        self.fonts.get_selected()
+    }
+
+    pub fn get_selected_font_mut(&mut self) -> Option<&mut FontMeta> {
+        self.fonts.get_selected_mut()
+    }
 
     pub const fn get_fonts(&self) -> &Vec<FontMeta> {
-        &self.fonts
+        self.fonts.get_fonts()
     }
-    pub fn get_fonts_mut(&mut self) -> &mut Vec<FontMeta> {
-        &mut self.fonts
-    }
+
     pub const fn get_font_idx(&self) -> Option<usize> {
-        self.font_idx
+        self.fonts.get_selected_index()
     }
-    pub fn set_font_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
-        match value {
-            Some(index) => {
-                self.font_idx = if index < self.fonts.len() {
-                    self.fonts[index].refresh();
-                    Some(index)
-                } else {
-                    bail!(PlaylistError::InvalidFontIndex { index });
-                }
-            }
-            None => self.font_idx = None,
-        }
+
+    pub fn select_font(&mut self, index: usize) -> Result<(), PlaylistError> {
+        self.fonts.set_selected_index(Some(index))?;
         Ok(())
     }
+
+    pub fn deselect_font(&mut self) {
+        self.fonts.set_selected_index(None).expect("unreachable");
+    }
+
     pub fn add_font(&mut self, path: PathBuf) -> Result<(), PlaylistError> {
         if self.font_list_mode != FileListMode::Manual {
-            return Err(PlaylistError::ModifyAutoFontList {
-                mode: self.font_list_mode,
-            });
+            return Err(PlaylistError::ModifyDirList);
         }
         self.force_add_font(path);
-        self.refresh_font_list();
+        self.recrawl_fonts();
         Ok(())
     }
+
     /// Bypasses extra correctness checks meant for gui.
     fn force_add_font(&mut self, path: PathBuf) {
         if !self.contains_font(&path) {
-            self.fonts.push(FontMeta::new(path));
+            let _ = self.fonts.add(FontMeta::new(path));
         }
         self.unsaved_changes = true;
     }
+
     pub fn remove_font(&mut self, index: usize) -> Result<(), PlaylistError> {
         if self.font_list_mode != FileListMode::Manual {
-            return Err(PlaylistError::ModifyAutoFontList {
-                mode: self.font_list_mode,
-            });
+            return Err(PlaylistError::ModifyDirList);
         }
         self.force_remove_font(index)
     }
+
     /// Bypasses extra correctness checks meant for gui.
     fn force_remove_font(&mut self, index: usize) -> Result<(), PlaylistError> {
-        if index >= self.fonts.len() {
-            return Err(PlaylistError::InvalidFontIndex { index });
-        }
-        self.fonts[index].is_queued_for_deletion = true;
         self.unsaved_changes = true;
+        self.fonts.remove(index)?;
         Ok(())
     }
+
     pub fn clear_fonts(&mut self) {
         self.fonts.clear();
-        self.font_idx = None;
         self.unsaved_changes = true;
     }
+
     pub fn contains_font(&self, filepath: &PathBuf) -> bool {
-        for i in 0..self.fonts.len() {
-            if self.fonts[i].get_path() == *filepath {
-                return true;
-            }
-        }
-        false
+        self.fonts.contains(filepath)
     }
+
+    fn sort_fonts(&mut self) {
+        self.fonts.sort();
+    }
+
+    pub const fn get_font_sort(&self) -> FontSort {
+        self.fonts.get_sort()
+    }
+
+    pub fn set_font_sort(&mut self, sort: FontSort) {
+        self.fonts.set_sort(sort);
+        self.recrawl_fonts();
+    }
+
+    // --- Font Management
+
     pub const fn get_font_list_mode(&self) -> FileListMode {
         self.font_list_mode
     }
+
     pub const fn get_font_dir(&self) -> Option<&PathBuf> {
         self.font_dir.as_ref()
     }
+
     pub fn set_font_dir(&mut self, path: PathBuf) {
         if self.font_list_mode == FileListMode::Manual {
             return;
         }
         self.font_dir = Some(path);
-        self.refresh_font_list();
+        self.recrawl_fonts();
         self.unsaved_changes = true;
     }
+
     pub fn set_font_list_mode(&mut self, mode: FileListMode) {
         self.font_list_mode = mode;
-        self.refresh_font_list();
+        self.recrawl_fonts();
         self.unsaved_changes = true;
     }
-    /// Refresh font file list
-    pub fn refresh_font_list(&mut self) {
+
+    pub fn recrawl_fonts(&mut self) {
         if self.font_list_mode == FileListMode::Manual {
             self.sort_fonts();
             return;
         }
 
         // Remove files
-        for i in 0..self.fonts.len() {
-            let filepath = self.fonts[i].get_path();
+        let mut to_be_removed = vec![];
+        for (i, font) in self.fonts.get_fonts().iter().enumerate() {
+            let filepath = font.get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.force_remove_font(i).expect("refresh: Font rm failed‽");
+                to_be_removed.push(i);
             }
             match self.font_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.font_dir.as_deref() {
-                        self.force_remove_font(i).expect("refresh: Font rm failed‽");
+                        to_be_removed.push(i);
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.font_dir {
                         if !filepath.starts_with(dir) {
-                            self.force_remove_font(i).expect("refresh: Font rm failed‽");
+                            to_be_removed.push(i);
                         }
                     }
                 }
                 FileListMode::Manual => unreachable!(),
             }
+        }
+        for i in to_be_removed {
+            self.force_remove_font(i).expect("refresh: Font rm failed‽");
         }
         self.delete_queued();
 
@@ -229,45 +251,6 @@ impl Playlist {
         }
         self.sort_fonts();
     }
-    fn sort_fonts(&mut self) {
-        // Remember the selected
-        let selected_font = if let Some(index) = self.font_idx {
-            Some(self.fonts[index].clone())
-        } else {
-            None
-        };
-
-        // Sort
-        match self.font_sort {
-            FontSort::NameAsc => self.fonts.sort_by_key(|f| f.get_name().to_lowercase()),
-            FontSort::NameDesc => {
-                self.fonts.sort_by_key(|f| f.get_name().to_lowercase());
-                self.fonts.reverse();
-            }
-
-            FontSort::SizeAsc => self.fonts.sort_by_key(font_meta::FontMeta::get_size),
-            FontSort::SizeDesc => {
-                self.fonts.sort_by_key(font_meta::FontMeta::get_size);
-                self.fonts.reverse();
-            }
-        };
-
-        // Find the selected again
-        if let Some(selected) = selected_font {
-            for i in 0..self.fonts.len() {
-                if self.fonts[i].get_path() == selected.get_path() {
-                    self.font_idx = Some(i);
-                }
-            }
-        }
-    }
-    pub const fn get_font_sort(&self) -> FontSort {
-        self.font_sort
-    }
-    pub fn set_font_sort(&mut self, sort: FontSort) {
-        self.font_sort = sort;
-        self.refresh_font_list();
-    }
 
     // --- Midi files
 
@@ -287,7 +270,7 @@ impl Playlist {
                     self.midis[index].refresh();
                     Some(index)
                 } else {
-                    return Err(PlaylistError::InvalidSongIndex { index });
+                    return Err(PlaylistError::InvalidIndex);
                 }
             }
             None => self.midi_idx = None,
@@ -296,9 +279,7 @@ impl Playlist {
     }
     pub fn add_song(&mut self, path: PathBuf) -> Result<(), PlaylistError> {
         if self.song_list_mode != FileListMode::Manual {
-            return Err(PlaylistError::ModifyAutoSongList {
-                mode: self.song_list_mode,
-            });
+            return Err(PlaylistError::ModifyDirList);
         }
         self.force_add_song(path);
         self.refresh_song_list();
@@ -313,16 +294,14 @@ impl Playlist {
     }
     pub fn remove_song(&mut self, index: usize) -> Result<(), PlaylistError> {
         if self.song_list_mode != FileListMode::Manual {
-            return Err(PlaylistError::ModifyAutoSongList {
-                mode: self.song_list_mode,
-            });
+            return Err(PlaylistError::ModifyDirList);
         }
         self.force_remove_song(index)
     }
     /// Bypasses extra correctness checks meant for gui.
     fn force_remove_song(&mut self, index: usize) -> Result<(), PlaylistError> {
         if index >= self.midis.len() {
-            return Err(PlaylistError::InvalidSongIndex { index });
+            return Err(PlaylistError::InvalidIndex);
         }
         self.midis[index].is_queued_for_deletion = true;
         self.unsaved_changes = true;
@@ -540,22 +519,7 @@ impl Playlist {
             }
         }
 
-        // Fonts
-        for i in (0..self.fonts.len()).rev() {
-            if !self.fonts[i].is_queued_for_deletion {
-                continue;
-            }
-            self.fonts.remove(i);
-
-            // Check if deletion affected index
-            if let Some(current) = self.font_idx {
-                match i {
-                    deleted if deleted == current => self.font_idx = None,
-                    deleted if deleted < current => self.font_idx = Some(current - 1),
-                    _ => (),
-                }
-            }
-        }
+        self.fonts.delete_queued();
     }
 }
 
@@ -567,11 +531,9 @@ impl Default for Playlist {
             unsaved_changes: true,
             deletion_status: DeletionStatus::None,
 
-            fonts: vec![],
-            font_idx: None,
+            fonts: FontList::default(),
             font_list_mode: FileListMode::Manual,
             font_dir: None,
-            font_sort: FontSort::default(),
 
             midis: vec![],
             midi_idx: None,
@@ -601,19 +563,15 @@ mod tests {
         playlist_man.add_font("fakepath".into()).unwrap();
         assert!(matches!(
             playlist_dir.add_font("fakepath".into()).unwrap_err(),
-            PlaylistError::ModifyAutoFontList {
-                mode: FileListMode::Directory
-            }
+            PlaylistError::ModifyDirList
         ));
         assert!(matches!(
             playlist_sub.add_font("fakepath".into()).unwrap_err(),
-            PlaylistError::ModifyAutoFontList {
-                mode: FileListMode::Subdirectories
-            }
+            PlaylistError::ModifyDirList
         ));
-        assert_eq!(playlist_man.fonts.len(), 1);
-        assert_eq!(playlist_dir.fonts.len(), 0);
-        assert_eq!(playlist_sub.fonts.len(), 0);
+        assert_eq!(playlist_man.fonts.get_fonts().len(), 1);
+        assert_eq!(playlist_dir.fonts.get_fonts().len(), 0);
+        assert_eq!(playlist_sub.fonts.get_fonts().len(), 0);
     }
     #[test]
     fn test_rmfont_listmodes() {
@@ -630,23 +588,19 @@ mod tests {
         playlist_man.remove_font(0).unwrap();
         assert!(matches!(
             playlist_dir.remove_font(0).unwrap_err(),
-            PlaylistError::ModifyAutoFontList {
-                mode: FileListMode::Directory
-            }
+            PlaylistError::ModifyDirList
         ));
         assert!(matches!(
             playlist_sub.remove_font(0).unwrap_err(),
-            PlaylistError::ModifyAutoFontList {
-                mode: FileListMode::Subdirectories
-            }
+            PlaylistError::ModifyDirList
         ));
         playlist_man.delete_queued();
         playlist_dir.delete_queued();
         playlist_sub.delete_queued();
 
-        assert_eq!(playlist_man.fonts.len(), 0);
-        assert_eq!(playlist_dir.fonts.len(), 1);
-        assert_eq!(playlist_sub.fonts.len(), 1);
+        assert_eq!(playlist_man.fonts.get_fonts().len(), 0);
+        assert_eq!(playlist_dir.fonts.get_fonts().len(), 1);
+        assert_eq!(playlist_sub.fonts.get_fonts().len(), 1);
     }
     #[test]
     fn test_addsong_listmodes() {
@@ -659,15 +613,11 @@ mod tests {
         playlist_man.add_song("fakepath".into()).unwrap();
         assert!(matches!(
             playlist_dir.add_song("fakepath".into()).unwrap_err(),
-            PlaylistError::ModifyAutoSongList {
-                mode: FileListMode::Directory
-            }
+            PlaylistError::ModifyDirList
         ));
         assert!(matches!(
             playlist_sub.add_song("fakepath".into()).unwrap_err(),
-            PlaylistError::ModifyAutoSongList {
-                mode: FileListMode::Subdirectories
-            }
+            PlaylistError::ModifyDirList
         ));
         assert_eq!(playlist_man.midis.len(), 1);
         assert_eq!(playlist_dir.midis.len(), 0);
@@ -688,15 +638,11 @@ mod tests {
         playlist_man.remove_song(0).unwrap();
         assert!(matches!(
             playlist_dir.remove_song(0).unwrap_err(),
-            PlaylistError::ModifyAutoSongList {
-                mode: FileListMode::Directory
-            }
+            PlaylistError::ModifyDirList
         ));
         assert!(matches!(
             playlist_sub.remove_song(0).unwrap_err(),
-            PlaylistError::ModifyAutoSongList {
-                mode: FileListMode::Subdirectories
-            }
+            PlaylistError::ModifyDirList
         ));
         playlist_man.delete_queued();
         playlist_dir.delete_queued();
@@ -711,8 +657,13 @@ mod tests {
     fn test_unsaved_flag_fontsong_idx() {
         // (Doesn't count, not stored in playlist)
         let mut playlist = Playlist::default();
+        playlist.add_font("fakefont_a".into()).unwrap();
+        playlist.add_font("fakefont_b".into()).unwrap();
+        playlist.add_song("fakesong_a".into()).unwrap();
+        playlist.add_song("fakesong_b".into()).unwrap();
         playlist.unsaved_changes = false;
-        playlist.set_font_idx(None).unwrap();
+        playlist.select_font(0).unwrap();
+        playlist.select_font(1).unwrap();
         assert!(!playlist.unsaved_changes);
         playlist.unsaved_changes = false;
         playlist.set_song_idx(None).unwrap();
@@ -798,7 +749,7 @@ mod tests {
         // (Doesn't count, refreshed automatically)
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
-        playlist.refresh_font_list();
+        playlist.recrawl_fonts();
         playlist.refresh_song_list();
         assert!(!playlist.unsaved_changes);
     }

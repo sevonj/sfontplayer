@@ -167,7 +167,7 @@ fn consume_no_modifiers(ctx: &Context, player: &mut Player, _gui: &GuiState) {
             player.cycle_repeat();
         }
         if input.consume_shortcut(&PLAYLIST) {
-            player.get_playlist_mut().refresh_font_list();
+            player.get_playlist_mut().recrawl_fonts();
             player.get_playlist_mut().refresh_song_list();
         }
     });

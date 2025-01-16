@@ -1,13 +1,12 @@
-use std::{error, fmt, fs, path::PathBuf};
-
-use anyhow::bail;
 use rustysynth::SoundFont;
 use serde::Serialize;
+use std::{error, fmt, fs, path::PathBuf};
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum FontMetaError {
     CantAccessFile { filename: String, message: String },
-    InvalidFile { filename: String, message: String },
+    InvalidSoundFont { filename: String, message: String },
+    ParseError,
 }
 impl error::Error for FontMetaError {}
 impl fmt::Display for FontMetaError {
@@ -16,8 +15,11 @@ impl fmt::Display for FontMetaError {
             Self::CantAccessFile { filename, message } => {
                 write!(f, "Can't access {filename}: {message}")
             }
-            Self::InvalidFile { filename, message } => {
+            Self::InvalidSoundFont { filename, message } => {
                 write!(f, "{filename} is not a valid soundfont: {message}")
+            }
+            Self::ParseError => {
+                write!(f, "Failed to parse FontMeta")
             }
         }
     }
@@ -55,7 +57,7 @@ impl FontMeta {
             Ok(mut file) => match SoundFont::new(&mut file) {
                 Ok(_) => error = None,
                 Err(e) => {
-                    error = Some(FontMetaError::InvalidFile {
+                    error = Some(FontMetaError::InvalidSoundFont {
                         filename: self.get_name(),
                         message: e.to_string(),
                     });
@@ -99,11 +101,11 @@ impl FontMeta {
 }
 
 impl TryFrom<&serde_json::Value> for FontMeta {
-    type Error = anyhow::Error;
+    type Error = FontMetaError;
 
     fn try_from(json: &serde_json::Value) -> Result<Self, Self::Error> {
         let Some(path_str) = json["filepath"].as_str() else {
-            bail!("No filepath.")
+            return Err(FontMetaError::ParseError);
         };
         let filesize = json["filesize"].as_u64();
 
@@ -134,12 +136,10 @@ mod tests {
             filepath: "Fakepath".into(),
             ..Default::default()
         };
-        playlist.fonts.push(font);
+        playlist.fonts.add(font).unwrap();
         let new_playlist = run_serialize(playlist);
-        assert_eq!(
-            new_playlist.fonts[0].get_path().to_str().unwrap(),
-            "Fakepath"
-        );
+        let font = new_playlist.get_font(0).unwrap();
+        assert_eq!(font.get_path().to_str().unwrap(), "Fakepath");
     }
 
     #[test]
@@ -151,14 +151,16 @@ mod tests {
             ..Default::default()
         };
         let font_420 = FontMeta {
-            filepath: "unused".into(),
+            filepath: "unused2".into(),
             filesize: Some(420),
             ..Default::default()
         };
-        playlist.fonts.push(font_none);
-        playlist.fonts.push(font_420);
+        playlist.fonts.add(font_none).unwrap();
+        playlist.fonts.add(font_420).unwrap();
         let new_playlist = run_serialize(playlist);
-        assert_eq!(new_playlist.fonts[0].get_size(), None);
-        assert_eq!(new_playlist.fonts[1].get_size().unwrap(), 420);
+        let font_0 = new_playlist.get_font(0).unwrap();
+        let font_1 = new_playlist.get_font(1).unwrap();
+        assert_eq!(font_0.get_size(), None);
+        assert_eq!(font_1.get_size().unwrap(), 420);
     }
 }
