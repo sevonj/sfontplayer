@@ -2,8 +2,8 @@ use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
 use gui::{draw_gui, GuiState};
 use midi_inspector::MidiInspector;
 use player::{
-    playlist::{midi_meta::MidiMeta, Playlist},
-    Player,
+    playlist::{MidiMeta, Playlist},
+    Player, PlayerEvent,
 };
 use rodio::{OutputStream, Sink};
 use std::{
@@ -189,12 +189,12 @@ fn handle_events(player: &mut Player, gui: &mut GuiState, ctx: &Context) {
     let event_queue = player.get_event_queue();
     while !event_queue.is_empty() {
         match event_queue.remove(0) {
-            player::PlayerEvent::Raise => {
+            PlayerEvent::Raise => {
                 ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
                 ctx.send_viewport_cmd(ViewportCommand::Focus);
             }
-            player::PlayerEvent::Quit => ctx.send_viewport_cmd(ViewportCommand::Close),
-            player::PlayerEvent::NotifyError(message) => gui.toast_error(message),
+            PlayerEvent::Quit => ctx.send_viewport_cmd(ViewportCommand::Close),
+            PlayerEvent::NotifyError(message) => gui.toast_error(message),
         }
     }
 }

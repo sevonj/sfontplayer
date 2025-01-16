@@ -1,17 +1,17 @@
-use super::soundfont_list::{FontList, FontListError, FontSort};
-
-use enums::{FileListMode, SongSort};
-use error::PlaylistError;
-use font_meta::FontMeta;
-use midi_meta::MidiMeta;
 use rand::seq::SliceRandom;
 use std::{fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
 
-pub mod enums;
-pub mod error;
-pub mod font_meta;
-pub mod midi_meta;
+use super::soundfont_list::{FontList, FontListError, FontSort};
+pub use enums::{FileListMode, SongSort};
+pub use error::{MetaError, PlaylistError};
+pub use font_meta::FontMeta;
+pub use midi_meta::MidiMeta;
+
+mod enums;
+mod error;
+mod font_meta;
+mod midi_meta;
 mod serialize_playlist;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

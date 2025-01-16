@@ -1,6 +1,6 @@
 use crate::{
     gui::GuiState,
-    player::{soundfont_library::FontLibrary, Player},
+    player::{FontLibrary, Player},
 };
 use rfd::FileDialog;
 

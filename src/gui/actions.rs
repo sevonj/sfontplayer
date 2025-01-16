@@ -16,7 +16,7 @@ use super::{
     modals::file_dialogs,
     GuiState,
 };
-use crate::player::{playlist::enums::FileListMode, Player};
+use crate::player::{playlist::FileListMode, Player};
 
 // --- Common File Actions --- //
 

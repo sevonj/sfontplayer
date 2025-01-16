@@ -6,7 +6,7 @@ use std::{error, fmt, fs, path::PathBuf};
 use walkdir::WalkDir;
 
 use super::{
-    playlist::font_meta::FontMeta,
+    playlist::FontMeta,
     soundfont_list::{FontList, FontListError, FontSort},
 };
 

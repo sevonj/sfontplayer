@@ -7,7 +7,7 @@ use super::{
     custom_controls::{circle_button, collapse_button, subheading},
     GuiState, TBL_ROW_H,
 };
-use crate::player::{playlist::enums::FileListMode, soundfont_list::FontSort, Player};
+use crate::player::{playlist::FileListMode, FontSort, Player};
 
 #[allow(clippy::too_many_lines)]
 pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {

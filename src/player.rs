@@ -1,110 +1,31 @@
 //! Player app logic module
+//!
 
-use audio::{error::AudioPlayerError, AudioPlayer};
 use eframe::egui::mutex::Mutex;
-#[cfg(not(target_os = "windows"))]
-use mediacontrols::create_mediacontrols;
-use playlist::{
-    error::MetaError, font_meta::FontMeta, midi_meta::MidiMeta, DeletionStatus, Playlist,
-};
 use rodio::Sink;
 use serde_json::Value;
-use serde_repr::{Deserialize_repr, Serialize_repr};
-use soundfont_library::FontLibrary;
 use souvlaki::{MediaControlEvent, MediaControls};
-use std::{error, fmt, fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
+use std::{fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
 
-pub mod audio;
+use audio::AudioPlayer;
+pub use enums::{PlayerEvent, RepeatMode};
+pub use error::PlayerError;
+#[cfg(not(target_os = "windows"))]
+use mediacontrols::create_mediacontrols;
+use playlist::{DeletionStatus, FontMeta, MidiMeta, Playlist};
+pub use soundfont_library::FontLibrary;
+pub use soundfont_list::FontSort;
+
+mod audio;
+mod enums;
+mod error;
 mod mediacontrols;
 pub mod playlist;
 pub mod serialize_player;
-pub mod soundfont_library;
-pub mod soundfont_list;
+mod soundfont_library;
+mod soundfont_list;
 
 const REMOVED_PLAYLIST_HISTORY_LEN: usize = 100;
-
-/// To be handled in gui
-pub enum PlayerEvent {
-    /// Bring window to focus
-    Raise,
-    Quit,
-    NotifyError(String),
-}
-
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
-#[repr(u8)]
-pub enum RepeatMode {
-    #[default]
-    Disabled = 0,
-    Queue = 1,
-    Song = 2,
-}
-
-impl TryFrom<u8> for RepeatMode {
-    type Error = ();
-
-    fn try_from(v: u8) -> Result<Self, Self::Error> {
-        match v {
-            x if x == Self::Disabled as u8 => Ok(Self::Disabled),
-            x if x == Self::Queue as u8 => Ok(Self::Queue),
-            x if x == Self::Song as u8 => Ok(Self::Song),
-            _ => Err(()),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum PlayerError {
-    InvalidPlaylistIndex { index: usize },
-    InvalidMidiIndex,
-    CantMovePlaylist,
-    CantSwitchPlaylist,
-    NoQueueIndex,
-    NoSoundfont,
-    PlaylistAlreadyOpen,
-    PlaylistOpenFailed,
-    PlaylistSaveFailed,
-    DebugBlockSaving,
-    MidiOverride,
-    Meta(MetaError),
-    AudioBackend,
-}
-
-impl error::Error for PlayerError {}
-
-impl fmt::Display for PlayerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidPlaylistIndex { index } => {
-                write!(f, "Playlist index {index} is out of bounds.")
-            }
-            Self::InvalidMidiIndex => write!(f, "Invalid midi index"),
-            Self::CantMovePlaylist => write!(f, "Can't move this playlist further."),
-            Self::CantSwitchPlaylist => write!(f, "Can't switch playlists further."),
-            Self::NoQueueIndex => write!(f, "No queue index!"),
-            Self::NoSoundfont => write!(f, "No soundfont!"),
-            Self::PlaylistAlreadyOpen => write!(f, "Playlist is already open."),
-            Self::PlaylistOpenFailed => write!(f, "Failed to open playlist."),
-            Self::PlaylistSaveFailed => write!(f, "Failed to save playlist."),
-            Self::DebugBlockSaving => write!(f, "debug_block_saving == true"),
-            Self::MidiOverride => write!(f, "Blocked by MIDI file override"),
-            Self::Meta(source) => source.fmt(f),
-            Self::AudioBackend => write!(f, "Error in audio player."),
-        }
-    }
-}
-
-impl From<AudioPlayerError> for PlayerError {
-    fn from(_: AudioPlayerError) -> Self {
-        Self::AudioBackend
-    }
-}
-
-impl From<MetaError> for PlayerError {
-    fn from(e: MetaError) -> Self {
-        Self::Meta(e)
-    }
-}
 
 /// The Player class does high-level app logic, which includes playlists and playback.
 pub struct Player {
