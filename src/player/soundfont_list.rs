@@ -13,6 +13,7 @@ pub enum FontSort {
     SizeAsc = 2,
     SizeDesc = 3,
 }
+
 impl TryFrom<u8> for FontSort {
     type Error = ();
 
@@ -54,9 +55,6 @@ pub struct FontList {
 }
 
 impl FontList {
-    pub fn len(&self) -> usize {
-        self.fonts.len()
-    }
     pub fn sort(&mut self) {
         // Store the selected
         let selected = if let Some(index) = self.selected {
@@ -86,21 +84,7 @@ impl FontList {
             }
         }
     }
-    pub const fn get_sort(&self) -> FontSort {
-        self.sort
-    }
-    pub fn set_sort(&mut self, sort: FontSort) {
-        self.sort = sort;
-        self.sort();
-    }
-    pub fn contains(&self, filepath: &PathBuf) -> bool {
-        for i in 0..self.fonts.len() {
-            if self.fonts[i].get_path() == *filepath {
-                return true;
-            }
-        }
-        false
-    }
+
     pub fn add(&mut self, font: FontMeta) -> Result<(), FontListError> {
         if self.contains(&font.get_path()) {
             return Err(FontListError::AlreadyExists);
@@ -108,6 +92,7 @@ impl FontList {
         self.fonts.push(font);
         Ok(())
     }
+
     pub fn remove(&mut self, index: usize) -> Result<(), FontListError> {
         if index >= self.fonts.len() {
             return Err(FontListError::IndexOutOfRange);
@@ -123,6 +108,7 @@ impl FontList {
         }
         Ok(())
     }
+
     pub fn delete_queued(&mut self) {
         for i in (0..self.fonts.len()).rev() {
             if !self.fonts[i].is_queued_for_deletion {
@@ -140,36 +126,54 @@ impl FontList {
             }
         }
     }
+
     pub fn clear(&mut self) {
         self.fonts.clear();
+        self.selected = None;
     }
+
+    pub fn contains(&self, filepath: &PathBuf) -> bool {
+        for i in 0..self.fonts.len() {
+            if self.fonts[i].get_path() == *filepath {
+                return true;
+            }
+        }
+        false
+    }
+
     pub const fn get_fonts(&self) -> &Vec<FontMeta> {
         &self.fonts
     }
+
     pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
         if index >= self.fonts.len() {
             return Err(FontListError::IndexOutOfRange);
         }
         Ok(&self.fonts[index])
     }
+
     pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
         if index >= self.fonts.len() {
             return Err(FontListError::IndexOutOfRange);
         }
         Ok(&mut self.fonts[index])
     }
+
     pub fn get_selected(&self) -> Option<&FontMeta> {
         let index = self.selected?;
         Some(&self.fonts[index])
     }
+
     pub fn get_selected_mut(&mut self) -> Option<&mut FontMeta> {
         let index = self.selected?;
         Some(&mut self.fonts[index])
     }
+
     pub const fn get_selected_index(&self) -> Option<usize> {
         self.selected
     }
-    pub fn select(&mut self, value: Option<usize>) -> Result<(), FontListError> {
+
+    pub fn set_selected_index(&mut self, value: Option<usize>) -> Result<(), FontListError> {
         let Some(index) = value else {
             self.selected = None;
             return Ok(());
@@ -178,6 +182,16 @@ impl FontList {
             return Err(FontListError::IndexOutOfRange);
         }
         self.selected = Some(index);
+        self.fonts[index].refresh();
         Ok(())
+    }
+
+    pub const fn get_sort(&self) -> FontSort {
+        self.sort
+    }
+
+    pub fn set_sort(&mut self, sort: FontSort) {
+        self.sort = sort;
+        self.sort();
     }
 }

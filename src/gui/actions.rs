@@ -249,7 +249,7 @@ pub fn refresh_playlist(player: &mut Player, index: usize, ui: &mut Ui) {
             .on_disabled_hover_text("This playlist uses manual listing.")
             .clicked()
         {
-            playlist.refresh_font_list();
+            playlist.recrawl_fonts();
             playlist.refresh_song_list();
             ui.close_menu();
         }
@@ -268,7 +268,7 @@ pub fn refresh_current_playlist(player: &mut Player, ui: &mut Ui) {
         .on_disabled_hover_text("This playlist uses manual listing.")
         .clicked()
     {
-        player.get_playlist_mut().refresh_font_list();
+        player.get_playlist_mut().recrawl_fonts();
         player.get_playlist_mut().refresh_song_list();
         ui.close_menu();
     }

@@ -36,7 +36,7 @@ fn empty_lib_placeholder(ui: &mut Ui, gui: &mut GuiState) {
 
 #[allow(clippy::too_many_lines)]
 fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
-    let playlist_font_override = player.get_playlist().get_font_idx().is_some();
+    let playlist_font_override = player.get_playlist().get_selected_font().is_some();
     if playlist_font_override {
         // Less intense gray highlight
         ui.style_mut().visuals.selection.bg_fill = ui.style().visuals.widgets.active.bg_fill;
@@ -138,7 +138,7 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
             // Select
             if row.response().clicked() {
-                let _ = player.font_lib.select(Some(index));
+                let _ = player.font_lib.select(index);
                 let _ = player.reload_font();
             }
 

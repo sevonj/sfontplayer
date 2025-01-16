@@ -542,7 +542,7 @@ impl Player {
             return Err(PlayerError::InvalidPlaylistIndex { index });
         }
         self.playlist_idx = index;
-        self.get_playlist_mut().refresh_font_list();
+        self.get_playlist_mut().recrawl_fonts();
         self.get_playlist_mut().refresh_song_list();
         Ok(())
     }

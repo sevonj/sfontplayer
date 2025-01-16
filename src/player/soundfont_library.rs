@@ -39,22 +39,16 @@ impl fmt::Display for FontLibraryError {
 
 /// `FontLibrary` is a wrapper around `FontList`.
 /// It abstracts manual font management into paths that will be auto-crawled for files.
+#[derive(Debug, Default)]
 pub struct FontLibrary {
+    /// List of paths to look at. Can be a file or a dir.
     paths: Vec<PathBuf>,
+    /// Deletion queue.
     delet: Vec<bool>,
+    /// True to search subdirs
     pub crawl_subdirs: bool,
+    /// Wrapped kind of opaquely
     fontlist: FontList,
-}
-#[allow(clippy::derivable_impls)]
-impl Default for FontLibrary {
-    fn default() -> Self {
-        Self {
-            paths: vec![],
-            delet: vec![],
-            crawl_subdirs: false,
-            fontlist: FontList::default(),
-        }
-    }
 }
 
 impl FontLibrary {
@@ -63,33 +57,43 @@ impl FontLibrary {
     pub fn sort(&mut self) {
         self.fontlist.sort();
     }
+
     pub const fn get_sort(&self) -> FontSort {
         self.fontlist.get_sort()
     }
+
     pub fn set_sort(&mut self, sort: FontSort) {
         self.fontlist.set_sort(sort);
     }
+
     pub const fn get_fonts(&self) -> &Vec<FontMeta> {
         self.fontlist.get_fonts()
     }
+
     pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
         self.fontlist.get_font(index)
     }
+
     pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
         self.fontlist.get_font_mut(index)
     }
+
     pub fn get_selected(&self) -> Option<&FontMeta> {
         self.fontlist.get_selected()
     }
+
     pub fn get_selected_mut(&mut self) -> Option<&mut FontMeta> {
         self.fontlist.get_selected_mut()
     }
+
     pub const fn get_selected_index(&self) -> Option<usize> {
         self.fontlist.get_selected_index()
     }
-    pub fn select(&mut self, value: Option<usize>) -> Result<(), FontListError> {
-        self.fontlist.select(value)
+
+    pub fn select(&mut self, index: usize) -> Result<(), FontListError> {
+        self.fontlist.set_selected_index(Some(index))
     }
+
     pub fn contains_font(&self, filepath: &PathBuf) -> bool {
         self.fontlist.contains(filepath)
     }
@@ -99,6 +103,7 @@ impl FontLibrary {
     pub const fn get_paths(&self) -> &Vec<PathBuf> {
         &self.paths
     }
+
     pub fn contains_path(&self, path: &PathBuf) -> bool {
         for existing_path in &self.paths {
             if *existing_path == *path {
@@ -107,15 +112,17 @@ impl FontLibrary {
         }
         false
     }
+
     pub fn select_by_path(&mut self, path: PathBuf) -> Result<(), FontLibraryError> {
         for (i, font) in self.get_fonts().iter().enumerate() {
             if font.get_path() == path {
-                let _ = self.fontlist.select(Some(i));
+                let _ = self.fontlist.set_selected_index(Some(i));
                 return Ok(());
             }
         }
         Err(FontLibraryError::NoSuchFont { path })
     }
+
     pub fn add_path(&mut self, path: PathBuf) -> Result<(), FontLibraryError> {
         if self.contains_path(&path) {
             return Err(FontLibraryError::PathAlreadyExists { path });
@@ -128,6 +135,7 @@ impl FontLibrary {
         self.refresh();
         Ok(())
     }
+
     pub fn remove_path(&mut self, index: usize) -> Result<(), FontLibraryError> {
         if index >= self.paths.len() {
             return Err(FontLibraryError::IndexOutOfRange);
@@ -136,11 +144,13 @@ impl FontLibrary {
         self.delet[index] = true;
         Ok(())
     }
+
     pub fn clear(&mut self) {
         self.paths.clear();
         self.delet.clear();
         self.fontlist.clear();
     }
+
     pub fn refresh(&mut self) {
         let mut found_files = vec![];
         let selected_font_path = self.get_selected().map(FontMeta::get_path);
@@ -182,16 +192,18 @@ impl FontLibrary {
         }
 
         if let Some(path) = selected_font_path {
-            let _ = self.select(None);
+            let _ = self.fontlist.set_selected_index(None);
             let _ = self.select_by_path(path);
         }
 
         self.sort();
     }
+
     pub fn update(&mut self) {
         self.assert_delete_queue_len();
         self.delete_queued();
     }
+
     fn delete_queued(&mut self) {
         for index in (0..self.paths.len()).rev() {
             if self.delet[index] {

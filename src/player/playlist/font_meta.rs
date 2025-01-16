@@ -1,13 +1,12 @@
-use std::{error, fmt, fs, path::PathBuf};
-
-use anyhow::bail;
 use rustysynth::SoundFont;
 use serde::Serialize;
+use std::{error, fmt, fs, path::PathBuf};
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum FontMetaError {
     CantAccessFile { filename: String, message: String },
-    InvalidFile { filename: String, message: String },
+    InvalidSoundFont { filename: String, message: String },
+    ParseError,
 }
 impl error::Error for FontMetaError {}
 impl fmt::Display for FontMetaError {
@@ -16,8 +15,11 @@ impl fmt::Display for FontMetaError {
             Self::CantAccessFile { filename, message } => {
                 write!(f, "Can't access {filename}: {message}")
             }
-            Self::InvalidFile { filename, message } => {
+            Self::InvalidSoundFont { filename, message } => {
                 write!(f, "{filename} is not a valid soundfont: {message}")
+            }
+            Self::ParseError => {
+                write!(f, "Failed to parse FontMeta")
             }
         }
     }
@@ -55,7 +57,7 @@ impl FontMeta {
             Ok(mut file) => match SoundFont::new(&mut file) {
                 Ok(_) => error = None,
                 Err(e) => {
-                    error = Some(FontMetaError::InvalidFile {
+                    error = Some(FontMetaError::InvalidSoundFont {
                         filename: self.get_name(),
                         message: e.to_string(),
                     });
@@ -99,11 +101,11 @@ impl FontMeta {
 }
 
 impl TryFrom<&serde_json::Value> for FontMeta {
-    type Error = anyhow::Error;
+    type Error = FontMetaError;
 
     fn try_from(json: &serde_json::Value) -> Result<Self, Self::Error> {
         let Some(path_str) = json["filepath"].as_str() else {
-            bail!("No filepath.")
+            return Err(FontMetaError::ParseError);
         };
         let filesize = json["filesize"].as_u64();
 

@@ -2,14 +2,13 @@
 
 use std::{error::Error, fmt, path::PathBuf};
 
-use super::enums::FileListMode;
+use crate::player::soundfont_list::FontListError;
 
 #[derive(Debug, Clone)]
 pub enum PlaylistError {
-    InvalidFontIndex { index: usize },
-    InvalidSongIndex { index: usize },
-    ModifyAutoFontList { mode: FileListMode },
-    ModifyAutoSongList { mode: FileListMode },
+    InvalidIndex,
+    AlreadyExists,
+    ModifyDirList,
     UnknownFileFormat { path: PathBuf },
     FailedToOpen { path: PathBuf },
 }
@@ -19,26 +18,26 @@ impl Error for PlaylistError {}
 impl fmt::Display for PlaylistError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidFontIndex { index } => {
-                write!(f, "Font index out of range: {index}")
+            Self::InvalidIndex => {
+                write!(f, "Index out of range")
             }
-            Self::InvalidSongIndex { index } => {
-                write!(f, "Song index out of range: {index}")
+            Self::AlreadyExists => {
+                write!(f, "Already in playlist")
             }
-            Self::ModifyAutoFontList { mode } => {
-                write!(
-                    f,
-                    "Can't modify font list, it's in auto-managed mode: {mode:?}"
-                )
-            }
-            Self::ModifyAutoSongList { mode } => {
-                write!(
-                    f,
-                    "Can't modify song list, it's in auto-managed mode: {mode:?}"
-                )
+            Self::ModifyDirList => {
+                write!(f, "Cant modify a directory-tracking list manually.")
             }
             Self::UnknownFileFormat { path } => write!(f, "Unknown file format: {path:?}"),
             Self::FailedToOpen { path } => write!(f, "Failed to open file: {path:?}"),
+        }
+    }
+}
+
+impl From<FontListError> for PlaylistError {
+    fn from(value: FontListError) -> Self {
+        match value {
+            FontListError::AlreadyExists => Self::AlreadyExists,
+            FontListError::IndexOutOfRange => Self::InvalidIndex,
         }
     }
 }

@@ -148,7 +148,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
                 // Select
                 if row.response().clicked() {
-                    let _ = player.get_playlist_mut().set_font_idx(Some(index));
+                    let _ = player.get_playlist_mut().select_font(index);
                     let _ = player.reload_font();
                 }
                 // Context menu
@@ -247,7 +247,7 @@ fn content_controls(ui: &mut Ui, player: &mut Player) {
                     .on_hover_text("Refresh content")
                     .clicked()
                 {
-                    player.get_playlist_mut().refresh_font_list();
+                    player.get_playlist_mut().recrawl_fonts();
                 }
             } else if let Some(paths) = actions::pick_soundfonts_button(ui) {
                 for path in paths {
@@ -282,7 +282,7 @@ fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Playe
 
     // Select
     if row.response().clicked() {
-        let _ = player.get_playlist_mut().set_font_idx(None);
+        player.get_playlist_mut().deselect_font();
         let _ = player.reload_font();
     }
 }
