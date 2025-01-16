@@ -2,7 +2,6 @@
 //!
 
 use eframe::egui::mutex::Mutex;
-#[cfg(not(target_os = "windows"))]
 use rodio::Sink;
 use serde_json::Value;
 use souvlaki::{MediaControlEvent, MediaControls};
@@ -11,6 +10,7 @@ use std::{fs::File, io::Write, path::PathBuf, sync::Arc, time::Duration, vec};
 use audio::AudioPlayer;
 pub use enums::{PlayerEvent, RepeatMode};
 pub use error::PlayerError;
+#[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
 use playlist::{DeletionStatus, FontMeta, MidiMeta, Playlist};
 pub use soundfont_library::FontLibrary;
