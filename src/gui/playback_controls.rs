@@ -4,10 +4,8 @@ use eframe::egui::{
 };
 use std::time::Duration;
 
-use crate::{
-    player::{playlist::midi_meta::MidiMeta, Player, RepeatMode},
-    GuiState,
-};
+use crate::player::{playlist::MidiMeta, Player, RepeatMode};
+use crate::GuiState;
 
 const ICON_SIZE: f32 = 20.;
 

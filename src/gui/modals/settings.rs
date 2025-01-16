@@ -7,7 +7,7 @@ use egui_extras::{Column, TableBuilder};
 
 use crate::{
     gui::actions,
-    player::{soundfont_library::FontLibrary, Player},
+    player::{FontLibrary, Player},
     GuiState,
 };
 

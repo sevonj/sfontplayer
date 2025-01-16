@@ -2,7 +2,7 @@ use core::{error, fmt};
 use serde::Serialize;
 use std::path::PathBuf;
 
-use super::playlist::font_meta::FontMeta;
+use super::playlist::FontMeta;
 
 #[derive(PartialEq, Eq, Default, Clone, Copy, Debug)]
 #[repr(u8)]

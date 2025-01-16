@@ -13,11 +13,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use super::{
-    playlist::{enums::SongSort, Playlist},
+    playlist::{Playlist, SongSort},
     soundfont_list::FontSort,
     Player, RepeatMode,
 };
-use crate::player::{playlist::font_meta::FontMeta, PlayerError};
+use crate::player::{playlist::FontMeta, PlayerError};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlaylistListEntry {
