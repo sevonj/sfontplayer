@@ -1,36 +1,15 @@
 use rustysynth::SoundFont;
 use serde::Serialize;
-use std::{error, fmt, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub enum FontMetaError {
-    CantAccessFile { filename: String, message: String },
-    InvalidSoundFont { filename: String, message: String },
-    ParseError,
-}
-impl error::Error for FontMetaError {}
-impl fmt::Display for FontMetaError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::CantAccessFile { filename, message } => {
-                write!(f, "Can't access {filename}: {message}")
-            }
-            Self::InvalidSoundFont { filename, message } => {
-                write!(f, "{filename} is not a valid soundfont: {message}")
-            }
-            Self::ParseError => {
-                write!(f, "Failed to parse FontMeta")
-            }
-        }
-    }
-}
+use super::error::MetaError;
 
 /// Reference to a font file with metadata
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct FontMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
-    error: Option<FontMetaError>,
+    error: Option<MetaError>,
     pub is_queued_for_deletion: bool,
 }
 
@@ -57,14 +36,14 @@ impl FontMeta {
             Ok(mut file) => match SoundFont::new(&mut file) {
                 Ok(_) => error = None,
                 Err(e) => {
-                    error = Some(FontMetaError::InvalidSoundFont {
+                    error = Some(MetaError::InvalidFile {
                         filename: self.get_name(),
                         message: e.to_string(),
                     });
                 }
             },
             Err(e) => {
-                error = Some(FontMetaError::CantAccessFile {
+                error = Some(MetaError::CantOpenFile {
                     filename: self.get_name(),
                     message: e.to_string(),
                 });
@@ -92,7 +71,7 @@ impl FontMeta {
     pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
-    pub fn get_status(&self) -> Result<(), FontMetaError> {
+    pub fn get_status(&self) -> Result<(), MetaError> {
         if let Some(e) = &self.error {
             return Err(e.clone());
         }
@@ -101,11 +80,11 @@ impl FontMeta {
 }
 
 impl TryFrom<&serde_json::Value> for FontMeta {
-    type Error = FontMetaError;
+    type Error = MetaError;
 
     fn try_from(json: &serde_json::Value) -> Result<Self, Self::Error> {
         let Some(path_str) = json["filepath"].as_str() else {
-            return Err(FontMetaError::ParseError);
+            return Err(MetaError::ParseError);
         };
         let filesize = json["filesize"].as_u64();
 
