@@ -5,9 +5,7 @@ use eframe::egui::mutex::Mutex;
 #[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
 use playlist::{
-    font_meta::{FontMeta, FontMetaError},
-    midi_meta::{MidiMeta, MidiMetaError},
-    DeletionStatus, Playlist,
+    error::MetaError, font_meta::FontMeta, midi_meta::MidiMeta, DeletionStatus, Playlist,
 };
 use rodio::Sink;
 use serde_json::Value;
@@ -41,6 +39,7 @@ pub enum RepeatMode {
     Queue = 1,
     Song = 2,
 }
+
 impl TryFrom<u8> for RepeatMode {
     type Error = ();
 
@@ -67,11 +66,12 @@ pub enum PlayerError {
     PlaylistSaveFailed,
     DebugBlockSaving,
     MidiOverride,
-    FontMeta(FontMetaError),
-    MidiMeta(MidiMetaError),
+    Meta(MetaError),
     AudioBackend,
 }
+
 impl error::Error for PlayerError {}
+
 impl fmt::Display for PlayerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -88,25 +88,21 @@ impl fmt::Display for PlayerError {
             Self::PlaylistSaveFailed => write!(f, "Failed to save playlist."),
             Self::DebugBlockSaving => write!(f, "debug_block_saving == true"),
             Self::MidiOverride => write!(f, "Blocked by MIDI file override"),
-            Self::FontMeta(source) => source.fmt(f),
-            Self::MidiMeta(source) => source.fmt(f),
+            Self::Meta(source) => source.fmt(f),
             Self::AudioBackend => write!(f, "Error in audio player."),
         }
     }
 }
+
 impl From<AudioPlayerError> for PlayerError {
     fn from(_: AudioPlayerError) -> Self {
         Self::AudioBackend
     }
 }
-impl From<FontMetaError> for PlayerError {
-    fn from(e: FontMetaError) -> Self {
-        Self::FontMeta(e)
-    }
-}
-impl From<MidiMetaError> for PlayerError {
-    fn from(e: MidiMetaError) -> Self {
-        Self::MidiMeta(e)
+
+impl From<MetaError> for PlayerError {
+    fn from(e: MetaError) -> Self {
+        Self::Meta(e)
     }
 }
 
