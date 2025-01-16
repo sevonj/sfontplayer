@@ -1,4 +1,4 @@
-use super::soundfont_list::FontSort;
+use super::soundfont_list::{FontList, FontListError, FontSort};
 
 use anyhow::bail;
 use enums::{FileListMode, SongSort};
@@ -33,11 +33,9 @@ pub struct Playlist {
     unsaved_changes: bool,
     pub deletion_status: DeletionStatus,
 
-    fonts: Vec<FontMeta>,
-    font_idx: Option<usize>,
+    fonts: FontList,
     font_list_mode: FileListMode,
     font_dir: Option<PathBuf>,
-    font_sort: FontSort,
 
     midis: Vec<MidiMeta>,
     midi_idx: Option<usize>,
@@ -71,27 +69,42 @@ impl Playlist {
     }
 
     // --- Soundfonts
-
-    pub const fn get_fonts(&self) -> &Vec<FontMeta> {
+    pub fn get_selected_font(&self) -> Option<&FontMeta> {
+        self.fonts.get_selected()
+    }
+    pub fn get_selected_font_mut(&mut self) -> Option<&mut FontMeta> {
+        self.fonts.get_selected_mut()
+    }
+    pub const fn get_font_list(&self) -> &FontList {
         &self.fonts
     }
-    pub fn get_fonts_mut(&mut self) -> &mut Vec<FontMeta> {
+    pub fn get_font_list_mut(&mut self) -> &mut FontList {
         &mut self.fonts
     }
+    pub const fn get_fonts(&self) -> &Vec<FontMeta> {
+        self.fonts.get_fonts()
+    }
+    pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
+        self.fonts.get_font(index)
+    }
+    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
+        self.fonts.get_font_mut(index)
+    }
     pub const fn get_font_idx(&self) -> Option<usize> {
-        self.font_idx
+        self.fonts.get_selected_index()
     }
     pub fn set_font_idx(&mut self, value: Option<usize>) -> anyhow::Result<()> {
         match value {
             Some(index) => {
-                self.font_idx = if index < self.fonts.len() {
-                    self.fonts[index].refresh();
+                let selected = if index < self.fonts.len() {
+                    self.get_font_mut(index)?.refresh();
                     Some(index)
                 } else {
                     bail!(PlaylistError::InvalidFontIndex { index });
-                }
+                };
+                self.fonts.select(selected)?;
             }
-            None => self.font_idx = None,
+            None => self.fonts.select(None)?,
         }
         Ok(())
     }
@@ -108,7 +121,7 @@ impl Playlist {
     /// Bypasses extra correctness checks meant for gui.
     fn force_add_font(&mut self, path: PathBuf) {
         if !self.contains_font(&path) {
-            self.fonts.push(FontMeta::new(path));
+            let _ = self.fonts.add(FontMeta::new(path));
         }
         self.unsaved_changes = true;
     }
@@ -122,21 +135,21 @@ impl Playlist {
     }
     /// Bypasses extra correctness checks meant for gui.
     fn force_remove_font(&mut self, index: usize) -> Result<(), PlaylistError> {
-        if index >= self.fonts.len() {
+        let Ok(font) = self.get_font_mut(index) else {
             return Err(PlaylistError::InvalidFontIndex { index });
-        }
-        self.fonts[index].is_queued_for_deletion = true;
+        };
+        font.is_queued_for_deletion = true;
         self.unsaved_changes = true;
         Ok(())
     }
     pub fn clear_fonts(&mut self) {
         self.fonts.clear();
-        self.font_idx = None;
+        let _ = self.fonts.select(None);
         self.unsaved_changes = true;
     }
     pub fn contains_font(&self, filepath: &PathBuf) -> bool {
-        for i in 0..self.fonts.len() {
-            if self.fonts[i].get_path() == *filepath {
+        for font in self.get_fonts() {
+            if font.get_path() == *filepath {
                 return true;
             }
         }
@@ -169,29 +182,33 @@ impl Playlist {
         }
 
         // Remove files
-        for i in 0..self.fonts.len() {
-            let filepath = self.fonts[i].get_path();
+        let mut to_be_removed = vec![];
+        for (i, font) in self.fonts.get_fonts().iter().enumerate() {
+            let filepath = font.get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.force_remove_font(i).expect("refresh: Font rm failed‽");
+                to_be_removed.push(i);
             }
             match self.font_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.font_dir.as_deref() {
-                        self.force_remove_font(i).expect("refresh: Font rm failed‽");
+                        to_be_removed.push(i);
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.font_dir {
                         if !filepath.starts_with(dir) {
-                            self.force_remove_font(i).expect("refresh: Font rm failed‽");
+                            to_be_removed.push(i);
                         }
                     }
                 }
                 FileListMode::Manual => unreachable!(),
             }
+        }
+        for i in to_be_removed {
+            self.force_remove_font(i).expect("refresh: Font rm failed‽");
         }
         self.delete_queued();
 
@@ -230,42 +247,13 @@ impl Playlist {
         self.sort_fonts();
     }
     fn sort_fonts(&mut self) {
-        // Remember the selected
-        let selected_font = if let Some(index) = self.font_idx {
-            Some(self.fonts[index].clone())
-        } else {
-            None
-        };
-
-        // Sort
-        match self.font_sort {
-            FontSort::NameAsc => self.fonts.sort_by_key(|f| f.get_name().to_lowercase()),
-            FontSort::NameDesc => {
-                self.fonts.sort_by_key(|f| f.get_name().to_lowercase());
-                self.fonts.reverse();
-            }
-
-            FontSort::SizeAsc => self.fonts.sort_by_key(font_meta::FontMeta::get_size),
-            FontSort::SizeDesc => {
-                self.fonts.sort_by_key(font_meta::FontMeta::get_size);
-                self.fonts.reverse();
-            }
-        };
-
-        // Find the selected again
-        if let Some(selected) = selected_font {
-            for i in 0..self.fonts.len() {
-                if self.fonts[i].get_path() == selected.get_path() {
-                    self.font_idx = Some(i);
-                }
-            }
-        }
+        self.fonts.sort();
     }
     pub const fn get_font_sort(&self) -> FontSort {
-        self.font_sort
+        self.fonts.get_sort()
     }
     pub fn set_font_sort(&mut self, sort: FontSort) {
-        self.font_sort = sort;
+        self.fonts.set_sort(sort);
         self.refresh_font_list();
     }
 
@@ -540,22 +528,7 @@ impl Playlist {
             }
         }
 
-        // Fonts
-        for i in (0..self.fonts.len()).rev() {
-            if !self.fonts[i].is_queued_for_deletion {
-                continue;
-            }
-            self.fonts.remove(i);
-
-            // Check if deletion affected index
-            if let Some(current) = self.font_idx {
-                match i {
-                    deleted if deleted == current => self.font_idx = None,
-                    deleted if deleted < current => self.font_idx = Some(current - 1),
-                    _ => (),
-                }
-            }
-        }
+        self.fonts.delete_queued();
     }
 }
 
@@ -567,11 +540,9 @@ impl Default for Playlist {
             unsaved_changes: true,
             deletion_status: DeletionStatus::None,
 
-            fonts: vec![],
-            font_idx: None,
+            fonts: FontList::default(),
             font_list_mode: FileListMode::Manual,
             font_dir: None,
-            font_sort: FontSort::default(),
 
             midis: vec![],
             midi_idx: None,

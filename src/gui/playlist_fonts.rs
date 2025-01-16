@@ -154,7 +154,9 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 // Context menu
                 row.response().context_menu(|ui| {
                     if ui.button("Refresh").clicked() {
-                        player.get_playlist_mut().get_fonts_mut()[index].refresh();
+                        if let Ok(font) = player.get_playlist_mut().get_font_mut(index) {
+                            font.refresh();
+                        }
                         ui.close_menu();
                     }
                     ui.add_enabled_ui(
@@ -166,13 +168,8 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                             }
                         },
                     );
-                    actions::open_file_dir(
-                        ui,
-                        &player.get_playlist().get_fonts()[index].get_path(),
-                        gui,
-                    );
+                    actions::open_file_dir(ui, &filepath, gui);
                     ui.menu_button("Add to playlist", |ui| {
-                        let filepath = player.get_playlist().get_fonts()[index].get_path();
                         if ui.button("➕ New playlist").clicked() {
                             let _ = player.new_playlist();
                             let playlist_index = player.get_playlists().len() - 1;
@@ -222,9 +219,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         .on_disabled_hover_text("Already in library")
                         .clicked()
                     {
-                        let _ = player
-                            .font_lib
-                            .add_path(player.get_playlist().get_fonts()[index].get_path());
+                        let _ = player.font_lib.add_path(filepath);
                         ui.close_menu();
                     }
                 });

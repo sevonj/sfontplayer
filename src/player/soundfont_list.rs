@@ -1,7 +1,6 @@
 use core::{error, fmt};
-use std::path::PathBuf;
-
 use serde::Serialize;
+use std::path::PathBuf;
 
 use super::playlist::font_meta::FontMeta;
 
@@ -47,7 +46,7 @@ impl fmt::Display for FontListError {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct FontList {
     fonts: Vec<FontMeta>,
     sort: FontSort,
@@ -55,6 +54,9 @@ pub struct FontList {
 }
 
 impl FontList {
+    pub fn len(&self) -> usize {
+        self.fonts.len()
+    }
     pub fn sort(&mut self) {
         // Store the selected
         let selected = if let Some(index) = self.selected {
@@ -105,6 +107,38 @@ impl FontList {
         }
         self.fonts.push(font);
         Ok(())
+    }
+    pub fn remove(&mut self, index: usize) -> Result<(), FontListError> {
+        if index >= self.fonts.len() {
+            return Err(FontListError::IndexOutOfRange);
+        }
+        self.fonts.remove(index);
+        // Check if deletion affected index
+        if let Some(current) = self.selected {
+            match index {
+                deleted if deleted == current => self.selected = None,
+                deleted if deleted < current => self.selected = Some(current - 1),
+                _ => (),
+            }
+        }
+        Ok(())
+    }
+    pub fn delete_queued(&mut self) {
+        for i in (0..self.fonts.len()).rev() {
+            if !self.fonts[i].is_queued_for_deletion {
+                continue;
+            }
+            self.fonts.remove(i);
+
+            // Check if deletion affected index
+            if let Some(current) = self.selected {
+                match i {
+                    deleted if deleted == current => self.selected = None,
+                    deleted if deleted < current => self.selected = Some(current - 1),
+                    _ => (),
+                }
+            }
+        }
     }
     pub fn clear(&mut self) {
         self.fonts.clear();

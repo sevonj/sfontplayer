@@ -257,27 +257,16 @@ impl Player {
         }
     }
 
-    fn get_soundfont(&mut self) -> Result<&mut FontMeta, PlayerError> {
-        if let Some(font_index) = self.get_playing_playlist().get_font_idx() {
-            return Ok(&mut self.get_playing_playlist_mut().get_fonts_mut()[font_index]);
-        }
-        self.font_lib
-            .get_selected_mut()
-            .ok_or(PlayerError::NoSoundfont)
-    }
-
     /// Load currently selected song & font from playlist and start playing
     fn play_selected_song(&mut self) -> Result<(), PlayerError> {
         self.audioplayer.stop_playback()?;
         let Some(queue_index) = self.get_playing_playlist().queue_idx else {
             return Err(PlayerError::NoQueueIndex);
         };
-        let midi_index = self.get_playing_playlist().queue[queue_index];
 
-        let sf = self.get_soundfont()?;
-        let sf_path = sf.get_path();
-        sf.refresh();
-        sf.get_status()?;
+        self.reload_font()?;
+
+        let midi_index = self.get_playing_playlist().queue[queue_index];
 
         let mid = match &mut self.midi_override {
             Some(midimeta) => midimeta,
@@ -294,7 +283,6 @@ impl Player {
         }
 
         // Play
-        self.audioplayer.set_soundfont(sf_path);
         self.audioplayer.set_midifile(mid_path);
         self.is_playing = true;
 
@@ -306,9 +294,15 @@ impl Player {
         Ok(())
     }
 
-    /// For changing soundfont on the go.
+    /// Finds out which font is selected and loads it.
     pub fn reload_font(&mut self) -> Result<(), PlayerError> {
-        let sf = self.get_soundfont()?;
+        let mut sf = self.get_playing_playlist_mut().get_selected_font_mut();
+        if sf.is_none() {
+            sf = self.font_lib.get_selected_mut();
+        }
+        let Some(sf) = sf else {
+            return Err(PlayerError::NoSoundfont);
+        };
         let sf_path = sf.get_path();
         sf.refresh();
         sf.get_status()?;

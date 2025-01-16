@@ -134,12 +134,10 @@ mod tests {
             filepath: "Fakepath".into(),
             ..Default::default()
         };
-        playlist.fonts.push(font);
+        playlist.fonts.add(font).unwrap();
         let new_playlist = run_serialize(playlist);
-        assert_eq!(
-            new_playlist.fonts[0].get_path().to_str().unwrap(),
-            "Fakepath"
-        );
+        let font = new_playlist.get_font(0).unwrap();
+        assert_eq!(font.get_path().to_str().unwrap(), "Fakepath");
     }
 
     #[test]
@@ -151,14 +149,16 @@ mod tests {
             ..Default::default()
         };
         let font_420 = FontMeta {
-            filepath: "unused".into(),
+            filepath: "unused2".into(),
             filesize: Some(420),
             ..Default::default()
         };
-        playlist.fonts.push(font_none);
-        playlist.fonts.push(font_420);
+        playlist.fonts.add(font_none).unwrap();
+        playlist.fonts.add(font_420).unwrap();
         let new_playlist = run_serialize(playlist);
-        assert_eq!(new_playlist.fonts[0].get_size(), None);
-        assert_eq!(new_playlist.fonts[1].get_size().unwrap(), 420);
+        let font_0 = new_playlist.get_font(0).unwrap();
+        let font_1 = new_playlist.get_font(1).unwrap();
+        assert_eq!(font_0.get_size(), None);
+        assert_eq!(font_1.get_size().unwrap(), 420);
     }
 }
