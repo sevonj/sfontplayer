@@ -1,22 +1,40 @@
-use std::{error, fmt};
+use std::{error, fmt, path::PathBuf};
 
-use super::{audio::error::AudioPlayerError, playlist::MetaError};
+use super::audio::error::AudioPlayerError;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PlayerError {
-    InvalidPlaylistIndex { index: usize },
-    InvalidMidiIndex,
-    CantMovePlaylist,
-    CantSwitchPlaylist,
-    NoQueueIndex,
-    NoSoundfont,
+    PlaylistIndex { index: usize },
+    PlaylistCantMove,
+    PlaylistCantSwitch,
     PlaylistAlreadyOpen,
-    PlaylistOpenFailed,
+    PlaylistOpenFailed { path: PathBuf },
     PlaylistSaveFailed,
+
+    PlaybackNoQueueIndex,
+    PlaybackNoSoundfont,
+    PlaybackBackend,
+
     DebugBlockSaving,
     MidiOverride,
-    Meta(MetaError),
-    AudioBackendError,
+
+    FontlibPathIndex { index: usize },
+    FontlibPathAlreadyExists { path: PathBuf },
+    FontlibNoSuchFont { path: PathBuf },
+
+    ModifyDirList,
+    UnknownFileFormat { path: PathBuf },
+    PathInaccessible { path: PathBuf },
+
+    FontAlreadyExists, // TODO: https://github.com/sevonj/sfontplayer/issues/271
+    FontIndex { index: usize },
+    FontMetaParse,
+    FontFileInvalid { path: PathBuf, msg: String },
+
+    // TODO: MidiAlreadyExists https://github.com/sevonj/sfontplayer/issues/271
+    MidiIndex { index: usize },
+    MidiMetaParse,
+    MidiFileInvalid { path: PathBuf, msg: String },
 }
 
 impl error::Error for PlayerError {}
@@ -24,33 +42,47 @@ impl error::Error for PlayerError {}
 impl fmt::Display for PlayerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidPlaylistIndex { index } => {
-                write!(f, "Playlist index {index} is out of bounds.")
-            }
-            Self::InvalidMidiIndex => write!(f, "Invalid midi index"),
-            Self::CantMovePlaylist => write!(f, "Can't move this playlist further."),
-            Self::CantSwitchPlaylist => write!(f, "Can't switch playlists further."),
-            Self::NoQueueIndex => write!(f, "No queue index!"),
-            Self::NoSoundfont => write!(f, "No soundfont!"),
+            Self::PlaylistIndex { index } => write!(f, "Playlist index {index} is out of range."),
+            Self::PlaylistCantMove => write!(f, "Can't move this playlist further."),
+            Self::PlaylistCantSwitch => write!(f, "Can't switch playlists further."),
             Self::PlaylistAlreadyOpen => write!(f, "Playlist is already open."),
-            Self::PlaylistOpenFailed => write!(f, "Failed to open playlist."),
-            Self::PlaylistSaveFailed => write!(f, "Failed to save playlist."),
+            Self::PlaylistOpenFailed { path } => write!(f, "Couldn't open playlist from {path:?}."),
+            Self::PlaylistSaveFailed => write!(f, "Couldn't save playlist."),
+
+            Self::PlaybackNoQueueIndex => write!(f, "No queue index!"),
+            Self::PlaybackNoSoundfont => write!(f, "No soundfont!"),
+            Self::PlaybackBackend => write!(f, "Error in audio player."),
+
             Self::DebugBlockSaving => write!(f, "debug_block_saving == true"),
-            Self::MidiOverride => write!(f, "Blocked by MIDI file override"),
-            Self::Meta(source) => source.fmt(f),
-            Self::AudioBackendError => write!(f, "Error in audio player."),
+            Self::MidiOverride => write!(f, "Action blocked by MIDI file override."),
+
+            Self::FontlibPathIndex { index } => {
+                write!(f, "Soundfont library path index {index} is out of range.")
+            }
+            Self::FontlibPathAlreadyExists { path } => {
+                write!(f, "This path is already in the library: {path:?}")
+            }
+            Self::FontlibNoSuchFont { path } => write!(f, "No such font in library: {path:?}"),
+
+            Self::ModifyDirList => write!(f, "Cant modify a directory-tracking list manually."),
+            Self::UnknownFileFormat { path } => write!(f, "Unknown file format: {path:?}."),
+            Self::PathInaccessible { path } => write!(f, "Path inaccessible: {path:?}."),
+
+            Self::FontAlreadyExists => write!(f, "This soundfont is already in the list."),
+            Self::FontIndex { index } => write!(f, "Soundfont index {index} is out of range."),
+            Self::FontMetaParse => write!(f, "Failed to parse imported soundfont meta."),
+            Self::FontFileInvalid { msg, .. } => write!(f, "Invalid soundfont: {msg}."),
+
+            // TODO: MidiAlreadyExists https://github.com/sevonj/sfontplayer/issues/271
+            Self::MidiIndex { index } => write!(f, "MIDI file index {index} is out of range."),
+            Self::MidiMetaParse => write!(f, "Failed to parse imported MIDI meta."),
+            Self::MidiFileInvalid { msg, .. } => write!(f, "Invalid midi file: {msg}."),
         }
     }
 }
 
 impl From<AudioPlayerError> for PlayerError {
     fn from(_: AudioPlayerError) -> Self {
-        Self::AudioBackendError
-    }
-}
-
-impl From<MetaError> for PlayerError {
-    fn from(e: MetaError) -> Self {
-        Self::Meta(e)
+        Self::PlaybackBackend
     }
 }

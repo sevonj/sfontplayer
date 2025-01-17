@@ -2,15 +2,16 @@ use rustysynth::MidiFile;
 use serde::Serialize;
 use std::{fs, path::PathBuf, time::Duration};
 
-use super::error::MetaError;
+use crate::player::PlayerError;
 
 /// Reference to a midi file with metadata
-#[derive(Default, Clone, Serialize)]
+#[derive(Debug, Default, Clone, Serialize)]
 pub struct MidiMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
     duration: Option<Duration>,
-    error: Option<MetaError>,
+    #[serde(skip)]
+    error: Option<PlayerError>,
     pub is_queued_for_deletion: bool,
 }
 
@@ -43,16 +44,16 @@ impl MidiMeta {
                     error = None;
                 }
                 Err(e) => {
-                    error = Some(MetaError::InvalidFile {
-                        filename: self.get_name(),
-                        message: e.to_string(),
+                    error = Some(PlayerError::MidiFileInvalid {
+                        path: self.filepath.clone(),
+                        msg: e.to_string(),
                     });
                 }
             },
             Err(e) => {
-                error = Some(MetaError::CantOpenFile {
-                    filename: self.get_name(),
-                    message: e.to_string(),
+                error = Some(PlayerError::MidiFileInvalid {
+                    path: self.filepath.clone(),
+                    msg: e.to_string(),
                 });
             }
         }
@@ -65,9 +66,11 @@ impl MidiMeta {
     pub fn get_path(&self) -> PathBuf {
         self.filepath.clone()
     }
+
     pub fn set_path(&mut self, filepath: PathBuf) {
         self.filepath = filepath;
     }
+
     pub fn get_name(&self) -> String {
         self.filepath
             .file_name()
@@ -76,13 +79,16 @@ impl MidiMeta {
             .expect("Invalid filename")
             .to_owned()
     }
+
     pub const fn get_duration(&self) -> Option<Duration> {
         self.duration
     }
+
     pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
-    pub fn get_status(&self) -> Result<(), MetaError> {
+
+    pub fn get_status(&self) -> Result<(), PlayerError> {
         if let Some(e) = &self.error {
             return Err(e.clone());
         }
@@ -91,11 +97,11 @@ impl MidiMeta {
 }
 
 impl TryFrom<&serde_json::Value> for MidiMeta {
-    type Error = MetaError;
+    type Error = PlayerError;
 
     fn try_from(json: &serde_json::Value) -> Result<Self, Self::Error> {
         let Some(path_str) = json["filepath"].as_str() else {
-            return Err(MetaError::ParseError);
+            return Err(PlayerError::MidiMetaParse);
         };
         let filesize = json["filesize"].as_u64();
         let duration = json["duration"]["secs"].as_u64().map(Duration::from_secs);

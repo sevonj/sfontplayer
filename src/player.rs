@@ -12,7 +12,7 @@ pub use enums::{PlayerEvent, RepeatMode};
 pub use error::PlayerError;
 #[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
-use playlist::{DeletionStatus, FontMeta, MidiMeta, Playlist};
+use playlist::{FontMeta, MidiMeta, Playlist, PlaylistState};
 pub use soundfont_library::FontLibrary;
 pub use soundfont_list::FontSort;
 
@@ -127,14 +127,14 @@ impl Player {
         for index in (0..self.playlists.len()).rev() {
             let playlist = &mut self.playlists[index];
 
-            match playlist.deletion_status {
-                DeletionStatus::None => continue,
-                DeletionStatus::Queued => {
+            match playlist.state {
+                PlaylistState::None => continue,
+                PlaylistState::Queued => {
                     if playlist.has_unsaved_changes() {
                         continue;
                     }
                 }
-                DeletionStatus::QueuedDiscard => (),
+                PlaylistState::QueuedDiscard => (),
             }
 
             if self.autosave && playlist.is_portable() {
@@ -178,7 +178,7 @@ impl Player {
     fn play_selected_song(&mut self) -> Result<(), PlayerError> {
         self.audioplayer.stop_playback()?;
         let Some(queue_index) = self.get_playing_playlist().queue_idx else {
-            return Err(PlayerError::NoQueueIndex);
+            return Err(PlayerError::PlaybackNoQueueIndex);
         };
 
         self.reload_font()?;
@@ -195,9 +195,7 @@ impl Player {
         mid.get_status()?;
 
         let playlist = self.get_playing_playlist_mut();
-        if playlist.set_song_idx(Some(midi_index)).is_err() {
-            return Err(PlayerError::InvalidMidiIndex);
-        }
+        playlist.set_song_idx(Some(midi_index))?;
 
         // Play
         self.audioplayer.set_midifile(mid_path);
@@ -218,7 +216,7 @@ impl Player {
             sf = self.font_lib.get_selected_mut();
         }
         let Some(sf) = sf else {
-            return Err(PlayerError::NoSoundfont);
+            return Err(PlayerError::PlaybackNoSoundfont);
         };
         let sf_path = sf.get_path();
         sf.refresh();
@@ -350,7 +348,7 @@ impl Player {
 
         let Some(mut queue_index) = playlist.queue_idx else {
             self.stop();
-            return Err(PlayerError::NoQueueIndex);
+            return Err(PlayerError::PlaybackNoQueueIndex);
         };
 
         // Replay the same song
@@ -456,7 +454,7 @@ impl Player {
             return Err(PlayerError::MidiOverride);
         }
         if index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index });
+            return Err(PlayerError::PlaylistIndex { index });
         }
         self.playlist_idx = index;
         self.get_playlist_mut().recrawl_fonts();
@@ -468,7 +466,7 @@ impl Player {
             return Err(PlayerError::MidiOverride);
         }
         if self.playlist_idx == 0 {
-            return Err(PlayerError::CantSwitchPlaylist);
+            return Err(PlayerError::PlaylistCantSwitch);
         }
         self.playlist_idx -= 1;
         Ok(())
@@ -478,7 +476,7 @@ impl Player {
             return Err(PlayerError::MidiOverride);
         }
         if self.playlist_idx >= self.playlists.len() - 1 {
-            return Err(PlayerError::CantSwitchPlaylist);
+            return Err(PlayerError::PlaylistCantSwitch);
         }
         self.playlist_idx += 1;
         Ok(())
@@ -497,31 +495,30 @@ impl Player {
             return Err(PlayerError::MidiOverride);
         }
         if index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index });
+            return Err(PlayerError::PlaylistIndex { index });
         }
-        self.playlists[index].deletion_status = DeletionStatus::Queued;
+        self.playlists[index].state = PlaylistState::Queued;
         Ok(())
     }
     /// Remove a playlist by index, override unsaved check
     pub fn force_remove_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index });
+            return Err(PlayerError::PlaylistIndex { index });
         }
-        self.playlists[index].deletion_status = DeletionStatus::QueuedDiscard;
+        self.playlists[index].state = PlaylistState::QueuedDiscard;
         Ok(())
     }
     pub fn cancel_remove_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index });
+            return Err(PlayerError::PlaylistIndex { index });
         }
-        self.playlists[index].deletion_status = DeletionStatus::None;
+        self.playlists[index].state = PlaylistState::None;
         Ok(())
     }
     /// Get a playlist waiting for delete confirm, if any exist.
     pub fn get_playlist_waiting_for_discard(&self) -> Option<usize> {
         for (i, playlist) in self.playlists.iter().enumerate() {
-            if playlist.deletion_status == DeletionStatus::Queued && playlist.has_unsaved_changes()
-            {
+            if playlist.state == PlaylistState::Queued && playlist.has_unsaved_changes() {
                 return Some(i);
             }
         }
@@ -541,7 +538,7 @@ impl Player {
         }
         let last_index = self.removed_playlists.len() - 1;
         let mut playlist = self.removed_playlists.remove(last_index);
-        playlist.deletion_status = DeletionStatus::None;
+        playlist.state = PlaylistState::None;
 
         // Skip this one, it's been reopened since closing.
         if let Some(filepath) = playlist.get_portable_path() {
@@ -558,10 +555,10 @@ impl Player {
     /// Rearrange playlists
     pub fn move_playlist(&mut self, old_index: usize, new_index: usize) -> Result<(), PlayerError> {
         if old_index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index: old_index });
+            return Err(PlayerError::PlaylistIndex { index: old_index });
         }
         if new_index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index: new_index });
+            return Err(PlayerError::PlaylistIndex { index: new_index });
         }
         let playlist = self.playlists.remove(old_index); // Remove at old index
         self.playlists.insert(new_index, playlist); // Reinsert at new index
@@ -588,7 +585,7 @@ impl Player {
     /// Move current playlist left
     pub fn move_playlist_left(&mut self) -> Result<(), PlayerError> {
         if self.playlist_idx == 0 {
-            return Err(PlayerError::CantMovePlaylist);
+            return Err(PlayerError::PlaylistCantMove);
         }
         self.move_playlist(self.playlist_idx, self.playlist_idx - 1)
             .expect("move_playlist_left out of bounds?!");
@@ -597,7 +594,7 @@ impl Player {
     /// Move current playlist right
     pub fn move_playlist_right(&mut self) -> Result<(), PlayerError> {
         if self.playlist_idx >= self.playlists.len() - 1 {
-            return Err(PlayerError::CantMovePlaylist);
+            return Err(PlayerError::PlaylistCantMove);
         }
         self.move_playlist(self.playlist_idx, self.playlist_idx + 1)
             .expect("move_playlist_right out of bounds?!");
@@ -607,16 +604,14 @@ impl Player {
         if self.is_portable_playlist_open(&filepath) {
             return Err(PlayerError::PlaylistAlreadyOpen);
         }
-        let Ok(playlist) = Playlist::open_portable(filepath) else {
-            return Err(PlayerError::PlaylistOpenFailed);
-        };
+        let playlist = Playlist::open_portable(filepath)?;
         self.playlists.push(playlist);
         self.playlist_idx = self.playlists.len() - 1;
         Ok(())
     }
     pub fn save_portable_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index });
+            return Err(PlayerError::PlaylistIndex { index });
         }
         if self.debug_block_saving {
             return Err(PlayerError::DebugBlockSaving);
@@ -640,7 +635,7 @@ impl Player {
     /// Save playlist into a portable file.
     pub fn save_playlist_as(&mut self, index: usize, filepath: PathBuf) -> Result<(), PlayerError> {
         if index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index });
+            return Err(PlayerError::PlaylistIndex { index });
         }
         if self.debug_block_saving {
             return Err(PlayerError::DebugBlockSaving);
@@ -679,7 +674,7 @@ impl Player {
             return Err(PlayerError::MidiOverride);
         }
         if index >= self.playlists.len() {
-            return Err(PlayerError::InvalidPlaylistIndex { index });
+            return Err(PlayerError::PlaylistIndex { index });
         }
         let mut new_playlist = self.playlists[index].clone();
         new_playlist.set_portable_path(None);

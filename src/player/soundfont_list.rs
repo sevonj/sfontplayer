@@ -1,8 +1,6 @@
-use core::{error, fmt};
-use serde::Serialize;
 use std::path::PathBuf;
 
-use super::playlist::FontMeta;
+use super::{playlist::FontMeta, PlayerError};
 
 #[derive(PartialEq, Eq, Default, Clone, Copy, Debug)]
 #[repr(u8)]
@@ -24,25 +22,6 @@ impl TryFrom<u8> for FontSort {
             x if x == Self::SizeAsc as u8 => Ok(Self::SizeAsc),
             x if x == Self::SizeDesc as u8 => Ok(Self::SizeDesc),
             _ => Err(()),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub enum FontListError {
-    AlreadyExists,
-    IndexOutOfRange,
-}
-impl error::Error for FontListError {}
-impl fmt::Display for FontListError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::AlreadyExists => {
-                write!(f, "This soundfont already exists in the list.")
-            }
-            Self::IndexOutOfRange => {
-                write!(f, "FontList index out of range.")
-            }
         }
     }
 }
@@ -85,17 +64,17 @@ impl FontList {
         }
     }
 
-    pub fn add(&mut self, font: FontMeta) -> Result<(), FontListError> {
+    pub fn add(&mut self, font: FontMeta) -> Result<(), PlayerError> {
         if self.contains(&font.get_path()) {
-            return Err(FontListError::AlreadyExists);
+            return Err(PlayerError::FontAlreadyExists);
         }
         self.fonts.push(font);
         Ok(())
     }
 
-    pub fn remove(&mut self, index: usize) -> Result<(), FontListError> {
+    pub fn remove(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.fonts.len() {
-            return Err(FontListError::IndexOutOfRange);
+            return Err(PlayerError::FontIndex { index });
         }
         self.fonts.remove(index);
         // Check if deletion affected index
@@ -145,16 +124,16 @@ impl FontList {
         &self.fonts
     }
 
-    pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
+    pub fn get_font(&self, index: usize) -> Result<&FontMeta, PlayerError> {
         if index >= self.fonts.len() {
-            return Err(FontListError::IndexOutOfRange);
+            return Err(PlayerError::FontIndex { index });
         }
         Ok(&self.fonts[index])
     }
 
-    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
+    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, PlayerError> {
         if index >= self.fonts.len() {
-            return Err(FontListError::IndexOutOfRange);
+            return Err(PlayerError::FontIndex { index });
         }
         Ok(&mut self.fonts[index])
     }
@@ -173,13 +152,13 @@ impl FontList {
         self.selected
     }
 
-    pub fn set_selected_index(&mut self, value: Option<usize>) -> Result<(), FontListError> {
+    pub fn set_selected_index(&mut self, value: Option<usize>) -> Result<(), PlayerError> {
         let Some(index) = value else {
             self.selected = None;
             return Ok(());
         };
         if index >= self.fonts.len() {
-            return Err(FontListError::IndexOutOfRange);
+            return Err(PlayerError::FontIndex { index });
         }
         self.selected = Some(index);
         self.fonts[index].refresh();
