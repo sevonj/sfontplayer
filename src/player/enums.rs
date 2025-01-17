@@ -10,6 +10,7 @@ pub enum PlayerEvent {
     NotifyError(String),
 }
 
+/// Playback repeat setting
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Default, Clone, Copy)]
 #[repr(u8)]
 pub enum RepeatMode {
