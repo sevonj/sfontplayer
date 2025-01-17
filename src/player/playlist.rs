@@ -2,35 +2,26 @@ use rand::seq::SliceRandom;
 use std::{fs, path::PathBuf, time::Duration, vec};
 use walkdir::WalkDir;
 
-use super::soundfont_list::{FontList, FontListError, FontSort};
-pub use enums::{FileListMode, SongSort};
-pub use error::{MetaError, PlaylistError};
+use super::soundfont_list::{FontList, FontSort};
+use super::PlayerError;
+pub use enums::{FileListMode, PlaylistState, SongSort};
 pub use font_meta::FontMeta;
 pub use midi_meta::MidiMeta;
 
 mod enums;
-mod error;
 mod font_meta;
 mod midi_meta;
 mod serialize_playlist;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum DeletionStatus {
-    None,
-    /// Queued for deletion.
-    Queued,
-    /// Queued, and delete even if unsaved changes.
-    QueuedDiscard,
-}
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Playlist {
     pub name: String,
     /// If None, this is a normal playlist. If Some, this is a portable playlist.
     portable_filepath: Option<PathBuf>,
     /// Only applicable to portable file
     unsaved_changes: bool,
-    pub deletion_status: DeletionStatus,
+    /// Is this playlist waiting to be closed?
+    pub state: PlaylistState,
 
     fonts: FontList,
     font_list_mode: FileListMode,
@@ -42,12 +33,38 @@ pub struct Playlist {
     midi_dir: Option<PathBuf>,
     song_sort: SongSort,
 
+    /// Playback queue
     pub queue: Vec<usize>,
     pub queue_idx: Option<usize>,
 }
+
+impl Default for Playlist {
+    fn default() -> Self {
+        Self {
+            name: "New Playlist".to_owned(),
+            portable_filepath: None,
+            unsaved_changes: true,
+            state: PlaylistState::None,
+
+            fonts: FontList::default(),
+            font_list_mode: FileListMode::Manual,
+            font_dir: None,
+
+            midis: vec![],
+            midi_idx: None,
+            song_list_mode: FileListMode::Manual,
+            midi_dir: None,
+            song_sort: SongSort::default(),
+
+            queue: vec![],
+            queue_idx: None,
+        }
+    }
+}
+
 impl Playlist {
-    pub fn add_file(&mut self, path: PathBuf) -> Result<(), PlaylistError> {
-        // Fast quess
+    pub fn add_file(&mut self, path: PathBuf) -> Result<(), PlayerError> {
+        // Fast guess
         if path.ends_with(".mid") {
             let midimeta = MidiMeta::new(path.clone());
             if midimeta.get_status().is_ok() {
@@ -64,16 +81,16 @@ impl Playlist {
             return self.add_song(path);
         }
 
-        Err(PlaylistError::UnknownFileFormat { path })
+        Err(PlayerError::UnknownFileFormat { path })
     }
 
     // --- FontList
 
-    pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
+    pub fn get_font(&self, index: usize) -> Result<&FontMeta, PlayerError> {
         self.fonts.get_font(index)
     }
 
-    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
+    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, PlayerError> {
         self.fonts.get_font_mut(index)
     }
 
@@ -93,7 +110,7 @@ impl Playlist {
         self.fonts.get_selected_index()
     }
 
-    pub fn select_font(&mut self, index: usize) -> Result<(), PlaylistError> {
+    pub fn select_font(&mut self, index: usize) -> Result<(), PlayerError> {
         self.fonts.set_selected_index(Some(index))?;
         Ok(())
     }
@@ -102,9 +119,9 @@ impl Playlist {
         self.fonts.set_selected_index(None).expect("unreachable");
     }
 
-    pub fn add_font(&mut self, path: PathBuf) -> Result<(), PlaylistError> {
+    pub fn add_font(&mut self, path: PathBuf) -> Result<(), PlayerError> {
         if self.font_list_mode != FileListMode::Manual {
-            return Err(PlaylistError::ModifyDirList);
+            return Err(PlayerError::ModifyDirList);
         }
         self.force_add_font(path);
         self.recrawl_fonts();
@@ -119,15 +136,15 @@ impl Playlist {
         self.unsaved_changes = true;
     }
 
-    pub fn remove_font(&mut self, index: usize) -> Result<(), PlaylistError> {
+    pub fn remove_font(&mut self, index: usize) -> Result<(), PlayerError> {
         if self.font_list_mode != FileListMode::Manual {
-            return Err(PlaylistError::ModifyDirList);
+            return Err(PlayerError::ModifyDirList);
         }
         self.force_remove_font(index)
     }
 
     /// Bypasses extra correctness checks meant for gui.
-    fn force_remove_font(&mut self, index: usize) -> Result<(), PlaylistError> {
+    fn force_remove_font(&mut self, index: usize) -> Result<(), PlayerError> {
         self.unsaved_changes = true;
         self.fonts.remove(index)?;
         Ok(())
@@ -257,34 +274,39 @@ impl Playlist {
     pub const fn get_songs(&self) -> &Vec<MidiMeta> {
         &self.midis
     }
+
     pub fn get_songs_mut(&mut self) -> &mut Vec<MidiMeta> {
         &mut self.midis
     }
+
     pub const fn get_song_idx(&self) -> Option<usize> {
         self.midi_idx
     }
-    pub fn set_song_idx(&mut self, value: Option<usize>) -> Result<(), PlaylistError> {
+
+    pub fn set_song_idx(&mut self, value: Option<usize>) -> Result<(), PlayerError> {
         match value {
             Some(index) => {
                 self.midi_idx = if index < self.midis.len() {
                     self.midis[index].refresh();
                     Some(index)
                 } else {
-                    return Err(PlaylistError::InvalidIndex);
+                    return Err(PlayerError::MidiIndex { index });
                 }
             }
             None => self.midi_idx = None,
         }
         Ok(())
     }
-    pub fn add_song(&mut self, path: PathBuf) -> Result<(), PlaylistError> {
+
+    pub fn add_song(&mut self, path: PathBuf) -> Result<(), PlayerError> {
         if self.song_list_mode != FileListMode::Manual {
-            return Err(PlaylistError::ModifyDirList);
+            return Err(PlayerError::ModifyDirList);
         }
         self.force_add_song(path);
         self.refresh_song_list();
         Ok(())
     }
+
     /// Bypasses extra correctness checks meant for gui.
     fn force_add_song(&mut self, path: PathBuf) {
         if !self.contains_song(&path) {
@@ -292,26 +314,30 @@ impl Playlist {
         }
         self.unsaved_changes = true;
     }
-    pub fn remove_song(&mut self, index: usize) -> Result<(), PlaylistError> {
+
+    pub fn remove_song(&mut self, index: usize) -> Result<(), PlayerError> {
         if self.song_list_mode != FileListMode::Manual {
-            return Err(PlaylistError::ModifyDirList);
+            return Err(PlayerError::ModifyDirList);
         }
         self.force_remove_song(index)
     }
+
     /// Bypasses extra correctness checks meant for gui.
-    fn force_remove_song(&mut self, index: usize) -> Result<(), PlaylistError> {
+    fn force_remove_song(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.midis.len() {
-            return Err(PlaylistError::InvalidIndex);
+            return Err(PlayerError::MidiIndex { index });
         }
         self.midis[index].is_queued_for_deletion = true;
         self.unsaved_changes = true;
         Ok(())
     }
+
     pub fn clear_songs(&mut self) {
         self.midis.clear();
         self.midi_idx = None;
         self.unsaved_changes = true;
     }
+
     pub fn contains_song(&self, filepath: &PathBuf) -> bool {
         for i in 0..self.midis.len() {
             if self.midis[i].get_path() == *filepath {
@@ -320,12 +346,15 @@ impl Playlist {
         }
         false
     }
+
     pub const fn get_song_list_mode(&self) -> FileListMode {
         self.song_list_mode
     }
+
     pub const fn get_song_dir(&self) -> Option<&PathBuf> {
         self.midi_dir.as_ref()
     }
+
     pub fn set_song_dir(&mut self, path: PathBuf) {
         if self.song_list_mode == FileListMode::Manual {
             return;
@@ -334,11 +363,13 @@ impl Playlist {
         self.refresh_song_list();
         self.unsaved_changes = true;
     }
+
     pub fn set_song_list_mode(&mut self, mode: FileListMode) {
         self.song_list_mode = mode;
         self.refresh_song_list();
         self.unsaved_changes = true;
     }
+
     /// Refresh midi file list
     pub fn refresh_song_list(&mut self) {
         if self.song_list_mode == FileListMode::Manual {
@@ -407,6 +438,7 @@ impl Playlist {
         }
         self.sort_songs();
     }
+
     fn sort_songs(&mut self) {
         // Remember the  selected
         let selected_song = if let Some(index) = self.midi_idx {
@@ -447,9 +479,11 @@ impl Playlist {
             }
         }
     }
+
     pub const fn get_song_sort(&self) -> SongSort {
         self.song_sort
     }
+
     pub fn set_song_sort(&mut self, sort: SongSort) {
         self.song_sort = sort;
         self.refresh_song_list();
@@ -488,13 +522,16 @@ impl Playlist {
     pub const fn is_portable(&self) -> bool {
         self.portable_filepath.is_some()
     }
+
     pub fn get_portable_path(&self) -> Option<PathBuf> {
         self.portable_filepath.clone()
     }
+
     pub fn set_portable_path(&mut self, portable_filepath: Option<PathBuf>) {
         self.portable_filepath = portable_filepath;
         self.unsaved_changes = true;
     }
+
     pub const fn has_unsaved_changes(&self) -> bool {
         self.is_portable() && self.unsaved_changes
     }
@@ -523,36 +560,13 @@ impl Playlist {
     }
 }
 
-impl Default for Playlist {
-    fn default() -> Self {
-        Self {
-            name: "Playlist".to_owned(),
-            portable_filepath: None,
-            unsaved_changes: true,
-            deletion_status: DeletionStatus::None,
-
-            fonts: FontList::default(),
-            font_list_mode: FileListMode::Manual,
-            font_dir: None,
-
-            midis: vec![],
-            midi_idx: None,
-            song_list_mode: FileListMode::Manual,
-            midi_dir: None,
-            song_sort: SongSort::default(),
-
-            queue: vec![],
-            queue_idx: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
 
     use super::*;
 
     #[test]
+
     fn test_addfont_listmodes() {
         let mut playlist_man = Playlist::default();
         let mut playlist_dir = Playlist::default();
@@ -563,17 +577,18 @@ mod tests {
         playlist_man.add_font("fakepath".into()).unwrap();
         assert!(matches!(
             playlist_dir.add_font("fakepath".into()).unwrap_err(),
-            PlaylistError::ModifyDirList
+            PlayerError::ModifyDirList
         ));
         assert!(matches!(
             playlist_sub.add_font("fakepath".into()).unwrap_err(),
-            PlaylistError::ModifyDirList
+            PlayerError::ModifyDirList
         ));
         assert_eq!(playlist_man.fonts.get_fonts().len(), 1);
         assert_eq!(playlist_dir.fonts.get_fonts().len(), 0);
         assert_eq!(playlist_sub.fonts.get_fonts().len(), 0);
     }
     #[test]
+
     fn test_rmfont_listmodes() {
         let mut playlist_man = Playlist::default();
         let mut playlist_dir = Playlist::default();
@@ -588,11 +603,11 @@ mod tests {
         playlist_man.remove_font(0).unwrap();
         assert!(matches!(
             playlist_dir.remove_font(0).unwrap_err(),
-            PlaylistError::ModifyDirList
+            PlayerError::ModifyDirList
         ));
         assert!(matches!(
             playlist_sub.remove_font(0).unwrap_err(),
-            PlaylistError::ModifyDirList
+            PlayerError::ModifyDirList
         ));
         playlist_man.delete_queued();
         playlist_dir.delete_queued();
@@ -603,6 +618,7 @@ mod tests {
         assert_eq!(playlist_sub.fonts.get_fonts().len(), 1);
     }
     #[test]
+
     fn test_addsong_listmodes() {
         let mut playlist_man = Playlist::default();
         let mut playlist_dir = Playlist::default();
@@ -613,17 +629,18 @@ mod tests {
         playlist_man.add_song("fakepath".into()).unwrap();
         assert!(matches!(
             playlist_dir.add_song("fakepath".into()).unwrap_err(),
-            PlaylistError::ModifyDirList
+            PlayerError::ModifyDirList
         ));
         assert!(matches!(
             playlist_sub.add_song("fakepath".into()).unwrap_err(),
-            PlaylistError::ModifyDirList
+            PlayerError::ModifyDirList
         ));
         assert_eq!(playlist_man.midis.len(), 1);
         assert_eq!(playlist_dir.midis.len(), 0);
         assert_eq!(playlist_sub.midis.len(), 0);
     }
     #[test]
+
     fn test_rmsong_listmodes() {
         let mut playlist_man = Playlist::default();
         let mut playlist_dir = Playlist::default();
@@ -638,11 +655,11 @@ mod tests {
         playlist_man.remove_song(0).unwrap();
         assert!(matches!(
             playlist_dir.remove_song(0).unwrap_err(),
-            PlaylistError::ModifyDirList
+            PlayerError::ModifyDirList
         ));
         assert!(matches!(
             playlist_sub.remove_song(0).unwrap_err(),
-            PlaylistError::ModifyDirList
+            PlayerError::ModifyDirList
         ));
         playlist_man.delete_queued();
         playlist_dir.delete_queued();
@@ -654,6 +671,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_idx() {
         // (Doesn't count, not stored in playlist)
         let mut playlist = Playlist::default();
@@ -671,6 +689,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_add_rm() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -689,6 +708,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_force_add_rm() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -706,6 +726,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_clear() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -717,6 +738,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_listmode() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -728,6 +750,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_listdir() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -745,6 +768,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_refresh_list() {
         // (Doesn't count, refreshed automatically)
         let mut playlist = Playlist::default();
@@ -755,6 +779,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_sort() {
         // (Doesn't count, refreshed automatically)
         let mut playlist = Playlist::default();
@@ -765,6 +790,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_sortmode() {
         // (Doesn't count, not stored in playlist)
         let mut playlist = Playlist::default();
@@ -777,6 +803,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_unsaved_flag_fontsong_setportable() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;

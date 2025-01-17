@@ -1,41 +1,12 @@
 //! Player's built in soundfont library
 //!
 
-use serde::Serialize;
-use std::{error, fmt, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 use walkdir::WalkDir;
 
-use super::{
-    playlist::FontMeta,
-    soundfont_list::{FontList, FontListError, FontSort},
-};
-
-#[derive(Debug, Clone, Serialize)]
-pub enum FontLibraryError {
-    PathAlreadyExists { path: PathBuf },
-    PathInaccessible { path: PathBuf },
-    NoSuchFont { path: PathBuf },
-    IndexOutOfRange,
-}
-impl error::Error for FontLibraryError {}
-impl fmt::Display for FontLibraryError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::PathAlreadyExists { path } => {
-                write!(f, "This path already exists in the library: {path:?}")
-            }
-            Self::PathInaccessible { path } => {
-                write!(f, "This path was inaccessible: {path:?}")
-            }
-            Self::NoSuchFont { path } => {
-                write!(f, "No such font: {path:?}")
-            }
-            Self::IndexOutOfRange => {
-                write!(f, "Path index out of range")
-            }
-        }
-    }
-}
+use super::playlist::FontMeta;
+use super::soundfont_list::{FontList, FontSort};
+use super::PlayerError;
 
 /// `FontLibrary` is a wrapper around `FontList`.
 /// It abstracts manual font management into paths that will be auto-crawled for files.
@@ -70,11 +41,11 @@ impl FontLibrary {
         self.fontlist.get_fonts()
     }
 
-    pub fn get_font(&self, index: usize) -> Result<&FontMeta, FontListError> {
+    pub fn get_font(&self, index: usize) -> Result<&FontMeta, PlayerError> {
         self.fontlist.get_font(index)
     }
 
-    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, FontListError> {
+    pub fn get_font_mut(&mut self, index: usize) -> Result<&mut FontMeta, PlayerError> {
         self.fontlist.get_font_mut(index)
     }
 
@@ -90,7 +61,7 @@ impl FontLibrary {
         self.fontlist.get_selected_index()
     }
 
-    pub fn select(&mut self, index: usize) -> Result<(), FontListError> {
+    pub fn select(&mut self, index: usize) -> Result<(), PlayerError> {
         self.fontlist.set_selected_index(Some(index))
     }
 
@@ -113,22 +84,22 @@ impl FontLibrary {
         false
     }
 
-    pub fn select_by_path(&mut self, path: PathBuf) -> Result<(), FontLibraryError> {
+    pub fn select_by_path(&mut self, path: PathBuf) -> Result<(), PlayerError> {
         for (i, font) in self.get_fonts().iter().enumerate() {
             if font.get_path() == path {
                 let _ = self.fontlist.set_selected_index(Some(i));
                 return Ok(());
             }
         }
-        Err(FontLibraryError::NoSuchFont { path })
+        Err(PlayerError::FontlibNoSuchFont { path })
     }
 
-    pub fn add_path(&mut self, path: PathBuf) -> Result<(), FontLibraryError> {
+    pub fn add_path(&mut self, path: PathBuf) -> Result<(), PlayerError> {
         if self.contains_path(&path) {
-            return Err(FontLibraryError::PathAlreadyExists { path });
+            return Err(PlayerError::FontlibPathAlreadyExists { path });
         }
         if !path.exists() {
-            return Err(FontLibraryError::PathInaccessible { path });
+            return Err(PlayerError::PathInaccessible { path });
         }
         self.paths.push(path);
         self.delet.push(false);
@@ -136,9 +107,9 @@ impl FontLibrary {
         Ok(())
     }
 
-    pub fn remove_path(&mut self, index: usize) -> Result<(), FontLibraryError> {
+    pub fn remove_path(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.paths.len() {
-            return Err(FontLibraryError::IndexOutOfRange);
+            return Err(PlayerError::FontlibPathIndex { index });
         }
 
         self.delet[index] = true;

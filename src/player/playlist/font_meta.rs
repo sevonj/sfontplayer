@@ -2,14 +2,15 @@ use rustysynth::SoundFont;
 use serde::Serialize;
 use std::{fs, path::PathBuf};
 
-use super::error::MetaError;
+use crate::player::PlayerError;
 
 /// Reference to a font file with metadata
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct FontMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
-    error: Option<MetaError>,
+    #[serde(skip)]
+    error: Option<PlayerError>,
     pub is_queued_for_deletion: bool,
 }
 
@@ -36,16 +37,16 @@ impl FontMeta {
             Ok(mut file) => match SoundFont::new(&mut file) {
                 Ok(_) => error = None,
                 Err(e) => {
-                    error = Some(MetaError::InvalidFile {
-                        filename: self.get_name(),
-                        message: e.to_string(),
+                    error = Some(PlayerError::FontFileInvalid {
+                        path: self.filepath.clone(),
+                        msg: e.to_string(),
                     });
                 }
             },
             Err(e) => {
-                error = Some(MetaError::CantOpenFile {
-                    filename: self.get_name(),
-                    message: e.to_string(),
+                error = Some(PlayerError::FontFileInvalid {
+                    path: self.filepath.clone(),
+                    msg: e.to_string(),
                 });
             }
         }
@@ -71,7 +72,7 @@ impl FontMeta {
     pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
-    pub fn get_status(&self) -> Result<(), MetaError> {
+    pub fn get_status(&self) -> Result<(), PlayerError> {
         if let Some(e) = &self.error {
             return Err(e.clone());
         }
@@ -80,11 +81,11 @@ impl FontMeta {
 }
 
 impl TryFrom<&serde_json::Value> for FontMeta {
-    type Error = MetaError;
+    type Error = PlayerError;
 
     fn try_from(json: &serde_json::Value) -> Result<Self, Self::Error> {
         let Some(path_str) = json["filepath"].as_str() else {
-            return Err(MetaError::ParseError);
+            return Err(PlayerError::FontMetaParse);
         };
         let filesize = json["filesize"].as_u64();
 

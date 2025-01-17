@@ -1,6 +1,17 @@
 use std::fmt::Display;
 
-/// Option for how soundfonts or midis are managed
+/// Is a playlist waiting to be closed?
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum PlaylistState {
+    /// Don't delet me pls.
+    None,
+    /// Death row: Queued for closing, but not until unsaved changes are resolved.
+    Queued,
+    /// Close at first opportunity, even if there are unsaved changes.
+    QueuedDiscard,
+}
+
+/// Option for how soundfonts or midi files are managed
 #[derive(PartialEq, Eq, Default, Clone, Copy, Debug)]
 #[repr(u8)]
 pub enum FileListMode {
@@ -12,6 +23,7 @@ pub enum FileListMode {
     /// The contents are fetched automatically from a directory and subdirectories.
     Subdirectories = 2,
 }
+
 impl Display for FileListMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -21,6 +33,7 @@ impl Display for FileListMode {
         }
     }
 }
+
 impl TryFrom<u8> for FileListMode {
     type Error = ();
 
@@ -46,6 +59,7 @@ pub enum SongSort {
     SizeAsc = 4,
     SizeDesc = 5,
 }
+
 impl TryFrom<u8> for SongSort {
     type Error = ();
 
