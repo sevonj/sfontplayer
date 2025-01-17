@@ -1,6 +1,9 @@
 use rustysynth::SoundFont;
 use serde::Serialize;
-use std::{fs, path::PathBuf};
+use std::{
+    fs::{self, File},
+    path::PathBuf,
+};
 
 use crate::player::PlayerError;
 
@@ -32,35 +35,29 @@ impl FontMeta {
         self.filesize =
             fs::metadata(&self.filepath).map_or(None, |file_meta| Some(file_meta.len()));
 
-        let error;
-        match fs::File::open(&self.filepath) {
-            Ok(mut file) => match SoundFont::new(&mut file) {
-                Ok(_) => error = None,
-                Err(e) => {
-                    error = Some(PlayerError::FontFileInvalid {
-                        path: self.filepath.clone(),
-                        msg: e.to_string(),
-                    });
-                }
-            },
-            Err(e) => {
-                error = Some(PlayerError::FontFileInvalid {
-                    path: self.filepath.clone(),
-                    msg: e.to_string(),
-                });
-            }
+        self.error = match self.get_soundfont() {
+            Err(e) => Some(e),
+            Ok(_) => None,
         }
-        self.error = error;
     }
 
-    // --- Getters
+    pub fn get_soundfont(&self) -> Result<SoundFont, PlayerError> {
+        let Ok(mut fontfile) = File::open(self.get_path()) else {
+            return Err(PlayerError::PathInaccessible {
+                path: self.get_path(),
+            });
+        };
+        Ok(SoundFont::new(&mut fontfile)?)
+    }
 
     pub fn get_path(&self) -> PathBuf {
         self.filepath.clone()
     }
+
     pub fn set_path(&mut self, filepath: PathBuf) {
         self.filepath = filepath;
     }
+
     pub fn get_name(&self) -> String {
         self.filepath
             .file_name()
@@ -69,9 +66,11 @@ impl FontMeta {
             .expect("Invalid filename")
             .to_owned()
     }
+
     pub const fn get_size(&self) -> Option<u64> {
         self.filesize
     }
+
     pub fn get_status(&self) -> Result<(), PlayerError> {
         if let Some(e) = &self.error {
             return Err(e.clone());
