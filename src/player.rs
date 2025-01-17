@@ -185,20 +185,20 @@ impl Player {
 
         let midi_index = self.get_playing_playlist().queue[queue_index];
 
-        let mid = match &mut self.midi_override {
+        let midi_meta = match &mut self.midi_override {
             Some(midimeta) => midimeta,
             _ => &mut self.get_playing_playlist_mut().get_songs_mut()[midi_index],
         };
 
-        let mid_path = mid.get_path();
-        mid.refresh();
-        mid.get_status()?;
+        let midifile = midi_meta.get_midifile()?;
+        midi_meta.refresh();
+        midi_meta.get_status()?;
 
         let playlist = self.get_playing_playlist_mut();
         playlist.set_song_idx(Some(midi_index))?;
 
         // Play
-        self.audioplayer.set_midifile(mid_path);
+        self.audioplayer.set_midifile(midifile);
         self.is_playing = true;
 
         self.update_volume();
@@ -211,17 +211,17 @@ impl Player {
 
     /// Finds out which font is selected and loads it.
     pub fn reload_font(&mut self) -> Result<(), PlayerError> {
-        let mut sf = self.get_playing_playlist_mut().get_selected_font_mut();
-        if sf.is_none() {
-            sf = self.font_lib.get_selected_mut();
+        let mut font_meta = self.get_playing_playlist_mut().get_selected_font_mut();
+        if font_meta.is_none() {
+            font_meta = self.font_lib.get_selected_mut();
         }
-        let Some(sf) = sf else {
+        let Some(font_meta) = font_meta else {
             return Err(PlayerError::PlaybackNoSoundfont);
         };
-        let sf_path = sf.get_path();
-        sf.refresh();
-        sf.get_status()?;
-        self.audioplayer.set_soundfont(sf_path);
+        font_meta.refresh();
+        font_meta.get_status()?;
+        let soundfont = font_meta.get_soundfont()?;
+        self.audioplayer.set_soundfont(soundfont);
         Ok(())
     }
 

@@ -1,6 +1,6 @@
+use midi_msg::MidiFileParseError;
+use rustysynth::SoundFontError;
 use std::{error, fmt, path::PathBuf};
-
-use super::audio::error::AudioPlayerError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PlayerError {
@@ -13,7 +13,10 @@ pub enum PlayerError {
 
     PlaybackNoQueueIndex,
     PlaybackNoSoundfont,
-    PlaybackBackend,
+
+    AudioNoSink,
+    AudioNoFont,
+    AudioNoMidi,
 
     DebugBlockSaving,
     MidiOverride,
@@ -29,12 +32,12 @@ pub enum PlayerError {
     FontAlreadyExists, // TODO: https://github.com/sevonj/sfontplayer/issues/271
     FontIndex { index: usize },
     FontMetaParse,
-    FontFileInvalid { path: PathBuf, msg: String },
+    FontFileError { msg: String },
 
     // TODO: MidiAlreadyExists https://github.com/sevonj/sfontplayer/issues/271
     MidiIndex { index: usize },
     MidiMetaParse,
-    MidiFileInvalid { path: PathBuf, msg: String },
+    MidiFileError { msg: String },
 }
 
 impl error::Error for PlayerError {}
@@ -51,7 +54,10 @@ impl fmt::Display for PlayerError {
 
             Self::PlaybackNoQueueIndex => write!(f, "No queue index!"),
             Self::PlaybackNoSoundfont => write!(f, "No soundfont!"),
-            Self::PlaybackBackend => write!(f, "Error in audio player."),
+
+            Self::AudioNoSink => write!(f, "Audio player has no sink?!."),
+            Self::AudioNoFont => write!(f, "Audio player has no soundfont?!."),
+            Self::AudioNoMidi => write!(f, "Audio player has no MIDI file?!."),
 
             Self::DebugBlockSaving => write!(f, "debug_block_saving == true"),
             Self::MidiOverride => write!(f, "Action blocked by MIDI file override."),
@@ -71,18 +77,24 @@ impl fmt::Display for PlayerError {
             Self::FontAlreadyExists => write!(f, "This soundfont is already in the list."),
             Self::FontIndex { index } => write!(f, "Soundfont index {index} is out of range."),
             Self::FontMetaParse => write!(f, "Failed to parse imported soundfont meta."),
-            Self::FontFileInvalid { msg, .. } => write!(f, "Invalid soundfont: {msg}."),
+            Self::FontFileError { msg } => write!(f, "Invalid soundfont: {msg}."),
 
             // TODO: MidiAlreadyExists https://github.com/sevonj/sfontplayer/issues/271
             Self::MidiIndex { index } => write!(f, "MIDI file index {index} is out of range."),
             Self::MidiMetaParse => write!(f, "Failed to parse imported MIDI meta."),
-            Self::MidiFileInvalid { msg, .. } => write!(f, "Invalid midi file: {msg}."),
+            Self::MidiFileError { msg } => write!(f, "Invalid midi file: {msg}."),
         }
     }
 }
 
-impl From<AudioPlayerError> for PlayerError {
-    fn from(_: AudioPlayerError) -> Self {
-        Self::PlaybackBackend
+impl From<SoundFontError> for PlayerError {
+    fn from(e: SoundFontError) -> Self {
+        Self::FontFileError { msg: e.to_string() }
+    }
+}
+
+impl From<MidiFileParseError> for PlayerError {
+    fn from(e: MidiFileParseError) -> Self {
+        Self::MidiFileError { msg: e.to_string() }
     }
 }

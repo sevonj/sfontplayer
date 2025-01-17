@@ -566,7 +566,6 @@ mod tests {
     use super::*;
 
     #[test]
-
     fn test_addfont_listmodes() {
         let mut playlist_man = Playlist::default();
         let mut playlist_dir = Playlist::default();
@@ -588,7 +587,6 @@ mod tests {
         assert_eq!(playlist_sub.fonts.get_fonts().len(), 0);
     }
     #[test]
-
     fn test_rmfont_listmodes() {
         let mut playlist_man = Playlist::default();
         let mut playlist_dir = Playlist::default();
@@ -618,7 +616,6 @@ mod tests {
         assert_eq!(playlist_sub.fonts.get_fonts().len(), 1);
     }
     #[test]
-
     fn test_addsong_listmodes() {
         let mut playlist_man = Playlist::default();
         let mut playlist_dir = Playlist::default();
@@ -640,7 +637,6 @@ mod tests {
         assert_eq!(playlist_sub.midis.len(), 0);
     }
     #[test]
-
     fn test_rmsong_listmodes() {
         let mut playlist_man = Playlist::default();
         let mut playlist_dir = Playlist::default();
@@ -671,7 +667,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_idx() {
         // (Doesn't count, not stored in playlist)
         let mut playlist = Playlist::default();
@@ -689,7 +684,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_add_rm() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -708,7 +702,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_force_add_rm() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -726,7 +719,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_clear() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -738,7 +730,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_listmode() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -750,7 +741,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_listdir() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
@@ -768,7 +758,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_refresh_list() {
         // (Doesn't count, refreshed automatically)
         let mut playlist = Playlist::default();
@@ -779,7 +768,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_sort() {
         // (Doesn't count, refreshed automatically)
         let mut playlist = Playlist::default();
@@ -790,7 +778,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_sortmode() {
         // (Doesn't count, not stored in playlist)
         let mut playlist = Playlist::default();
@@ -803,7 +790,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_unsaved_flag_fontsong_setportable() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;

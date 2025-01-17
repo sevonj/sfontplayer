@@ -44,24 +44,25 @@ impl MidiMeta {
                     error = None;
                 }
                 Err(e) => {
-                    error = Some(PlayerError::MidiFileInvalid {
-                        path: self.filepath.clone(),
-                        msg: e.to_string(),
-                    });
+                    error = Some(PlayerError::MidiFileError { msg: e.to_string() });
                 }
             },
             Err(e) => {
-                error = Some(PlayerError::MidiFileInvalid {
-                    path: self.filepath.clone(),
-                    msg: e.to_string(),
-                });
+                error = Some(PlayerError::MidiFileError { msg: e.to_string() });
             }
         }
         self.duration = duration;
         self.error = error;
     }
 
-    // --- Getters
+    pub fn get_midifile(&self) -> Result<midi_msg::MidiFile, PlayerError> {
+        let Ok(bytes) = fs::read(self.get_path()) else {
+            return Err(PlayerError::PathInaccessible {
+                path: self.get_path(),
+            });
+        };
+        Ok(midi_msg::MidiFile::from_midi(bytes.as_slice())?)
+    }
 
     pub fn get_path(&self) -> PathBuf {
         self.filepath.clone()
