@@ -1,42 +1,35 @@
-use super::{custom_controls::collapse_button, GuiState};
-use crate::midi_inspector::{MidiInspector, MidiInspectorTrack};
+//
+
 use eframe::egui::{Color32, Frame, Label, RichText, ScrollArea, Style, TextWrapMode, Ui};
 use egui_extras::{Column, TableBuilder};
 use midi_msg::{MidiMsg, Track};
 use std::path::Path;
 
+use crate::{
+    gui::custom_controls::collapse_button,
+    player::{MidiInspector, MidiInspectorTrack},
+};
+
 const TRACKHEAD_WIDTH: f32 = 128.;
 
-pub fn midi_inspector(ui: &mut Ui, inspector: &mut MidiInspector, gui: &mut GuiState) {
-    inspector_toolbar(ui, gui);
-    ui.separator();
-
+pub fn build_event_browser(ui: &mut Ui, inspector: &mut MidiInspector) {
     ScrollArea::vertical().show(ui, |ui| {
         ui.set_width(ui.available_width());
 
-        header_panel(ui, &inspector.header, &inspector.filepath);
+        build_header_panel(ui, &inspector.header, &inspector.get_filepath());
         for i in 0..inspector.tracks.len() {
             let track = &mut inspector.tracks[i];
             ui.separator();
             ui.push_id(format!("track_ui_{i}"), |ui| match &track.track {
-                Track::Midi(..) => midi_track_panel(ui, i, track),
-                Track::AlienChunk(..) => nonstandard_track_panel(ui, i, track),
+                Track::Midi(..) => build_midi_track_panel(ui, i, track),
+                Track::AlienChunk(..) => build_nonstandard_track_panel(ui, i, track),
             });
         }
     });
 }
 
-fn inspector_toolbar(ui: &mut Ui, gui: &mut GuiState) {
-    ui.horizontal(|ui| {
-        ui.label("MIDI Inspector");
-        if ui.button("close").clicked() {
-            gui.update_flags.close_midi_inspector = true;
-        }
-    });
-}
-
 /// MIDI Header
-fn header_panel(ui: &mut Ui, header: &midi_msg::Header, filepath: &Path) {
+fn build_header_panel(ui: &mut Ui, header: &midi_msg::Header, filepath: &Path) {
     Frame::group(ui.style())
         .fill(ui.style().visuals.panel_fill)
         .show(ui, |ui| {
@@ -50,7 +43,7 @@ fn header_panel(ui: &mut Ui, header: &midi_msg::Header, filepath: &Path) {
 }
 
 /// MIDI Track - Unknown track type placeholder.
-fn nonstandard_track_panel(ui: &mut Ui, i: usize, track: &MidiInspectorTrack) {
+fn build_nonstandard_track_panel(ui: &mut Ui, i: usize, track: &MidiInspectorTrack) {
     Frame::group(ui.style()).show(ui, |ui| {
         ui.set_width(ui.available_width());
 
@@ -63,7 +56,7 @@ fn nonstandard_track_panel(ui: &mut Ui, i: usize, track: &MidiInspectorTrack) {
 }
 
 /// MIDI Track - Normal
-fn midi_track_panel(ui: &mut Ui, i: usize, track: &mut MidiInspectorTrack) {
+fn build_midi_track_panel(ui: &mut Ui, i: usize, track: &mut MidiInspectorTrack) {
     let content = track.track.events();
     let bgcol = ui.visuals().code_bg_color;
 
@@ -87,10 +80,10 @@ fn midi_track_panel(ui: &mut Ui, i: usize, track: &mut MidiInspectorTrack) {
             });
         });
 
-        let open = &mut track.open;
+        let open = &mut track.is_open;
         ui.add(collapse_button(open));
 
-        if !track.open {
+        if !track.is_open {
             return;
         }
 
@@ -139,7 +132,7 @@ fn midi_track_panel(ui: &mut Ui, i: usize, track: &mut MidiInspectorTrack) {
                     });
                     row.col(|ui| {
                         Frame::group(ui.style())
-                            .fill(event_color(ui.style(), event))
+                            .fill(generate_event_color(ui.style(), event))
                             .show(ui, |ui| {
                                 ui.set_width(ui.available_width());
                                 ui.horizontal(|ui| {
@@ -154,7 +147,7 @@ fn midi_track_panel(ui: &mut Ui, i: usize, track: &mut MidiInspectorTrack) {
     });
 }
 
-fn event_color(style: &Style, msg: &MidiMsg) -> Color32 {
+fn generate_event_color(style: &Style, msg: &MidiMsg) -> Color32 {
     let color = match msg {
         MidiMsg::ChannelVoice { .. } => Color32::from_hex("#458588"),
         MidiMsg::RunningChannelVoice { .. } => Color32::from_hex("#98971A"),

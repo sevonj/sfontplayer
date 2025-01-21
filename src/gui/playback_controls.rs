@@ -22,7 +22,7 @@ pub fn playback_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 }
 
 fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
-    let midi_override = player.get_midi_override();
+    let midi_override = player.get_inspected_midi_meta();
     let (back_enabled, skip_enabled) =
         if player.get_playing_playlist().queue.is_empty() || midi_override.is_some() {
             (false, false)

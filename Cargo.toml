@@ -37,6 +37,7 @@ anyhow = "1.0.95"       # Errors
 souvlaki = "0.8.0"      # Media control/metadata system integration
 directories = "6.0.0"
 relative-path = "1.9.3"
+itertools = "0.14.0"
 
 [build-dependencies]
 build-info-build = "0.0.39" # For dependency listing

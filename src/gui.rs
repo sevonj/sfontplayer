@@ -11,21 +11,22 @@ mod playlist_songs;
 pub mod soundfont_library;
 mod tabs;
 
-use crate::midi_inspector::MidiInspector;
+use eframe::egui::{vec2, CentralPanel, Context, Frame, SidePanel, TopBottomPanel, Ui};
+use egui_notify::Toasts;
+
 use crate::player::Player;
 use crate::SfontPlayer;
 use cooltoolbar::toolbar;
-use eframe::egui::{vec2, CentralPanel, Context, Frame, SidePanel, TopBottomPanel, Ui};
-use egui_notify::Toasts;
 use keyboard_shortcuts::consume_shortcuts;
-use midi_inspector::midi_inspector;
-use modals::{about_modal::about_modal, settings::settings_modal, shortcuts::shortcut_modal};
-use modals::{unsaved_close_dialog, unsaved_quit_dialog};
+use midi_inspector::{build_midi_inspector, MidiInspectorTab};
+use modals::{
+    about_modal::about_modal, settings::settings_modal, shortcuts::shortcut_modal,
+    unsaved_close_dialog, unsaved_quit_dialog,
+};
 use playback_controls::playback_panel;
 use playlist_fonts::soundfont_table;
 use playlist_songs::playlist_song_panel;
 use soundfont_library::soundfont_library;
-use std::path::PathBuf;
 use tabs::playlist_tabs;
 
 const TBL_ROW_H: f32 = 16.;
@@ -53,6 +54,8 @@ pub struct GuiState {
     pub update_flags: UpdateFlags,
     #[serde(skip)]
     pub toasts: Toasts,
+    #[serde(skip)]
+    pub midi_inspector_tab: MidiInspectorTab,
 }
 
 impl GuiState {
@@ -73,14 +76,11 @@ impl GuiState {
 #[derive(Default)]
 pub struct UpdateFlags {
     pub scroll_to_song: bool,
-    pub open_midi_inspector: Option<PathBuf>,
-    pub close_midi_inspector: bool,
 }
+
 impl UpdateFlags {
     pub fn clear(&mut self) {
         self.scroll_to_song = false;
-        self.open_midi_inspector = None;
-        self.close_midi_inspector = false;
     }
 }
 
@@ -133,8 +133,8 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
             });
     }
 
-    if let Some(inspector) = &mut app.midi_inspector {
-        midi_inspector_panel(ctx, inspector, gui);
+    if player.get_midi_inspector().is_some() {
+        midi_inspector_panel(ctx, player, gui);
     } else {
         playlist_panel(ctx, player, gui);
     }
@@ -143,13 +143,13 @@ pub fn draw_gui(ctx: &Context, app: &mut SfontPlayer) {
     handle_dropped_files(ctx);
 }
 
-fn midi_inspector_panel(ctx: &Context, inspector: &mut MidiInspector, gui: &mut GuiState) {
+fn midi_inspector_panel(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
     CentralPanel::default()
         .frame(Frame::central_panel(&ctx.style()).inner_margin(vec2(8., 2.)))
         .show(ctx, |ui| {
             disable_if_modal(ui, gui);
 
-            midi_inspector(ui, inspector, gui);
+            build_midi_inspector(ui, player, gui);
         });
 }
 

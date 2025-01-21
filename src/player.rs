@@ -1,7 +1,18 @@
 //! Player app logic module
 //!
 
+mod audio;
+mod enums;
+mod error;
+mod mediacontrols;
+mod midi_inspector;
+pub mod playlist;
+pub mod serialize_player;
+mod soundfont_library;
+mod soundfont_list;
+
 use eframe::egui::mutex::Mutex;
+use midi_msg::MidiFile;
 use rodio::Sink;
 use serde_json::Value;
 use souvlaki::{MediaControlEvent, MediaControls};
@@ -12,18 +23,10 @@ pub use enums::{PlayerEvent, RepeatMode};
 pub use error::PlayerError;
 #[cfg(not(target_os = "windows"))]
 use mediacontrols::create_mediacontrols;
+pub use midi_inspector::{MidiInspector, MidiInspectorTrack, PresetMapper};
 use playlist::{FontMeta, MidiMeta, Playlist, PlaylistState};
 pub use soundfont_library::FontLibrary;
 pub use soundfont_list::FontSort;
-
-mod audio;
-mod enums;
-mod error;
-mod mediacontrols;
-pub mod playlist;
-pub mod serialize_player;
-mod soundfont_library;
-mod soundfont_list;
 
 const REMOVED_PLAYLIST_HISTORY_LEN: usize = 100;
 
@@ -56,7 +59,7 @@ pub struct Player {
     /// For undo closing
     removed_playlists: Vec<Playlist>,
     /// Used by inspector.
-    midi_override: Option<MidiMeta>,
+    midi_inspector: Option<MidiInspector>,
 
     // -- settings
     shuffle: bool,
@@ -86,7 +89,7 @@ impl Default for Player {
             playlist_idx: 0,
             playing_playlist_idx: 0,
             removed_playlists: vec![],
-            midi_override: None,
+            midi_inspector: None,
 
             shuffle: false,
             repeat: RepeatMode::Disabled,
@@ -185,20 +188,20 @@ impl Player {
 
         let midi_index = self.get_playing_playlist().queue[queue_index];
 
-        let midi_meta = match &mut self.midi_override {
-            Some(midimeta) => midimeta,
-            _ => &mut self.get_playing_playlist_mut().get_songs_mut()[midi_index],
+        let midi_file = if let Some(inspector) = &self.midi_inspector {
+            inspector.get_midi()?
+        } else {
+            let midi_meta = &mut self.get_playing_playlist_mut().get_songs_mut()[midi_index];
+            midi_meta.refresh();
+            midi_meta.get_status()?;
+            midi_meta.get_midifile()?
         };
-
-        let midifile = midi_meta.get_midifile()?;
-        midi_meta.refresh();
-        midi_meta.get_status()?;
 
         let playlist = self.get_playing_playlist_mut();
         playlist.set_song_idx(Some(midi_index))?;
 
         // Play
-        self.audioplayer.set_midifile(midifile);
+        self.audioplayer.set_midifile(midi_file);
         self.is_playing = true;
 
         self.update_volume();
@@ -209,8 +212,36 @@ impl Player {
         Ok(())
     }
 
+    /// Override playlists and play a specific `MidiFile`. Used for test sounds.
+    pub fn play_midi(&mut self, midi_file: MidiFile) -> Result<(), PlayerError> {
+        self.audioplayer.stop_playback()?;
+        self.reload_font()?;
+
+        self.audioplayer.set_midifile(midi_file);
+        self.is_playing = true;
+
+        self.update_volume();
+        self.audioplayer.start_playback()?;
+
+        self.mediacontrol_update_song();
+        Ok(())
+    }
+
+    pub fn get_soundfont_meta(&self) -> Option<&FontMeta> {
+        let font_meta = match self.get_playlist().get_selected_font() {
+            Some(font) => font,
+            None => self.get_default_soundfont()?,
+        };
+        Some(font_meta)
+    }
+
     /// Finds out which font is selected and loads it.
     pub fn reload_font(&mut self) -> Result<(), PlayerError> {
+        if let Some(inspector) = &mut self.midi_inspector {
+            inspector.set_soundfont(None);
+        }
+        self.audioplayer.clear_soundfont();
+
         let mut font_meta = self.get_playing_playlist_mut().get_selected_font_mut();
         if font_meta.is_none() {
             font_meta = self.font_lib.get_selected_mut();
@@ -220,8 +251,13 @@ impl Player {
         };
         font_meta.refresh();
         font_meta.get_status()?;
-        let soundfont = font_meta.get_soundfont()?;
+        let soundfont = Arc::new(font_meta.get_soundfont()?);
+
+        if let Some(inspector) = &mut self.midi_inspector {
+            inspector.set_soundfont(Some(soundfont.clone()));
+        }
         self.audioplayer.set_soundfont(soundfont);
+
         Ok(())
     }
 
@@ -234,11 +270,13 @@ impl Player {
 
         self.mediacontrol_update_song();
     }
+
     pub fn seek_to(&mut self, t: Duration) {
         if let Err(e) = self.audioplayer.seek_to(t) {
             self.push_error(e.to_string());
         }
     }
+
     /// Unpause
     pub fn play(&mut self) {
         if self.is_playing {
@@ -246,14 +284,16 @@ impl Player {
             self.mediacontrol_update_playback();
         }
     }
+
     /// Pause
     pub fn pause(&mut self) {
         let _ = self.audioplayer.pause();
         self.mediacontrol_update_playback();
     }
+
     /// Play previous song
     pub fn skip_back(&mut self) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         if let Some(mut index) = self.get_playing_playlist().queue_idx {
@@ -273,9 +313,10 @@ impl Player {
         }
         Ok(())
     }
+
     /// Play next song
     pub fn skip(&mut self) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         if let Some(index) = self.get_playing_playlist().queue_idx {
@@ -294,18 +335,22 @@ impl Player {
         }
         Ok(())
     }
+
     pub const fn get_shuffle(&self) -> bool {
         self.shuffle
     }
+
     /// Toggle shuffle and rebuild queue
     pub fn toggle_shuffle(&mut self) {
         let shuffle = !self.shuffle;
         self.shuffle = shuffle;
         self.get_playing_playlist_mut().rebuild_queue(shuffle);
     }
+
     pub const fn get_repeat(&self) -> RepeatMode {
         self.repeat
     }
+
     pub fn cycle_repeat(&mut self) {
         match self.repeat {
             RepeatMode::Disabled => self.repeat = RepeatMode::Queue,
@@ -313,33 +358,53 @@ impl Player {
             RepeatMode::Song => self.repeat = RepeatMode::Disabled,
         }
     }
+
     pub const fn get_volume(&self) -> f32 {
         self.volume
     }
+
     pub fn set_volume(&mut self, volume: f32) {
         self.volume = f32::clamp(volume, 0., 100.);
         self.update_volume();
         self.mediacontrol_update_volume();
     }
+
     /// Sends current volume setting to backend
     pub fn update_volume(&self) {
         // Not dividing the volume by 100 is a mistake you only make once.
         let _ = self.audioplayer.set_volume(self.volume * 0.01);
     }
-    pub const fn get_midi_override(&self) -> Option<&MidiMeta> {
-        self.midi_override.as_ref()
+
+    pub fn get_inspected_midi_meta(&self) -> Option<&MidiMeta> {
+        self.midi_inspector.as_ref().map(MidiInspector::get_meta)
     }
-    pub fn set_midi_override(&mut self, midi: MidiMeta) {
-        self.midi_override = Some(midi);
+
+    pub const fn get_midi_inspector(&self) -> Option<&MidiInspector> {
+        self.midi_inspector.as_ref()
+    }
+
+    pub fn get_midi_inspector_mut(&mut self) -> Option<&mut MidiInspector> {
+        self.midi_inspector.as_mut()
+    }
+
+    pub fn open_midi_inspector(&mut self, meta: MidiMeta) -> Result<(), PlayerError> {
+        let soundfont = self
+            .get_soundfont_meta()
+            .and_then(|f| f.get_soundfont().and_then(|f| Ok(Arc::new(f))).ok());
+        let inspector = MidiInspector::new(meta, soundfont)?;
+        self.midi_inspector = Some(inspector);
+        self.stop();
+        Ok(())
+    }
+
+    pub fn close_midi_inspector(&mut self) {
+        self.midi_inspector = None;
         self.stop();
     }
-    pub fn clear_midi_override(&mut self) {
-        self.midi_override = None;
-        self.stop();
-    }
+
     // When previous song has ended, advance queue or stop.
     fn advance_queue(&mut self) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             self.pause();
             return Ok(());
         }
@@ -387,14 +452,17 @@ impl Player {
     pub const fn is_playing(&self) -> bool {
         self.is_playing
     }
+
     /// Pause status.
     pub fn is_paused(&self) -> bool {
         self.audioplayer.is_paused()
     }
+
     /// Finished playing, no current song.
     pub fn is_empty(&self) -> bool {
         self.audioplayer.is_empty()
     }
+
     /// Get total length of currently playing file
     pub const fn get_playback_length(&self) -> Duration {
         if let Some(len) = self.audioplayer.get_midi_length() {
@@ -402,6 +470,7 @@ impl Player {
         }
         Duration::ZERO
     }
+
     pub fn get_playback_position(&self) -> Duration {
         self.audioplayer.get_midi_position()
     }
@@ -412,26 +481,32 @@ impl Player {
     pub const fn get_playlist_idx(&self) -> usize {
         self.playlist_idx
     }
+
     /// Index of currently playing playlist
     pub const fn get_playing_playlist_idx(&self) -> usize {
         self.playing_playlist_idx
     }
+
     /// Get a reference to the playlist list
     pub const fn get_playlists(&self) -> &Vec<Playlist> {
         &self.playlists
     }
+
     /// Get a mutable reference to the playlist list
     pub fn get_playlists_mut(&mut self) -> &mut Vec<Playlist> {
         &mut self.playlists
     }
+
     /// Get a reference to the currently open playlist
     pub fn get_playlist(&self) -> &Playlist {
         &self.playlists[self.playlist_idx]
     }
+
     /// Get a mutable reference to the currently open playlist
     pub fn get_playlist_mut(&mut self) -> &mut Playlist {
         &mut self.playlists[self.playlist_idx]
     }
+
     /// Get a reference to the currently playing playlist.
     /// If nothing's playing, it gives the currently open playlist instead.
     pub fn get_playing_playlist(&self) -> &Playlist {
@@ -440,6 +515,7 @@ impl Player {
         }
         &self.playlists[self.playlist_idx]
     }
+
     /// Get a mutable reference to the currently playing playlist.
     /// If nothing's playing, it gives the currently open playlist instead.
     pub fn get_playing_playlist_mut(&mut self) -> &mut Playlist {
@@ -448,9 +524,10 @@ impl Player {
         }
         &mut self.playlists[self.playlist_idx]
     }
+
     /// Switch to another playlist
     pub fn switch_to_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         if index >= self.playlists.len() {
@@ -461,8 +538,9 @@ impl Player {
         self.get_playlist_mut().refresh_song_list();
         Ok(())
     }
+
     pub fn switch_playlist_left(&mut self) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         if self.playlist_idx == 0 {
@@ -471,8 +549,9 @@ impl Player {
         self.playlist_idx -= 1;
         Ok(())
     }
+
     pub fn switch_playlist_right(&mut self) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         if self.playlist_idx >= self.playlists.len() - 1 {
@@ -481,17 +560,19 @@ impl Player {
         self.playlist_idx += 1;
         Ok(())
     }
+
     /// Create a new playlist
     pub fn new_playlist(&mut self) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         self.playlists.push(Playlist::default());
         Ok(())
     }
+
     /// Remove a playlist by index
     pub fn remove_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         if index >= self.playlists.len() {
@@ -500,6 +581,7 @@ impl Player {
         self.playlists[index].state = PlaylistState::Queued;
         Ok(())
     }
+
     /// Remove a playlist by index, override unsaved check
     pub fn force_remove_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.playlists.len() {
@@ -508,6 +590,7 @@ impl Player {
         self.playlists[index].state = PlaylistState::QueuedDiscard;
         Ok(())
     }
+
     pub fn cancel_remove_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.playlists.len() {
             return Err(PlayerError::PlaylistIndex { index });
@@ -515,6 +598,7 @@ impl Player {
         self.playlists[index].state = PlaylistState::None;
         Ok(())
     }
+
     /// Get a playlist waiting for delete confirm, if any exist.
     pub fn get_playlist_waiting_for_discard(&self) -> Option<usize> {
         for (i, playlist) in self.playlists.iter().enumerate() {
@@ -524,13 +608,15 @@ impl Player {
         }
         None
     }
+
     /// Playlist tabs have been closed
     pub fn has_removed_playlist(&self) -> bool {
         !self.removed_playlists.is_empty()
     }
+
     /// Undo playlist close, reopen the tab.
     pub fn reopen_removed_playlist(&mut self) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         if self.removed_playlists.is_empty() {
@@ -552,6 +638,7 @@ impl Player {
 
         Ok(())
     }
+
     /// Rearrange playlists
     pub fn move_playlist(&mut self, old_index: usize, new_index: usize) -> Result<(), PlayerError> {
         if old_index >= self.playlists.len() {
@@ -582,6 +669,7 @@ impl Player {
 
         Ok(())
     }
+
     /// Move current playlist left
     pub fn move_playlist_left(&mut self) -> Result<(), PlayerError> {
         if self.playlist_idx == 0 {
@@ -591,6 +679,7 @@ impl Player {
             .expect("move_playlist_left out of bounds?!");
         Ok(())
     }
+
     /// Move current playlist right
     pub fn move_playlist_right(&mut self) -> Result<(), PlayerError> {
         if self.playlist_idx >= self.playlists.len() - 1 {
@@ -600,6 +689,7 @@ impl Player {
             .expect("move_playlist_right out of bounds?!");
         Ok(())
     }
+
     pub fn open_portable_playlist(&mut self, filepath: PathBuf) -> Result<(), PlayerError> {
         if self.is_portable_playlist_open(&filepath) {
             return Err(PlayerError::PlaylistAlreadyOpen);
@@ -609,6 +699,7 @@ impl Player {
         self.playlist_idx = self.playlists.len() - 1;
         Ok(())
     }
+
     pub fn save_portable_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.playlists.len() {
             return Err(PlayerError::PlaylistIndex { index });
@@ -621,6 +712,7 @@ impl Player {
         }
         Ok(())
     }
+
     pub fn save_all_portable_playlists(&mut self) -> Result<(), PlayerError> {
         if self.debug_block_saving {
             return Err(PlayerError::DebugBlockSaving);
@@ -632,6 +724,7 @@ impl Player {
         }
         Ok(())
     }
+
     /// Save playlist into a portable file.
     pub fn save_playlist_as(&mut self, index: usize, filepath: PathBuf) -> Result<(), PlayerError> {
         if index >= self.playlists.len() {
@@ -668,9 +761,10 @@ impl Player {
         let _ = self.switch_to_playlist(self.playlists.len() - 1);
         Ok(())
     }
+
     /// New playlist is stored to app data.
     pub fn duplicate_playlist(&mut self, index: usize) -> Result<(), PlayerError> {
-        if self.midi_override.is_some() {
+        if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
         if index >= self.playlists.len() {
@@ -684,6 +778,7 @@ impl Player {
         let _ = self.switch_to_playlist(self.playlists.len() - 1);
         Ok(())
     }
+
     /// Make sure at least one playlist exists!
     fn ensure_playlist_existence(&mut self) {
         if self.get_playlists().is_empty() {
@@ -691,6 +786,7 @@ impl Player {
             self.playlist_idx = 0;
         }
     }
+
     fn is_portable_playlist_open(&self, filepath: &PathBuf) -> bool {
         for playlist in &self.playlists {
             let Some(playlist_path) = playlist.get_portable_path() else {
@@ -708,6 +804,7 @@ impl Player {
     pub fn get_event_queue(&mut self) -> &mut Vec<PlayerEvent> {
         &mut self.player_events
     }
+
     fn push_error(&mut self, message: String) {
         self.player_events.push(PlayerEvent::NotifyError(message));
     }
@@ -935,7 +1032,9 @@ mod tests {
             .unwrap();
         player.get_playlist_mut().set_song_idx(Some(1)).unwrap();
         assert_eq!(player.get_playlist().get_song_idx(), Some(1));
-        player.set_midi_override(MidiMeta::new("override_fakepath".into()));
+        player
+            .open_midi_inspector(MidiMeta::new("src/assets/demo.mid".into()))
+            .unwrap();
 
         assert_eq!(player.skip().unwrap_err(), PlayerError::MidiOverride);
         assert_eq!(player.get_playlist().get_song_idx(), None);
@@ -964,7 +1063,9 @@ mod tests {
             .unwrap();
         player.get_playlist_mut().set_song_idx(Some(1)).unwrap();
         assert_eq!(player.get_playlist().get_song_idx(), Some(1));
-        player.set_midi_override(MidiMeta::new("override_fakepath".into()));
+        player
+            .open_midi_inspector(MidiMeta::new("src/assets/demo.mid".into()))
+            .unwrap();
         assert_eq!(player.get_playlist().get_song_idx(), None);
 
         player.playing_playlist_idx = player.playlist_idx;
@@ -996,7 +1097,9 @@ mod tests {
             .add_song("fakepath3".into())
             .unwrap();
         assert_eq!(player.get_playlist_idx(), 1);
-        player.set_midi_override(MidiMeta::new("override_fakepath".into()));
+        player
+            .open_midi_inspector(MidiMeta::new("src/assets/demo.mid".into()))
+            .unwrap();
 
         assert_eq!(
             player.switch_playlist_left().unwrap_err(),
@@ -1037,7 +1140,9 @@ mod tests {
             .add_song("fakepath3".into())
             .unwrap();
         assert_eq!(player.get_playlist_idx(), 1);
-        player.set_midi_override(MidiMeta::new("override_fakepath".into()));
+        player
+            .open_midi_inspector(MidiMeta::new("src/assets/demo.mid".into()))
+            .unwrap();
 
         assert_eq!(
             player.new_playlist().unwrap_err(),
