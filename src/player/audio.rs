@@ -33,8 +33,8 @@ impl AudioPlayer {
     // --- File Management
 
     /// Choose new soundfont
-    pub(crate) fn set_soundfont(&mut self, soundfont: SoundFont) {
-        self.soundfont = Some(Arc::new(soundfont));
+    pub(crate) fn set_soundfont(&mut self, soundfont: Arc<SoundFont>) {
+        self.soundfont = Some(soundfont);
 
         if let Some(sink) = &self.sink {
             if !sink.empty() {
@@ -44,6 +44,10 @@ impl AudioPlayer {
                 let _ = self.seek_to(pos);
             }
         };
+    }
+
+    pub(crate) fn clear_soundfont(&mut self) {
+        self.soundfont = None;
     }
 
     /// Choose new midi file

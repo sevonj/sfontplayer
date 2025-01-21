@@ -1,21 +1,13 @@
-use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
-use gui::{draw_gui, GuiState};
-use midi_inspector::MidiInspector;
-use player::{
-    playlist::{MidiMeta, Playlist},
-    Player, PlayerEvent,
-};
-use rodio::{OutputStream, Sink};
-use std::{
-    env,
-    sync::Arc,
-    thread,
-    time::{Duration, Instant},
-};
-
 mod gui;
-mod midi_inspector;
 mod player;
+
+use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
+use rodio::{OutputStream, Sink};
+use std::time::{Duration, Instant};
+use std::{env, sync::Arc, thread};
+
+use gui::{draw_gui, GuiState};
+use player::{playlist::Playlist, Player, PlayerEvent};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -40,8 +32,6 @@ struct SfontPlayer {
     #[serde(skip)]
     player: Arc<Mutex<Player>>,
     #[serde(skip)]
-    midi_inspector: Option<MidiInspector>,
-    #[serde(skip)]
     stream: OutputStream,
     gui_state: GuiState,
 }
@@ -56,7 +46,6 @@ impl Default for SfontPlayer {
         }
         let sfontplayer = Self {
             player: Arc::new(Mutex::new(player)),
-            midi_inspector: None,
             gui_state: GuiState::default(),
             stream,
         };
@@ -167,18 +156,6 @@ impl eframe::App for SfontPlayer {
         // Draw
         egui_extras::install_image_loaders(ctx);
         draw_gui(ctx, self);
-
-        if self.gui_state.update_flags.close_midi_inspector {
-            self.midi_inspector = None;
-            self.player.lock().clear_midi_override();
-        } else if let Some(filepath) = &self.gui_state.update_flags.open_midi_inspector {
-            if let Ok(insp) = MidiInspector::new(filepath) {
-                self.midi_inspector = Some(insp);
-                self.player
-                    .lock()
-                    .set_midi_override(MidiMeta::new(filepath.into()));
-            }
-        }
 
         self.gui_state.update_flags.clear();
         self.quit_check(ctx);

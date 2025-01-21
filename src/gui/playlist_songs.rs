@@ -10,7 +10,7 @@ use super::{
     GuiState, TBL_ROW_H,
 };
 use crate::player::{
-    playlist::{FileListMode, SongSort},
+    playlist::{FileListMode, MidiMeta, SongSort},
     Player,
 };
 
@@ -192,7 +192,7 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
                 row.response().context_menu(|ui| {
                     ui.add_enabled_ui(status.is_ok(), |ui| {
                         if ui.button("Open in inspector").clicked() {
-                            gui.update_flags.open_midi_inspector = Some(filepath.clone());
+                            let _ = player.open_midi_inspector(MidiMeta::new(filepath.clone()));
                             ui.close_menu();
                         }
                     });
