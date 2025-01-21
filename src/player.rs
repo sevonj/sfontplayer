@@ -390,7 +390,7 @@ impl Player {
     pub fn open_midi_inspector(&mut self, meta: MidiMeta) -> Result<(), PlayerError> {
         let soundfont = self
             .get_soundfont_meta()
-            .and_then(|f| f.get_soundfont().and_then(|f| Ok(Arc::new(f))).ok());
+            .and_then(|f| f.get_soundfont().map(Arc::new).ok());
         let inspector = MidiInspector::new(meta, soundfont)?;
         self.midi_inspector = Some(inspector);
         self.stop();
