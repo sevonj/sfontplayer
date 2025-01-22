@@ -123,24 +123,24 @@ impl Playlist {
         if self.font_list_mode != FileListMode::Manual {
             return Err(PlayerError::ModifyDirList);
         }
-        self.force_add_font(path);
+        self.force_add_font(path)?;
         self.recrawl_fonts();
         Ok(())
     }
 
     /// Bypasses extra correctness checks meant for gui.
-    fn force_add_font(&mut self, path: PathBuf) {
-        if !self.contains_font(&path) {
-            let _ = self.fonts.add(FontMeta::new(path));
-        }
+    fn force_add_font(&mut self, path: PathBuf) -> Result<(), PlayerError> {
+        self.fonts.add(FontMeta::new(path))?;
         self.unsaved_changes = true;
+        Ok(())
     }
 
     pub fn remove_font(&mut self, index: usize) -> Result<(), PlayerError> {
         if self.font_list_mode != FileListMode::Manual {
             return Err(PlayerError::ModifyDirList);
         }
-        self.force_remove_font(index)
+        self.force_remove_font(index)?;
+        Ok(())
     }
 
     /// Bypasses extra correctness checks meant for gui.
@@ -244,11 +244,9 @@ impl Playlist {
                 if let Ok(paths) = fs::read_dir(dir) {
                     for entry in paths.filter_map(std::result::Result::ok) {
                         let path = entry.path();
-                        if self.contains_font(&path) {
-                            continue;
-                        }
                         if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
-                            self.force_add_font(path);
+                            // Okay to ignore FontAlreadyExists
+                            let _ = self.force_add_font(path);
                         }
                     }
                 }
@@ -260,7 +258,8 @@ impl Playlist {
                 {
                     let path = entry.path();
                     if path.is_file() && path.extension().is_some_and(|s| s == "sf2") {
-                        self.force_add_font(path.into());
+                        // Okay to ignore FontAlreadyExists
+                        let _ = self.force_add_font(path.into());
                     }
                 }
             }
@@ -302,17 +301,19 @@ impl Playlist {
         if self.song_list_mode != FileListMode::Manual {
             return Err(PlayerError::ModifyDirList);
         }
-        self.force_add_song(path);
+        self.force_add_song(path)?;
         self.refresh_song_list();
         Ok(())
     }
 
     /// Bypasses extra correctness checks meant for gui.
-    fn force_add_song(&mut self, path: PathBuf) {
-        if !self.contains_song(&path) {
-            self.midis.push(MidiMeta::new(path));
+    fn force_add_song(&mut self, path: PathBuf) -> Result<(), PlayerError> {
+        if self.contains_song(&path) {
+            return Err(PlayerError::MidiAlreadyExists);
         }
+        self.midis.push(MidiMeta::new(path));
         self.unsaved_changes = true;
+        Ok(())
     }
 
     pub fn remove_song(&mut self, index: usize) -> Result<(), PlayerError> {
@@ -418,7 +419,8 @@ impl Playlist {
                             continue;
                         }
                         if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
-                            self.force_add_song(path);
+                            // Okay to ignore MidiAlreadyExists
+                            let _ = self.force_add_song(path);
                         }
                     }
                 }
@@ -430,7 +432,8 @@ impl Playlist {
                 {
                     let path = entry.path();
                     if path.is_file() && path.extension().is_some_and(|s| s == "mid") {
-                        self.force_add_song(path.into());
+                        // Okay to ignore MidiAlreadyExists
+                        let _ = self.force_add_song(path.into());
                     }
                 }
             }
@@ -586,6 +589,7 @@ mod tests {
         assert_eq!(playlist_dir.fonts.get_fonts().len(), 0);
         assert_eq!(playlist_sub.fonts.get_fonts().len(), 0);
     }
+
     #[test]
     fn test_rmfont_listmodes() {
         let mut playlist_man = Playlist::default();
@@ -615,6 +619,7 @@ mod tests {
         assert_eq!(playlist_dir.fonts.get_fonts().len(), 1);
         assert_eq!(playlist_sub.fonts.get_fonts().len(), 1);
     }
+
     #[test]
     fn test_addsong_listmodes() {
         let mut playlist_man = Playlist::default();
@@ -636,6 +641,7 @@ mod tests {
         assert_eq!(playlist_dir.midis.len(), 0);
         assert_eq!(playlist_sub.midis.len(), 0);
     }
+
     #[test]
     fn test_rmsong_listmodes() {
         let mut playlist_man = Playlist::default();
@@ -664,6 +670,28 @@ mod tests {
         assert_eq!(playlist_man.midis.len(), 0);
         assert_eq!(playlist_dir.midis.len(), 1);
         assert_eq!(playlist_sub.midis.len(), 1);
+    }
+
+    #[test]
+    fn test_add_duplicate_font() {
+        let mut playlist = Playlist::default();
+        playlist.add_font("fakefont_a".into()).unwrap();
+        playlist.add_font("fakefont_b".into()).unwrap();
+        assert!(matches!(
+            playlist.add_font("fakefont_b".into()).unwrap_err(),
+            PlayerError::FontAlreadyExists
+        ))
+    }
+
+    #[test]
+    fn test_add_duplicate_song() {
+        let mut playlist = Playlist::default();
+        playlist.add_song("fakesong_a".into()).unwrap();
+        playlist.add_song("fakesong_b".into()).unwrap();
+        assert!(matches!(
+            playlist.add_song("fakesong_b".into()).unwrap_err(),
+            PlayerError::MidiAlreadyExists
+        ))
     }
 
     #[test]
@@ -705,13 +733,13 @@ mod tests {
     fn test_unsaved_flag_fontsong_force_add_rm() {
         let mut playlist = Playlist::default();
         playlist.unsaved_changes = false;
-        playlist.force_add_font("fakepath".into());
+        playlist.force_add_font("fakepath1".into()).unwrap();
         assert!(playlist.unsaved_changes);
         playlist.unsaved_changes = false;
         playlist.force_remove_font(0).unwrap();
         assert!(playlist.unsaved_changes);
         playlist.unsaved_changes = false;
-        playlist.force_add_song("fakepath".into());
+        playlist.force_add_song("fakepath2".into()).unwrap();
         assert!(playlist.unsaved_changes);
         playlist.unsaved_changes = false;
         playlist.force_remove_song(0).unwrap();
