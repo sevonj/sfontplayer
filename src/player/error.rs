@@ -2,7 +2,7 @@ use midi_msg::MidiFileParseError;
 use rustysynth::SoundFontError;
 use std::{error, fmt, path::PathBuf};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug)]
 pub enum PlayerError {
     PlaylistIndex { index: usize },
     PlaylistCantMove,
@@ -17,6 +17,7 @@ pub enum PlayerError {
     AudioNoSink,
     AudioNoFont,
     AudioNoMidi,
+    AudioRenderError,
 
     DebugBlockSaving,
     MidiOverride,
@@ -27,7 +28,8 @@ pub enum PlayerError {
 
     ModifyDirList,
     UnknownFileFormat { path: PathBuf },
-    PathInaccessible { path: PathBuf },
+    PathDoesntExist { path: PathBuf },
+    IoError { source: std::io::Error },
 
     FontAlreadyExists, // TODO: https://github.com/sevonj/sfontplayer/issues/271
     FontIndex { index: usize },
@@ -58,6 +60,7 @@ impl fmt::Display for PlayerError {
             Self::AudioNoSink => write!(f, "Audio player has no sink?!."),
             Self::AudioNoFont => write!(f, "Audio player has no soundfont?!."),
             Self::AudioNoMidi => write!(f, "Audio player has no MIDI file?!."),
+            Self::AudioRenderError => write!(f, "Render failed."),
 
             Self::DebugBlockSaving => write!(f, "debug_block_saving == true"),
             Self::MidiOverride => write!(f, "Action blocked by MIDI file override."),
@@ -72,7 +75,8 @@ impl fmt::Display for PlayerError {
 
             Self::ModifyDirList => write!(f, "Cant modify a directory-tracking list manually."),
             Self::UnknownFileFormat { path } => write!(f, "Unknown file format: {path:?}."),
-            Self::PathInaccessible { path } => write!(f, "Path inaccessible: {path:?}."),
+            Self::PathDoesntExist { path } => write!(f, "Path doesn't exist: {path:?}."),
+            Self::IoError { source } => source.fmt(f),
 
             Self::FontAlreadyExists => write!(f, "This soundfont is already in the list."),
             Self::FontIndex { index } => write!(f, "Soundfont index {index} is out of range."),
@@ -88,13 +92,23 @@ impl fmt::Display for PlayerError {
 }
 
 impl From<SoundFontError> for PlayerError {
-    fn from(e: SoundFontError) -> Self {
-        Self::FontFileError { msg: e.to_string() }
+    fn from(source: SoundFontError) -> Self {
+        Self::FontFileError {
+            msg: source.to_string(),
+        }
     }
 }
 
 impl From<MidiFileParseError> for PlayerError {
-    fn from(e: MidiFileParseError) -> Self {
-        Self::MidiFileError { msg: e.to_string() }
+    fn from(source: MidiFileParseError) -> Self {
+        Self::MidiFileError {
+            msg: source.to_string(),
+        }
+    }
+}
+
+impl From<std::io::Error> for PlayerError {
+    fn from(source: std::io::Error) -> Self {
+        Self::IoError { source }
     }
 }

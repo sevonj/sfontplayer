@@ -1,16 +1,16 @@
 //! Audio backend module
 
+mod midisequencer;
+mod midisource;
+mod midisynth;
+
 use midi_msg::MidiFile;
 use rodio::Sink;
 use rustysynth::SoundFont;
 use std::{sync::Arc, time::Duration};
 
 use super::PlayerError;
-use midisource::MidiSource;
-
-mod midisequencer;
-mod midisource;
-mod midisynth;
+pub use midisource::MidiSource;
 
 /// Audio backend struct
 #[derive(Default)]
@@ -96,7 +96,7 @@ impl AudioPlayer {
             return Err(PlayerError::AudioNoSink);
         };
         let source = MidiSource::new(soundfont, midifile);
-        self.midifile_duration = Some(source.get_song_length());
+        self.midifile_duration = Some(source.song_length());
 
         sink.append(source);
         sink.play();

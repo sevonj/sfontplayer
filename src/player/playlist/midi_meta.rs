@@ -11,7 +11,7 @@ pub struct MidiMeta {
     filesize: Option<u64>,
     duration: Option<Duration>,
     #[serde(skip)]
-    error: Option<PlayerError>,
+    error: Option<String>,
     pub is_queued_for_deletion: bool,
 }
 
@@ -44,11 +44,11 @@ impl MidiMeta {
                     error = None;
                 }
                 Err(e) => {
-                    error = Some(PlayerError::MidiFileError { msg: e.to_string() });
+                    error = Some(e.to_string());
                 }
             },
             Err(e) => {
-                error = Some(PlayerError::MidiFileError { msg: e.to_string() });
+                error = Some(e.to_string());
             }
         }
         self.duration = duration;
@@ -56,11 +56,7 @@ impl MidiMeta {
     }
 
     pub fn get_midifile(&self) -> Result<midi_msg::MidiFile, PlayerError> {
-        let Ok(bytes) = fs::read(self.get_path()) else {
-            return Err(PlayerError::PathInaccessible {
-                path: self.get_path(),
-            });
-        };
+        let bytes = fs::read(self.get_path())?;
         Ok(midi_msg::MidiFile::from_midi(bytes.as_slice())?)
     }
 
@@ -91,7 +87,7 @@ impl MidiMeta {
 
     pub fn get_status(&self) -> Result<(), PlayerError> {
         if let Some(e) = &self.error {
-            return Err(e.clone());
+            return Err(PlayerError::MidiFileError { msg: e.to_owned() });
         }
         Ok(())
     }

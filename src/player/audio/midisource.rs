@@ -4,8 +4,6 @@ use std::{sync::Arc, time::Duration};
 
 use super::midisequencer::MidiSequencer;
 
-const SAMPLERATE: u32 = 44100;
-
 #[derive(PartialEq)]
 enum Channel {
     L,
@@ -29,9 +27,13 @@ pub struct MidiSource {
 
 impl MidiSource {
     /// New `MidiSource` that immediately starts playing.
-    #[allow(clippy::cast_possible_wrap)] // It's ok to cast here
-    pub fn new(sf: &Arc<SoundFont>, midifile: MidiFile) -> Self {
-        let settings = SynthesizerSettings::new(SAMPLERATE as i32);
+    pub fn new(sf: &Arc<SoundFont>, midi_file: MidiFile) -> Self {
+        Self::with_sample_rate(sf, midi_file, Self::DEFAULT_SAMPLE_RATE)
+    }
+
+    /// New `MidiSource` that immediately starts playing.
+    pub fn with_sample_rate(sf: &Arc<SoundFont>, midifile: MidiFile, sample_rate: i32) -> Self {
+        let settings = SynthesizerSettings::new(sample_rate);
         let mut synthesizer =
             Synthesizer::new(sf, &settings).expect("Could not create synthesizer");
         synthesizer.set_master_volume(1.0);
@@ -48,8 +50,14 @@ impl MidiSource {
         }
     }
 
-    pub const fn get_song_length(&self) -> Duration {
-        self.sequencer.get_song_length()
+    pub const fn song_length(&self) -> Duration {
+        self.sequencer.song_length()
+    }
+
+    pub const DEFAULT_SAMPLE_RATE: i32 = 44100;
+
+    pub fn sample_rate(&self) -> i32 {
+        self.synthesizer.get_sample_rate()
     }
 }
 
@@ -91,7 +99,7 @@ impl Iterator for MidiSource {
 
 impl rodio::Source for MidiSource {
     fn current_frame_len(&self) -> Option<usize> {
-        let time_left = self.sequencer.get_song_length() - self.sequencer.get_song_position();
+        let time_left = self.sequencer.song_length() - self.sequencer.song_position();
         let samples_left = time_left.as_secs_f64() * f64::from(self.synthesizer.get_sample_rate());
         Some(samples_left as usize)
     }
@@ -101,11 +109,11 @@ impl rodio::Source for MidiSource {
     }
 
     fn sample_rate(&self) -> u32 {
-        SAMPLERATE
+        Self::DEFAULT_SAMPLE_RATE as u32
     }
 
     fn total_duration(&self) -> Option<Duration> {
-        Some(self.sequencer.get_song_length())
+        Some(self.sequencer.song_length())
     }
 
     fn try_seek(&mut self, pos: Duration) -> Result<(), rodio::source::SeekError> {

@@ -83,13 +83,13 @@ impl MidiSequencer {
     where
         R: MidiSink,
     {
-        let Some(events) = self.get_events() else {
+        let Some(events) = self.events() else {
             return;
         };
 
         self.song_pos += delta_t;
         self.since_last_tick += delta_t;
-        let tick_duration = self.get_current_tick_duration();
+        let tick_duration = self.current_tick_duration();
         if self.since_last_tick >= tick_duration {
             self.since_last_tick -= tick_duration;
             self.tick += 1;
@@ -117,11 +117,11 @@ impl MidiSequencer {
     where
         R: MidiSink,
     {
-        let Some(events) = self.get_events() else {
+        let Some(events) = self.events() else {
             return;
         };
 
-        self.song_pos += self.get_current_tick_duration();
+        self.song_pos += self.current_tick_duration();
         self.tick += 1;
 
         for wrap in events {
@@ -143,7 +143,7 @@ impl MidiSequencer {
         }
     }
 
-    fn get_events(&mut self) -> Option<Vec<TrackEventWrap>> {
+    fn events(&mut self) -> Option<Vec<TrackEventWrap>> {
         let Some(midifile) = &self.midifile else {
             return None;
         };
@@ -186,7 +186,7 @@ impl MidiSequencer {
         }
     }
 
-    fn get_current_tick_duration(&self) -> Duration {
+    fn current_tick_duration(&self) -> Duration {
         let Some(midifile) = &self.midifile else {
             return Duration::ZERO;
         };
@@ -269,11 +269,11 @@ impl MidiSequencer {
         self.song_len = duration;
     }
 
-    pub const fn get_song_length(&self) -> Duration {
+    pub const fn song_length(&self) -> Duration {
         self.song_len
     }
 
-    pub const fn get_song_position(&self) -> Duration {
+    pub const fn song_position(&self) -> Duration {
         self.song_pos
     }
 

@@ -99,7 +99,7 @@ impl FontLibrary {
             return Err(PlayerError::FontlibPathAlreadyExists { path });
         }
         if !path.exists() {
-            return Err(PlayerError::PathInaccessible { path });
+            return Err(PlayerError::PathDoesntExist { path });
         }
         self.paths.push(path);
         self.delet.push(false);

@@ -2,17 +2,12 @@ use std::collections::HashMap;
 
 use midi_msg::{ChannelVoiceMsg, GMSoundSet, MidiFile, MidiMsg, Track};
 
+#[derive(Debug, Default, Clone)]
 pub struct PresetMapper {
     pub map: HashMap<u8, u8>,
 }
 
 impl PresetMapper {
-    pub fn new() -> Self {
-        Self {
-            map: HashMap::new(),
-        }
-    }
-
     pub fn remap_value(&self, patch: u8) -> u8 {
         self.map.get(&patch).map_or_else(|| patch, |f| *f)
     }
@@ -178,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_get_remapped() {
-        let mut mapper = PresetMapper::new();
+        let mut mapper = PresetMapper::default();
         mapper.map.insert(4, 7);
         mapper.map.insert(5, 7);
 
