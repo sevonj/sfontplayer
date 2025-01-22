@@ -21,9 +21,18 @@ A simple midi player that makes soundfont comparison easy.
 ![image](packaging/res/screenshot_3.png)
 
 - **MIDI Inspector**  
-  Examine MIDI files at event level
+   Inspect your MIDI files in detail and mess with them
 
-...and more coming up!
+  - **Event Browser**  
+    Examine MIDI files at event level
+
+  - **Preset Mapper**  
+    Remap patches. Useful when the soundfont and MIDI file don't use the same patch map (e.g. [General Midi](https://en.wikipedia.org/wiki/General_MIDI#Program_change_events))
+
+  - **MIDI Renderer**  
+    Render your MIDI file to audio
+
+...and more to come!
 
 </details>
 
