@@ -996,18 +996,20 @@ mod tests {
 
         player.playlists[0].set_portable_path(Some("fakepath".into()));
 
-        assert_eq!(
+        assert!(matches!(
             player.save_portable_playlist(0).unwrap_err(),
             PlayerError::DebugBlockSaving
-        );
-        assert_eq!(
+        ));
+        assert!(matches!(
             player.save_all_portable_playlists().unwrap_err(),
             PlayerError::DebugBlockSaving
-        );
-        assert_eq!(
+        ));
+        assert!(matches!(
             player.save_playlist_as(0, "fakepath2".into()).unwrap_err(),
             PlayerError::DebugBlockSaving
-        );
+        ));
+        // Weird because anyhow.
+        // To be cleaned.
         assert_eq!(
             player.save_state().unwrap_err().to_string(),
             PlayerError::DebugBlockSaving.to_string()
@@ -1036,10 +1038,16 @@ mod tests {
             .open_midi_inspector(MidiMeta::new("src/assets/demo.mid".into()))
             .unwrap();
 
-        assert_eq!(player.skip().unwrap_err(), PlayerError::MidiOverride);
+        assert!(matches!(
+            player.skip().unwrap_err(),
+            PlayerError::MidiOverride
+        ));
         assert_eq!(player.get_playlist().get_song_idx(), None);
 
-        assert_eq!(player.skip_back().unwrap_err(), PlayerError::MidiOverride);
+        assert!(matches!(
+            player.skip_back().unwrap_err(),
+            PlayerError::MidiOverride
+        ));
         assert_eq!(player.get_playlist().get_song_idx(), None);
     }
 
@@ -1101,22 +1109,22 @@ mod tests {
             .open_midi_inspector(MidiMeta::new("src/assets/demo.mid".into()))
             .unwrap();
 
-        assert_eq!(
+        assert!(matches!(
             player.switch_playlist_left().unwrap_err(),
             PlayerError::MidiOverride
-        );
+        ));
         assert_eq!(player.get_playlist_idx(), 1);
 
-        assert_eq!(
+        assert!(matches!(
             player.switch_playlist_right().unwrap_err(),
             PlayerError::MidiOverride
-        );
+        ));
         assert_eq!(player.get_playlist_idx(), 1);
 
-        assert_eq!(
+        assert!(matches!(
             player.switch_to_playlist(0).unwrap_err(),
             PlayerError::MidiOverride
-        );
+        ));
         assert_eq!(player.get_playlist_idx(), 1);
     }
 
@@ -1144,28 +1152,28 @@ mod tests {
             .open_midi_inspector(MidiMeta::new("src/assets/demo.mid".into()))
             .unwrap();
 
-        assert_eq!(
+        assert!(matches!(
             player.new_playlist().unwrap_err(),
             PlayerError::MidiOverride
-        );
+        ));
         assert_eq!(player.get_playlists().len(), 3);
 
-        assert_eq!(
+        assert!(matches!(
             player.remove_playlist(1).unwrap_err(),
             PlayerError::MidiOverride
-        );
+        ));
         assert_eq!(player.get_playlists().len(), 3);
 
-        assert_eq!(
+        assert!(matches!(
             player.reopen_removed_playlist().unwrap_err(),
             PlayerError::MidiOverride
-        );
+        ));
         assert_eq!(player.get_playlists().len(), 3);
 
-        assert_eq!(
+        assert!(matches!(
             player.duplicate_playlist(1).unwrap_err(),
             PlayerError::MidiOverride
-        );
+        ));
         assert_eq!(player.get_playlists().len(), 3);
     }
 }

@@ -1,12 +1,15 @@
+mod midi_renderer;
 mod preset_mapper;
 
 use midi_msg::{ChannelVoiceMsg, Header, Meta, MidiFile, MidiMsg, Track};
+use midi_renderer::MidiRenderer;
 use rustysynth::SoundFont;
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use crate::player::{playlist::MidiMeta, PlayerError};
 pub use preset_mapper::PresetMapper;
 
+#[derive(Debug)]
 pub struct MidiInspectorTrack {
     /// Original track contents
     pub track: Track,
@@ -54,6 +57,7 @@ impl MidiInspectorTrack {
     }
 }
 
+#[derive(Debug)]
 pub struct MidiInspector {
     meta: MidiMeta,
     pub header: Header,
@@ -61,7 +65,10 @@ pub struct MidiInspector {
     soundfont: Option<Arc<SoundFont>>,
     /// Set of unique program change values in the file
     presets: HashSet<u8>,
+
     pub preset_mapper: PresetMapper,
+
+    pub renderer: MidiRenderer,
 }
 
 impl MidiInspector {
@@ -85,7 +92,8 @@ impl MidiInspector {
             tracks,
             soundfont,
             presets,
-            preset_mapper: PresetMapper::new(),
+            preset_mapper: PresetMapper::default(),
+            renderer: MidiRenderer::default(),
         })
     }
 
@@ -118,5 +126,13 @@ impl MidiInspector {
     /// Set of unique program change values in the file
     pub const fn get_presets(&self) -> &HashSet<u8> {
         &self.presets
+    }
+
+    pub fn render(&self) -> Result<(), PlayerError> {
+        let Some(soundfont) = &self.soundfont else {
+            return Err(PlayerError::AudioNoFont);
+        };
+        self.renderer.render(self.get_midi()?, soundfont)?;
+        Ok(())
     }
 }

@@ -13,7 +13,7 @@ pub struct FontMeta {
     filepath: PathBuf,
     filesize: Option<u64>,
     #[serde(skip)]
-    error: Option<PlayerError>,
+    error: Option<String>,
     pub is_queued_for_deletion: bool,
 }
 
@@ -36,17 +36,13 @@ impl FontMeta {
             fs::metadata(&self.filepath).map_or(None, |file_meta| Some(file_meta.len()));
 
         self.error = match self.get_soundfont() {
-            Err(e) => Some(e),
+            Err(e) => Some(e.to_string()),
             Ok(_) => None,
         }
     }
 
     pub fn get_soundfont(&self) -> Result<SoundFont, PlayerError> {
-        let Ok(mut fontfile) = File::open(self.get_path()) else {
-            return Err(PlayerError::PathInaccessible {
-                path: self.get_path(),
-            });
-        };
+        let mut fontfile = File::open(self.get_path())?;
         Ok(SoundFont::new(&mut fontfile)?)
     }
 
@@ -73,7 +69,7 @@ impl FontMeta {
 
     pub fn get_status(&self) -> Result<(), PlayerError> {
         if let Some(e) = &self.error {
-            return Err(e.clone());
+            return Err(PlayerError::FontFileError { msg: e.to_owned() });
         }
         Ok(())
     }
