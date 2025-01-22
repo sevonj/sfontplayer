@@ -31,12 +31,12 @@ pub enum PlayerError {
     PathDoesntExist { path: PathBuf },
     IoError { source: std::io::Error },
 
-    FontAlreadyExists, // TODO: https://github.com/sevonj/sfontplayer/issues/271
+    FontAlreadyExists,
     FontIndex { index: usize },
     FontMetaParse,
     FontFileError { msg: String },
 
-    // TODO: MidiAlreadyExists https://github.com/sevonj/sfontplayer/issues/271
+    MidiAlreadyExists,
     MidiIndex { index: usize },
     MidiMetaParse,
     MidiFileError { msg: String },
@@ -83,7 +83,7 @@ impl fmt::Display for PlayerError {
             Self::FontMetaParse => write!(f, "Failed to parse imported soundfont meta."),
             Self::FontFileError { msg } => write!(f, "Invalid soundfont: {msg}."),
 
-            // TODO: MidiAlreadyExists https://github.com/sevonj/sfontplayer/issues/271
+            Self::MidiAlreadyExists => write!(f, "This MIDI file is already in the list."),
             Self::MidiIndex { index } => write!(f, "MIDI file index {index} is out of range."),
             Self::MidiMetaParse => write!(f, "Failed to parse imported MIDI meta."),
             Self::MidiFileError { msg } => write!(f, "Invalid midi file: {msg}."),
