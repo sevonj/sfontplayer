@@ -10,6 +10,7 @@ A simple midi player that makes soundfont comparison easy.
 
 - **Changing between soundfonts takes one click**  
   This was the sole reason to start this project.
+
 - **Workspaces**  
   Playlists can be set to automatically track the contents of a directory (and subdirectories).
 
@@ -27,10 +28,10 @@ A simple midi player that makes soundfont comparison easy.
     Examine MIDI files at event level
 
   - **Preset Mapper**  
-    Remap patches. Useful when the soundfont and MIDI file don't use the same patch map (e.g. [General Midi](https://en.wikipedia.org/wiki/General_MIDI#Program_change_events))
+    Useful if the soundfont and MIDI file don't use the same patch map (e.g. [General Midi](https://en.wikipedia.org/wiki/General_MIDI#Program_change_events))
 
   - **MIDI Renderer**  
-    Render your MIDI file to audio
+    Render MIDI files to audio
 
 ...and more to come!
 
