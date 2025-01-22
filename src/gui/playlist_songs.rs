@@ -142,7 +142,7 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
                             .on_hover_text("Remove")
                             .clicked()
                     {
-                        let _ = player.get_playlist_mut().remove_song(index);
+                        let _ = player.get_playlist_mut().mark_song_for_removal(index);
                     }
                 });
                 // Filename
@@ -204,7 +204,7 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
                         player.get_playlist().get_song_list_mode() == FileListMode::Manual,
                         |ui| {
                             if ui.button("Remove").clicked() {
-                                let _ = player.get_playlist_mut().remove_song(index);
+                                let _ = player.get_playlist_mut().mark_song_for_removal(index);
                                 ui.close_menu();
                             }
                         },

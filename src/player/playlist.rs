@@ -135,18 +135,18 @@ impl Playlist {
         Ok(())
     }
 
-    pub fn remove_font(&mut self, index: usize) -> Result<(), PlayerError> {
+    pub fn mark_font_for_removal(&mut self, index: usize) -> Result<(), PlayerError> {
         if self.font_list_mode != FileListMode::Manual {
             return Err(PlayerError::ModifyDirList);
         }
-        self.force_remove_font(index)?;
+        self.force_mark_font_for_removal(index)?;
         Ok(())
     }
 
     /// Bypasses extra correctness checks meant for gui.
-    fn force_remove_font(&mut self, index: usize) -> Result<(), PlayerError> {
+    fn force_mark_font_for_removal(&mut self, index: usize) -> Result<(), PlayerError> {
         self.unsaved_changes = true;
-        self.fonts.remove(index)?;
+        self.fonts.mark_for_removal(index)?;
         Ok(())
     }
 
@@ -230,9 +230,10 @@ impl Playlist {
             }
         }
         for i in to_be_removed {
-            self.force_remove_font(i).expect("refresh: Font rm failed‽");
+            self.force_mark_font_for_removal(i)
+                .expect("refresh: Font rm failed‽");
         }
-        self.delete_queued();
+        self.remove_marked();
 
         // Look for new files
         let Some(dir) = &self.font_dir else {
@@ -316,19 +317,19 @@ impl Playlist {
         Ok(())
     }
 
-    pub fn remove_song(&mut self, index: usize) -> Result<(), PlayerError> {
+    pub fn mark_song_for_removal(&mut self, index: usize) -> Result<(), PlayerError> {
         if self.song_list_mode != FileListMode::Manual {
             return Err(PlayerError::ModifyDirList);
         }
-        self.force_remove_song(index)
+        self.force_mark_song_for_removal(index)
     }
 
     /// Bypasses extra correctness checks meant for gui.
-    fn force_remove_song(&mut self, index: usize) -> Result<(), PlayerError> {
+    fn force_mark_song_for_removal(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.midis.len() {
             return Err(PlayerError::MidiIndex { index });
         }
-        self.midis[index].is_queued_for_deletion = true;
+        self.midis[index].marked_for_removal = true;
         self.unsaved_changes = true;
         Ok(())
     }
@@ -383,27 +384,30 @@ impl Playlist {
             let filepath = self.midis[i].get_path();
             // File doesn't exist anymore
             if !filepath.exists() {
-                self.force_remove_song(i).expect("refresh: Song rm failed‽");
+                self.force_mark_song_for_removal(i)
+                    .expect("refresh: Song rm failed‽");
             }
             match self.song_list_mode {
                 FileListMode::Directory => {
                     // Delete if dir is not immediate parent
                     if filepath.parent() != self.midi_dir.as_deref() {
-                        self.force_remove_song(i).expect("refresh: Song rm failed‽");
+                        self.force_mark_song_for_removal(i)
+                            .expect("refresh: Song rm failed‽");
                     }
                 }
                 FileListMode::Subdirectories => {
                     // Delete if dir is not a parent
                     if let Some(dir) = &self.midi_dir {
                         if !filepath.starts_with(dir) {
-                            self.force_remove_song(i).expect("refresh: Song rm failed‽");
+                            self.force_mark_song_for_removal(i)
+                                .expect("refresh: Song rm failed‽");
                         }
                     }
                 }
                 FileListMode::Manual => unreachable!(),
             }
         }
-        self.delete_queued();
+        self.remove_marked();
 
         // Look for new files
         let Some(dir) = &self.midi_dir else {
@@ -541,10 +545,10 @@ impl Playlist {
 
     /// Midis and fonts aren't deleted immediately. A queue is used instead.
     /// This handles the queues, call at the end of the frame.
-    pub fn delete_queued(&mut self) {
+    pub fn remove_marked(&mut self) {
         // Songs
         for i in (0..self.midis.len()).rev() {
-            if !self.midis[i].is_queued_for_deletion {
+            if !self.midis[i].marked_for_removal {
                 continue;
             }
             self.midis.remove(i);
@@ -559,7 +563,7 @@ impl Playlist {
             }
         }
 
-        self.fonts.delete_queued();
+        self.fonts.remove_marked();
     }
 }
 
@@ -602,18 +606,18 @@ mod tests {
         playlist_dir.font_list_mode = FileListMode::Directory;
         playlist_sub.font_list_mode = FileListMode::Subdirectories;
 
-        playlist_man.remove_font(0).unwrap();
+        playlist_man.mark_font_for_removal(0).unwrap();
         assert!(matches!(
-            playlist_dir.remove_font(0).unwrap_err(),
+            playlist_dir.mark_font_for_removal(0).unwrap_err(),
             PlayerError::ModifyDirList
         ));
         assert!(matches!(
-            playlist_sub.remove_font(0).unwrap_err(),
+            playlist_sub.mark_font_for_removal(0).unwrap_err(),
             PlayerError::ModifyDirList
         ));
-        playlist_man.delete_queued();
-        playlist_dir.delete_queued();
-        playlist_sub.delete_queued();
+        playlist_man.remove_marked();
+        playlist_dir.remove_marked();
+        playlist_sub.remove_marked();
 
         assert_eq!(playlist_man.fonts.get_fonts().len(), 0);
         assert_eq!(playlist_dir.fonts.get_fonts().len(), 1);
@@ -654,18 +658,18 @@ mod tests {
         playlist_dir.song_list_mode = FileListMode::Directory;
         playlist_sub.song_list_mode = FileListMode::Subdirectories;
 
-        playlist_man.remove_song(0).unwrap();
+        playlist_man.mark_song_for_removal(0).unwrap();
         assert!(matches!(
-            playlist_dir.remove_song(0).unwrap_err(),
+            playlist_dir.mark_song_for_removal(0).unwrap_err(),
             PlayerError::ModifyDirList
         ));
         assert!(matches!(
-            playlist_sub.remove_song(0).unwrap_err(),
+            playlist_sub.mark_song_for_removal(0).unwrap_err(),
             PlayerError::ModifyDirList
         ));
-        playlist_man.delete_queued();
-        playlist_dir.delete_queued();
-        playlist_sub.delete_queued();
+        playlist_man.remove_marked();
+        playlist_dir.remove_marked();
+        playlist_sub.remove_marked();
 
         assert_eq!(playlist_man.midis.len(), 0);
         assert_eq!(playlist_dir.midis.len(), 1);
@@ -718,14 +722,14 @@ mod tests {
         playlist.add_font("fakepath".into()).unwrap();
         assert!(playlist.unsaved_changes);
         playlist.unsaved_changes = false;
-        playlist.remove_font(0).unwrap();
+        playlist.mark_font_for_removal(0).unwrap();
         assert!(playlist.unsaved_changes);
         playlist = Playlist::default();
         playlist.unsaved_changes = false;
         playlist.add_song("fakepath".into()).unwrap();
         assert!(playlist.unsaved_changes);
         playlist.unsaved_changes = false;
-        playlist.remove_song(0).unwrap();
+        playlist.mark_song_for_removal(0).unwrap();
         assert!(playlist.unsaved_changes);
     }
 
@@ -736,13 +740,13 @@ mod tests {
         playlist.force_add_font("fakepath1".into()).unwrap();
         assert!(playlist.unsaved_changes);
         playlist.unsaved_changes = false;
-        playlist.force_remove_font(0).unwrap();
+        playlist.force_mark_font_for_removal(0).unwrap();
         assert!(playlist.unsaved_changes);
         playlist.unsaved_changes = false;
         playlist.force_add_song("fakepath2".into()).unwrap();
         assert!(playlist.unsaved_changes);
         playlist.unsaved_changes = false;
-        playlist.force_remove_song(0).unwrap();
+        playlist.force_mark_song_for_removal(0).unwrap();
         assert!(playlist.unsaved_changes);
     }
 

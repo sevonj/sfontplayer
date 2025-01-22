@@ -119,7 +119,7 @@ impl Player {
             }
         }
 
-        self.get_playlist_mut().delete_queued();
+        self.get_playlist_mut().remove_marked();
         self.font_lib.update();
         self.delete_queued_playlists();
 

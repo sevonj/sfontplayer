@@ -14,7 +14,7 @@ pub struct FontMeta {
     filesize: Option<u64>,
     #[serde(skip)]
     error: Option<String>,
-    pub is_queued_for_deletion: bool,
+    pub marked_for_removal: bool,
 }
 
 impl FontMeta {
@@ -24,7 +24,7 @@ impl FontMeta {
             filepath,
             filesize: None,
             error: None,
-            is_queued_for_deletion: false,
+            marked_for_removal: false,
         };
         this.refresh();
         this
@@ -88,7 +88,7 @@ impl TryFrom<&serde_json::Value> for FontMeta {
             filepath: path_str.into(),
             filesize,
             error: None,
-            is_queued_for_deletion: false,
+            marked_for_removal: false,
         })
     }
 }
