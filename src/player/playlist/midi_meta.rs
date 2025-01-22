@@ -12,7 +12,7 @@ pub struct MidiMeta {
     duration: Option<Duration>,
     #[serde(skip)]
     error: Option<String>,
-    pub is_queued_for_deletion: bool,
+    pub marked_for_removal: bool,
 }
 
 impl MidiMeta {
@@ -23,7 +23,7 @@ impl MidiMeta {
             filesize: None,
             duration: None,
             error: None,
-            is_queued_for_deletion: false,
+            marked_for_removal: false,
         };
         this.refresh();
         this
@@ -108,7 +108,7 @@ impl TryFrom<&serde_json::Value> for MidiMeta {
             filesize,
             duration,
             error: None,
-            is_queued_for_deletion: false,
+            marked_for_removal: false,
         })
     }
 }

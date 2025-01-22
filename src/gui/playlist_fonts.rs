@@ -114,7 +114,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                             .on_hover_text("Remove")
                             .clicked()
                     {
-                        let _ = player.get_playlist_mut().remove_font(index);
+                        let _ = player.get_playlist_mut().mark_font_for_removal(index);
                     }
                 });
                 // Filename
@@ -163,7 +163,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         player.get_playlist().get_font_list_mode() == FileListMode::Manual,
                         |ui| {
                             if ui.button("Remove").clicked() {
-                                let _ = player.get_playlist_mut().remove_font(index);
+                                let _ = player.get_playlist_mut().mark_font_for_removal(index);
                                 ui.close_menu();
                             }
                         },

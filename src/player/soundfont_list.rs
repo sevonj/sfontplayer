@@ -72,25 +72,20 @@ impl FontList {
         Ok(())
     }
 
-    pub fn remove(&mut self, index: usize) -> Result<(), PlayerError> {
+    /// Remove font - safe for iteration.
+    /// See also: `remove_marked`
+    pub fn mark_for_removal(&mut self, index: usize) -> Result<(), PlayerError> {
         if index >= self.fonts.len() {
             return Err(PlayerError::FontIndex { index });
         }
-        self.fonts.remove(index);
-        // Check if deletion affected index
-        if let Some(current) = self.selected {
-            match index {
-                deleted if deleted == current => self.selected = None,
-                deleted if deleted < current => self.selected = Some(current - 1),
-                _ => (),
-            }
-        }
+        self.fonts[index].marked_for_removal = true;
         Ok(())
     }
 
-    pub fn delete_queued(&mut self) {
+    /// Remove all fonts marked for removal.
+    pub fn remove_marked(&mut self) {
         for i in (0..self.fonts.len()).rev() {
-            if !self.fonts[i].is_queued_for_deletion {
+            if !self.fonts[i].marked_for_removal {
                 continue;
             }
             self.fonts.remove(i);
@@ -172,5 +167,30 @@ impl FontList {
     pub fn set_sort(&mut self, sort: FontSort) {
         self.sort = sort;
         self.sort();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_removal_happens_at_correct_place() {
+        let mut font_list = FontList::default();
+        assert_eq!(font_list.get_fonts().len(), 0);
+        println!("{font_list:?}");
+
+        font_list.add(FontMeta::new("FakeFont".into())).unwrap();
+        assert_eq!(font_list.get_fonts().len(), 1);
+        println!("{font_list:?}");
+
+        font_list.mark_for_removal(0).unwrap();
+        assert_eq!(font_list.get_fonts().len(), 1);
+        println!("{font_list:?}");
+
+        font_list.remove_marked();
+        assert_eq!(font_list.get_fonts().len(), 0);
+        println!("{font_list:?}");
     }
 }
