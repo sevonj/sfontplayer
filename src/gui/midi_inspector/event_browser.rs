@@ -16,7 +16,7 @@ pub fn build_event_browser(ui: &mut Ui, inspector: &mut MidiInspector) {
     ScrollArea::vertical().show(ui, |ui| {
         ui.set_width(ui.available_width());
 
-        build_header_panel(ui, &inspector.header, &inspector.get_filepath());
+        build_header_panel(ui, &inspector.header, inspector.midi_filepath());
         for i in 0..inspector.tracks.len() {
             let track = &mut inspector.tracks[i];
             ui.separator();

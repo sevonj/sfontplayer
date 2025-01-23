@@ -51,12 +51,12 @@ impl Player {
             };
             let midi = &self.get_playlist().get_songs()[midi_index];
 
-            let filename = midi.get_name();
+            let filename = midi.filename();
             let _ = self.mediacontrol.set_metadata(MediaMetadata {
                 title: Some(&filename),
                 // Give an empty name to hide "Unknown Artist"
                 artist: Some(""),
-                duration: midi.get_duration(),
+                duration: midi.duration(),
                 ..MediaMetadata::default()
             });
 

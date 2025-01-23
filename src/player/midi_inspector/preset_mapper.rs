@@ -8,10 +8,12 @@ pub struct PresetMapper {
 }
 
 impl PresetMapper {
-    pub fn remap_value(&self, patch: u8) -> u8 {
+    /// Get remapped patch. Returns original if not mapped.
+    pub fn mapped_patch(&self, patch: u8) -> u8 {
         self.map.get(&patch).map_or_else(|| patch, |f| *f)
     }
 
+    /// Apply the mapping to a MIDI file.
     pub fn remap_midi(&self, midi_file: &mut MidiFile) {
         for track in &mut midi_file.tracks {
             let Track::Midi(midi_track) = track else {
@@ -24,7 +26,7 @@ impl PresetMapper {
                 let ChannelVoiceMsg::ProgramChange { program } = msg else {
                     continue;
                 };
-                let remapped = self.remap_value(*program);
+                let remapped = self.mapped_patch(*program);
                 *msg = ChannelVoiceMsg::ProgramChange { program: remapped };
             }
         }
@@ -177,11 +179,11 @@ mod tests {
         mapper.map.insert(4, 7);
         mapper.map.insert(5, 7);
 
-        assert_eq!(mapper.remap_value(2), 2);
-        assert_eq!(mapper.remap_value(3), 3);
-        assert_eq!(mapper.remap_value(4), 7); // mapped
-        assert_eq!(mapper.remap_value(5), 7); // mapped
-        assert_eq!(mapper.remap_value(6), 6);
-        assert_eq!(mapper.remap_value(7), 7);
+        assert_eq!(mapper.mapped_patch(2), 2);
+        assert_eq!(mapper.mapped_patch(3), 3);
+        assert_eq!(mapper.mapped_patch(4), 7); // mapped
+        assert_eq!(mapper.mapped_patch(5), 7); // mapped
+        assert_eq!(mapper.mapped_patch(6), 6);
+        assert_eq!(mapper.mapped_patch(7), 7);
     }
 }

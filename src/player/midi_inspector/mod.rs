@@ -52,28 +52,26 @@ impl MidiInspectorTrack {
     }
 
     /// Set of unique program change values in the track
-    pub const fn get_presets(&self) -> &HashSet<u8> {
+    pub const fn presets(&self) -> &HashSet<u8> {
         &self.presets
     }
 }
 
 #[derive(Debug)]
 pub struct MidiInspector {
-    meta: MidiMeta,
+    midimeta: MidiMeta,
     pub header: Header,
     pub tracks: Vec<MidiInspectorTrack>,
     soundfont: Option<Arc<SoundFont>>,
     /// Set of unique program change values in the file
     presets: HashSet<u8>,
-
     pub preset_mapper: PresetMapper,
-
-    pub renderer: MidiRenderer,
+    pub midi_renderer: MidiRenderer,
 }
 
 impl MidiInspector {
-    pub fn new(meta: MidiMeta, soundfont: Option<Arc<SoundFont>>) -> Result<Self, PlayerError> {
-        let midi_file = meta.get_midifile()?;
+    pub fn new(midimeta: MidiMeta, soundfont: Option<Arc<SoundFont>>) -> Result<Self, PlayerError> {
+        let midi_file = midimeta.fetch_midifile()?;
 
         let header = midi_file.header;
         let mut tracks = vec![];
@@ -83,39 +81,38 @@ impl MidiInspector {
 
         let mut presets = HashSet::new();
         for track in &tracks {
-            presets.extend(track.get_presets());
+            presets.extend(track.presets());
         }
 
         Ok(Self {
-            meta,
+            midimeta,
             header,
             tracks,
             soundfont,
             presets,
             preset_mapper: PresetMapper::default(),
-            renderer: MidiRenderer::default(),
+            midi_renderer: MidiRenderer::default(),
         })
     }
 
     /// Filepath of inspected MIDI file
-    pub fn get_filepath(&self) -> PathBuf {
-        self.meta.get_path()
+    pub const fn midi_filepath(&self) -> &PathBuf {
+        self.midimeta.filepath()
     }
 
     /// `MidiMeta` of inspected MIDI file
-    pub const fn get_meta(&self) -> &MidiMeta {
-        &self.meta
+    pub const fn midimeta(&self) -> &MidiMeta {
+        &self.midimeta
     }
 
-    pub fn get_midi(&self) -> Result<MidiFile, PlayerError> {
-        let mut midi_file = self.meta.get_midifile()?;
-
-        self.preset_mapper.remap_midi(&mut midi_file);
-
-        Ok(midi_file)
+    /// Get the inspected midi file, with potential changes made by the user.
+    pub fn midifile(&self) -> Result<MidiFile, PlayerError> {
+        let mut midifile = self.midimeta.fetch_midifile()?;
+        self.preset_mapper.remap_midi(&mut midifile);
+        Ok(midifile)
     }
 
-    pub fn get_soundfont(&self) -> Option<Arc<SoundFont>> {
+    pub fn soundfont(&self) -> Option<Arc<SoundFont>> {
         self.soundfont.clone()
     }
 
@@ -124,7 +121,7 @@ impl MidiInspector {
     }
 
     /// Set of unique program change values in the file
-    pub const fn get_presets(&self) -> &HashSet<u8> {
+    pub const fn presets(&self) -> &HashSet<u8> {
         &self.presets
     }
 
@@ -132,7 +129,7 @@ impl MidiInspector {
         let Some(soundfont) = &self.soundfont else {
             return Err(PlayerError::AudioNoFont);
         };
-        self.renderer.render(self.get_midi()?, soundfont)?;
+        self.midi_renderer.render(self.midifile()?, soundfont)?;
         Ok(())
     }
 }

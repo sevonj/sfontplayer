@@ -3,7 +3,7 @@ use egui_extras::{Column, TableBuilder};
 use size_format::SizeFormatterBinary;
 
 use super::{actions, TBL_ROW_H};
-use crate::player::playlist::{FileListMode, FontMeta};
+use crate::player::playlist::FileListMode;
 use crate::{
     player::{FontSort, Player},
     GuiState,
@@ -92,10 +92,10 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         body.rows(TBL_ROW_H, player.font_lib.get_fonts().len(), |mut row| {
             let index = row.index();
             let fontref = &player.font_lib.get_fonts()[index];
-            let filename = fontref.get_name();
-            let filepath = fontref.get_path();
-            let filesize = fontref.get_size();
-            let status = fontref.get_status();
+            let filename = fontref.filename();
+            let filepath = fontref.filepath().to_owned();
+            let filesize = fontref.filesize();
+            let status = fontref.status();
 
             row.set_selected(Some(index) == player.font_lib.get_selected_index());
 
@@ -147,10 +147,13 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                     }
                     ui.close_menu();
                 }
-                actions::open_file_dir(ui, &player.font_lib.get_fonts()[index].get_path(), gui);
+                actions::open_file_dir(ui, player.font_lib.get_fonts()[index].filepath(), gui);
 
                 ui.menu_button("Add to playlist", |ui| {
-                    let Ok(filepath) = player.font_lib.get_font(index).map(FontMeta::get_path)
+                    let Ok(filepath) = player
+                        .font_lib
+                        .get_font(index)
+                        .map(|meta| meta.filepath().to_owned())
                     else {
                         ui.label("Failed to get font");
                         return;

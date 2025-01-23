@@ -29,7 +29,7 @@ impl TryFrom<u8> for FontSort {
 #[derive(Debug, Default, Clone)]
 pub struct FontList {
     fonts: Vec<FontMeta>,
-    sort: FontSort,
+    sort_mode: FontSort,
     selected: Option<usize>,
 }
 
@@ -42,33 +42,44 @@ impl FontList {
             None
         };
         // Sort
-        match self.sort {
-            FontSort::NameAsc => self.fonts.sort_by_key(|f| f.get_name().to_lowercase()),
+        match self.sort_mode {
+            FontSort::NameAsc => self.fonts.sort_by_key(|f| f.filename().to_lowercase()),
             FontSort::NameDesc => {
-                self.fonts.sort_by_key(|f| f.get_name().to_lowercase());
+                self.fonts.sort_by_key(|f| f.filename().to_lowercase());
                 self.fonts.reverse();
             }
-            FontSort::SizeAsc => self.fonts.sort_by_key(FontMeta::get_size),
+            FontSort::SizeAsc => self.fonts.sort_by_key(FontMeta::filesize),
             FontSort::SizeDesc => {
-                self.fonts.sort_by_key(FontMeta::get_size);
+                self.fonts.sort_by_key(FontMeta::filesize);
                 self.fonts.reverse();
             }
         };
         // Find the selected again
         if let Some(selected) = selected {
             for i in 0..self.fonts.len() {
-                if self.fonts[i].get_path() == selected.get_path() {
+                if self.fonts[i].filepath() == selected.filepath() {
                     self.selected = Some(i);
                 }
             }
         }
     }
 
-    pub fn add(&mut self, font: FontMeta) -> Result<(), PlayerError> {
-        if self.contains(&font.get_path()) {
+    /// Add a font. Use this unles you can't.
+    pub fn add(&mut self, filepath: PathBuf) -> Result<(), PlayerError> {
+        if self.contains(&filepath) {
             return Err(PlayerError::FontAlreadyExists);
         }
-        self.fonts.push(font);
+        self.fonts.push(FontMeta::new(filepath));
+        Ok(())
+    }
+
+    /// Add a fontmeta you have already loaded.
+    /// Instead of pre-loading them, add them by filepath if you can.
+    pub fn add_fontmeta(&mut self, fontmeta: FontMeta) -> Result<(), PlayerError> {
+        if self.contains(fontmeta.filepath()) {
+            return Err(PlayerError::FontAlreadyExists);
+        }
+        self.fonts.push(fontmeta);
         Ok(())
     }
 
@@ -108,14 +119,14 @@ impl FontList {
 
     pub fn contains(&self, filepath: &PathBuf) -> bool {
         for i in 0..self.fonts.len() {
-            if self.fonts[i].get_path() == *filepath {
+            if *self.fonts[i].filepath() == *filepath {
                 return true;
             }
         }
         false
     }
 
-    pub const fn get_fonts(&self) -> &Vec<FontMeta> {
+    pub const fn fonts(&self) -> &Vec<FontMeta> {
         &self.fonts
     }
 
@@ -133,17 +144,17 @@ impl FontList {
         Ok(&mut self.fonts[index])
     }
 
-    pub fn get_selected(&self) -> Option<&FontMeta> {
+    pub fn selected(&self) -> Option<&FontMeta> {
         let index = self.selected?;
         Some(&self.fonts[index])
     }
 
-    pub fn get_selected_mut(&mut self) -> Option<&mut FontMeta> {
+    pub fn selected_mut(&mut self) -> Option<&mut FontMeta> {
         let index = self.selected?;
         Some(&mut self.fonts[index])
     }
 
-    pub const fn get_selected_index(&self) -> Option<usize> {
+    pub const fn selected_index(&self) -> Option<usize> {
         self.selected
     }
 
@@ -160,12 +171,12 @@ impl FontList {
         Ok(())
     }
 
-    pub const fn get_sort(&self) -> FontSort {
-        self.sort
+    pub const fn sort_mode(&self) -> FontSort {
+        self.sort_mode
     }
 
-    pub fn set_sort(&mut self, sort: FontSort) {
-        self.sort = sort;
+    pub fn set_sort_mode(&mut self, sort: FontSort) {
+        self.sort_mode = sort;
         self.sort();
     }
 }
@@ -178,19 +189,19 @@ mod tests {
     #[test]
     fn test_removal_happens_at_correct_place() {
         let mut font_list = FontList::default();
-        assert_eq!(font_list.get_fonts().len(), 0);
+        assert_eq!(font_list.fonts().len(), 0);
         println!("{font_list:?}");
 
-        font_list.add(FontMeta::new("FakeFont".into())).unwrap();
-        assert_eq!(font_list.get_fonts().len(), 1);
+        font_list.add("FakeFont".into()).unwrap();
+        assert_eq!(font_list.fonts().len(), 1);
         println!("{font_list:?}");
 
         font_list.mark_for_removal(0).unwrap();
-        assert_eq!(font_list.get_fonts().len(), 1);
+        assert_eq!(font_list.fonts().len(), 1);
         println!("{font_list:?}");
 
         font_list.remove_marked();
-        assert_eq!(font_list.get_fonts().len(), 0);
+        assert_eq!(font_list.fonts().len(), 0);
         println!("{font_list:?}");
     }
 }

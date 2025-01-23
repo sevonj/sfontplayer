@@ -67,17 +67,17 @@ impl Playlist {
         // Fast guess
         if path.ends_with(".mid") {
             let midimeta = MidiMeta::new(path.clone());
-            if midimeta.get_status().is_ok() {
+            if midimeta.status().is_ok() {
                 return self.add_song(path);
             }
         }
         // Try all types
         let fontmeta = FontMeta::new(path.clone());
-        if fontmeta.get_status().is_ok() {
+        if fontmeta.status().is_ok() {
             return self.add_font(path);
         }
         let midimeta = MidiMeta::new(path.clone());
-        if midimeta.get_status().is_ok() {
+        if midimeta.status().is_ok() {
             return self.add_song(path);
         }
 
@@ -95,19 +95,19 @@ impl Playlist {
     }
 
     pub fn get_selected_font(&self) -> Option<&FontMeta> {
-        self.fonts.get_selected()
+        self.fonts.selected()
     }
 
     pub fn get_selected_font_mut(&mut self) -> Option<&mut FontMeta> {
-        self.fonts.get_selected_mut()
+        self.fonts.selected_mut()
     }
 
     pub const fn get_fonts(&self) -> &Vec<FontMeta> {
-        self.fonts.get_fonts()
+        self.fonts.fonts()
     }
 
     pub const fn get_font_idx(&self) -> Option<usize> {
-        self.fonts.get_selected_index()
+        self.fonts.selected_index()
     }
 
     pub fn select_font(&mut self, index: usize) -> Result<(), PlayerError> {
@@ -119,18 +119,18 @@ impl Playlist {
         self.fonts.set_selected_index(None).expect("unreachable");
     }
 
-    pub fn add_font(&mut self, path: PathBuf) -> Result<(), PlayerError> {
+    pub fn add_font(&mut self, filepath: PathBuf) -> Result<(), PlayerError> {
         if self.font_list_mode != FileListMode::Manual {
             return Err(PlayerError::ModifyDirList);
         }
-        self.force_add_font(path)?;
+        self.force_add_font(filepath)?;
         self.recrawl_fonts();
         Ok(())
     }
 
     /// Bypasses extra correctness checks meant for gui.
-    fn force_add_font(&mut self, path: PathBuf) -> Result<(), PlayerError> {
-        self.fonts.add(FontMeta::new(path))?;
+    fn force_add_font(&mut self, filepath: PathBuf) -> Result<(), PlayerError> {
+        self.fonts.add(filepath)?;
         self.unsaved_changes = true;
         Ok(())
     }
@@ -164,11 +164,11 @@ impl Playlist {
     }
 
     pub const fn get_font_sort(&self) -> FontSort {
-        self.fonts.get_sort()
+        self.fonts.sort_mode()
     }
 
     pub fn set_font_sort(&mut self, sort: FontSort) {
-        self.fonts.set_sort(sort);
+        self.fonts.set_sort_mode(sort);
         self.recrawl_fonts();
     }
 
@@ -205,8 +205,8 @@ impl Playlist {
 
         // Remove files
         let mut to_be_removed = vec![];
-        for (i, font) in self.fonts.get_fonts().iter().enumerate() {
-            let filepath = font.get_path();
+        for (i, font) in self.fonts.fonts().iter().enumerate() {
+            let filepath = font.filepath();
             // File doesn't exist anymore
             if !filepath.exists() {
                 to_be_removed.push(i);
@@ -298,21 +298,21 @@ impl Playlist {
         Ok(())
     }
 
-    pub fn add_song(&mut self, path: PathBuf) -> Result<(), PlayerError> {
+    pub fn add_song(&mut self, filepath: PathBuf) -> Result<(), PlayerError> {
         if self.song_list_mode != FileListMode::Manual {
             return Err(PlayerError::ModifyDirList);
         }
-        self.force_add_song(path)?;
+        self.force_add_song(filepath)?;
         self.refresh_song_list();
         Ok(())
     }
 
     /// Bypasses extra correctness checks meant for gui.
-    fn force_add_song(&mut self, path: PathBuf) -> Result<(), PlayerError> {
-        if self.contains_song(&path) {
+    fn force_add_song(&mut self, filepath: PathBuf) -> Result<(), PlayerError> {
+        if self.contains_song(&filepath) {
             return Err(PlayerError::MidiAlreadyExists);
         }
-        self.midis.push(MidiMeta::new(path));
+        self.midis.push(MidiMeta::new(filepath));
         self.unsaved_changes = true;
         Ok(())
     }
@@ -342,7 +342,7 @@ impl Playlist {
 
     pub fn contains_song(&self, filepath: &PathBuf) -> bool {
         for i in 0..self.midis.len() {
-            if self.midis[i].get_path() == *filepath {
+            if *self.midis[i].filepath() == *filepath {
                 return true;
             }
         }
@@ -381,7 +381,7 @@ impl Playlist {
 
         // Remove files
         for i in 0..self.midis.len() {
-            let filepath = self.midis[i].get_path();
+            let filepath = self.midis[i].filepath().to_owned();
             // File doesn't exist anymore
             if !filepath.exists() {
                 self.force_mark_song_for_removal(i)
@@ -456,23 +456,23 @@ impl Playlist {
 
         // Sort
         match self.song_sort {
-            SongSort::NameAsc => self.midis.sort_by_key(|f| f.get_name().to_lowercase()),
+            SongSort::NameAsc => self.midis.sort_by_key(|f| f.filename().to_lowercase()),
             SongSort::NameDesc => {
-                self.midis.sort_by_key(|f| f.get_name().to_lowercase());
+                self.midis.sort_by_key(|f| f.filename().to_lowercase());
                 self.midis.reverse();
             }
 
             SongSort::TimeAsc => self
                 .midis
-                .sort_by_key(|f| f.get_duration().unwrap_or(Duration::ZERO)),
+                .sort_by_key(|f| f.duration().unwrap_or(Duration::ZERO)),
             SongSort::TimeDesc => {
                 self.midis
-                    .sort_by_key(|f| f.get_duration().unwrap_or(Duration::ZERO));
+                    .sort_by_key(|f| f.duration().unwrap_or(Duration::ZERO));
                 self.midis.reverse();
             }
-            SongSort::SizeAsc => self.midis.sort_by_key(midi_meta::MidiMeta::get_size),
+            SongSort::SizeAsc => self.midis.sort_by_key(midi_meta::MidiMeta::filesize),
             SongSort::SizeDesc => {
-                self.midis.sort_by_key(midi_meta::MidiMeta::get_size);
+                self.midis.sort_by_key(midi_meta::MidiMeta::filesize);
                 self.midis.reverse();
             }
         };
@@ -480,7 +480,7 @@ impl Playlist {
         // Find the selected again
         if let Some(selected) = selected_song {
             for i in 0..self.midis.len() {
-                if self.midis[i].get_path() == selected.get_path() {
+                if self.midis[i].filepath() == selected.filepath() {
                     self.midi_idx = Some(i);
                 }
             }
@@ -589,9 +589,9 @@ mod tests {
             playlist_sub.add_font("fakepath".into()).unwrap_err(),
             PlayerError::ModifyDirList
         ));
-        assert_eq!(playlist_man.fonts.get_fonts().len(), 1);
-        assert_eq!(playlist_dir.fonts.get_fonts().len(), 0);
-        assert_eq!(playlist_sub.fonts.get_fonts().len(), 0);
+        assert_eq!(playlist_man.fonts.fonts().len(), 1);
+        assert_eq!(playlist_dir.fonts.fonts().len(), 0);
+        assert_eq!(playlist_sub.fonts.fonts().len(), 0);
     }
 
     #[test]
@@ -619,9 +619,9 @@ mod tests {
         playlist_dir.remove_marked();
         playlist_sub.remove_marked();
 
-        assert_eq!(playlist_man.fonts.get_fonts().len(), 0);
-        assert_eq!(playlist_dir.fonts.get_fonts().len(), 1);
-        assert_eq!(playlist_sub.fonts.get_fonts().len(), 1);
+        assert_eq!(playlist_man.fonts.fonts().len(), 0);
+        assert_eq!(playlist_dir.fonts.fonts().len(), 1);
+        assert_eq!(playlist_sub.fonts.fonts().len(), 1);
     }
 
     #[test]

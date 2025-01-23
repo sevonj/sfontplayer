@@ -12,7 +12,10 @@ pub fn build_midi_renderer(ui: &mut Ui, inspector: &mut MidiInspector, gui: &mut
 
             ui.label("Format: WAVE");
             ui.label("Channels: 2");
-            ui.label(format!("Sample rate: {}", inspector.renderer.sample_rate));
+            ui.label(format!(
+                "Sample rate: {}",
+                inspector.midi_renderer.sample_rate
+            ));
             ui.label("Bit depth: 16");
         });
 
@@ -26,7 +29,7 @@ pub fn build_midi_renderer(ui: &mut Ui, inspector: &mut MidiInspector, gui: &mut
                 }
                 Frame::canvas(ui.style()).show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.label(inspector.renderer.filepath.to_string_lossy().as_str());
+                    ui.label(inspector.midi_renderer.filepath.to_string_lossy().as_str());
                 });
             })
         });
@@ -48,9 +51,9 @@ pub fn show_filepath_dialog(inspector: &mut MidiInspector) {
     if let Some(filepath) = FileDialog::new()
         .add_filter("Wave file", &["wav"])
         .set_title("Render to file")
-        .set_file_name(format!("{}.wav", inspector.get_meta().get_name()))
+        .set_file_name(format!("{}.wav", inspector.midimeta().filename()))
         .save_file()
     {
-        inspector.renderer.filepath = filepath;
+        inspector.midi_renderer.filepath = filepath;
     }
 }

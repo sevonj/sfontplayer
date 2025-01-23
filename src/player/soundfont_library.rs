@@ -30,15 +30,15 @@ impl FontLibrary {
     }
 
     pub const fn get_sort(&self) -> FontSort {
-        self.fontlist.get_sort()
+        self.fontlist.sort_mode()
     }
 
     pub fn set_sort(&mut self, sort: FontSort) {
-        self.fontlist.set_sort(sort);
+        self.fontlist.set_sort_mode(sort);
     }
 
     pub const fn get_fonts(&self) -> &Vec<FontMeta> {
-        self.fontlist.get_fonts()
+        self.fontlist.fonts()
     }
 
     pub fn get_font(&self, index: usize) -> Result<&FontMeta, PlayerError> {
@@ -50,15 +50,15 @@ impl FontLibrary {
     }
 
     pub fn get_selected(&self) -> Option<&FontMeta> {
-        self.fontlist.get_selected()
+        self.fontlist.selected()
     }
 
     pub fn get_selected_mut(&mut self) -> Option<&mut FontMeta> {
-        self.fontlist.get_selected_mut()
+        self.fontlist.selected_mut()
     }
 
     pub const fn get_selected_index(&self) -> Option<usize> {
-        self.fontlist.get_selected_index()
+        self.fontlist.selected_index()
     }
 
     pub fn select(&mut self, index: usize) -> Result<(), PlayerError> {
@@ -84,14 +84,16 @@ impl FontLibrary {
         false
     }
 
-    pub fn select_by_path(&mut self, path: PathBuf) -> Result<(), PlayerError> {
+    pub fn select_by_filepath(&mut self, filepath: &PathBuf) -> Result<(), PlayerError> {
         for (i, font) in self.get_fonts().iter().enumerate() {
-            if font.get_path() == path {
+            if *font.filepath() == *filepath {
                 let _ = self.fontlist.set_selected_index(Some(i));
                 return Ok(());
             }
         }
-        Err(PlayerError::FontlibNoSuchFont { path })
+        Err(PlayerError::FontlibNoSuchFont {
+            filepath: filepath.to_owned(),
+        })
     }
 
     pub fn add_path(&mut self, path: PathBuf) -> Result<(), PlayerError> {
@@ -124,7 +126,7 @@ impl FontLibrary {
 
     pub fn refresh(&mut self) {
         let mut found_files = vec![];
-        let selected_font_path = self.get_selected().map(FontMeta::get_path);
+        let selected_font_path = self.get_selected().map(|meta| meta.filepath().to_owned());
 
         self.fontlist.clear();
         for input_path in &self.paths {
@@ -159,12 +161,12 @@ impl FontLibrary {
         }
 
         for filepath in found_files {
-            let _ = self.fontlist.add(FontMeta::new(filepath));
+            let _ = self.fontlist.add(filepath);
         }
 
-        if let Some(path) = selected_font_path {
+        if let Some(filepath) = selected_font_path {
             let _ = self.fontlist.set_selected_index(None);
-            let _ = self.select_by_path(path);
+            let _ = self.select_by_filepath(&filepath);
         }
 
         self.sort();
