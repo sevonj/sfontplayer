@@ -1,6 +1,6 @@
 [package]
 name = "sfontplayer"
-version = "0.12.1"
+version = "0.12.2"
 edition = "2021"
 repository = "https://github.com/sevonj/sfontplayer"
 license = "GPL-3.0-or-later"
