@@ -104,7 +104,7 @@ impl Player {
 
         let data = json!({
             "paths": self.font_lib.get_paths(),
-            "selected": self.font_lib.get_selected().map(FontMeta::get_path)
+            "selected": self.font_lib.get_selected().map(FontMeta::filepath)
         });
 
         file.write_all(data.to_string().as_bytes())?;
@@ -128,7 +128,7 @@ impl Player {
         let Some(selected) = data["selected"].as_str().map(std::convert::Into::into) else {
             bail!("Couldn't parse paths");
         };
-        let _ = self.font_lib.select_by_path(selected);
+        let _ = self.font_lib.select_by_filepath(&selected);
 
         Ok(())
     }

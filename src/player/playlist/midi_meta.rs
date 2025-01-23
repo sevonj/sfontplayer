@@ -4,7 +4,7 @@ use std::{fs, path::PathBuf, time::Duration};
 
 use crate::player::PlayerError;
 
-/// Reference to a midi file with metadata
+/// Reference to a MIDI file with metadata
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct MidiMeta {
     filepath: PathBuf,
@@ -55,20 +55,21 @@ impl MidiMeta {
         self.error = error;
     }
 
-    pub fn get_midifile(&self) -> Result<midi_msg::MidiFile, PlayerError> {
-        let bytes = fs::read(self.get_path())?;
+    /// Load the MIDI file
+    pub fn fetch_midifile(&self) -> Result<midi_msg::MidiFile, PlayerError> {
+        let bytes = fs::read(self.filepath())?;
         Ok(midi_msg::MidiFile::from_midi(bytes.as_slice())?)
     }
 
-    pub fn get_path(&self) -> PathBuf {
-        self.filepath.clone()
+    pub const fn filepath(&self) -> &PathBuf {
+        &self.filepath
     }
 
-    pub fn set_path(&mut self, filepath: PathBuf) {
+    pub fn set_filepath(&mut self, filepath: PathBuf) {
         self.filepath = filepath;
     }
 
-    pub fn get_name(&self) -> String {
+    pub fn filename(&self) -> String {
         self.filepath
             .file_name()
             .expect("No filename")
@@ -77,15 +78,18 @@ impl MidiMeta {
             .to_owned()
     }
 
-    pub const fn get_duration(&self) -> Option<Duration> {
+    /// Duration of the MIDI file
+    pub const fn duration(&self) -> Option<Duration> {
         self.duration
     }
 
-    pub const fn get_size(&self) -> Option<u64> {
+    /// Size of the MIDI file
+    pub const fn filesize(&self) -> Option<u64> {
         self.filesize
     }
 
-    pub fn get_status(&self) -> Result<(), PlayerError> {
+    /// Is the actual MIDI file accessible and OK?
+    pub fn status(&self) -> Result<(), PlayerError> {
         if let Some(e) = &self.error {
             return Err(PlayerError::MidiFileError { msg: e.to_owned() });
         }
@@ -134,7 +138,7 @@ mod tests {
         playlist.midis.push(song);
         let new_playlist = run_serialize(playlist);
         assert_eq!(
-            new_playlist.midis[0].get_path().to_str().unwrap(),
+            new_playlist.midis[0].filepath().to_str().unwrap(),
             "Fakepath"
         );
     }
@@ -155,8 +159,8 @@ mod tests {
         playlist.midis.push(song_none);
         playlist.midis.push(song_420);
         let new_playlist = run_serialize(playlist);
-        assert_eq!(new_playlist.midis[0].get_size(), None);
-        assert_eq!(new_playlist.midis[1].get_size().unwrap(), 420);
+        assert_eq!(new_playlist.midis[0].filesize(), None);
+        assert_eq!(new_playlist.midis[1].filesize().unwrap(), 420);
     }
 
     #[test]
@@ -175,9 +179,9 @@ mod tests {
         playlist.midis.push(song_none);
         playlist.midis.push(song_420);
         let new_playlist = run_serialize(playlist);
-        assert_eq!(new_playlist.midis[0].get_duration(), None);
+        assert_eq!(new_playlist.midis[0].duration(), None);
         assert_eq!(
-            new_playlist.midis[1].get_duration().unwrap(),
+            new_playlist.midis[1].duration().unwrap(),
             Duration::from_secs(420)
         );
     }

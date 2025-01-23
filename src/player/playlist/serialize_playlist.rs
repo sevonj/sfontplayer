@@ -18,7 +18,7 @@ impl From<&Playlist> for Value {
                 // Normal playlist: save as is
                 json! ({"name": playlist.name,
 
-                     "fonts": playlist.fonts.get_fonts(),
+                     "fonts": playlist.fonts.fonts(),
                      "font_list_mode": playlist.font_list_mode as u8,
                      "font_dir": playlist.font_dir,
 
@@ -31,18 +31,18 @@ impl From<&Playlist> for Value {
             |root| {
                 // Portable file: translate all paths into relative
 
-                let mut fonts = playlist.fonts.get_fonts().clone();
+                let mut fonts = playlist.fonts.fonts().clone();
                 for font in &mut fonts {
-                    let absolute_path = font.get_path();
+                    let absolute_path = font.filepath();
                     if let Ok(relative_path) = absolute_path.relative_to(&root) {
-                        font.set_path(relative_path.to_path("."));
+                        font.set_filepath(relative_path.to_path("."));
                     }
                 }
                 let mut songs = playlist.midis.clone();
                 for song in &mut songs {
-                    let absolute_path = song.get_path();
+                    let absolute_path = song.filepath();
                     if let Ok(relative_path) = absolute_path.relative_to(&root) {
-                        song.set_path(relative_path.to_path("."));
+                        song.set_filepath(relative_path.to_path("."));
                     }
                 }
                 let font_dir = playlist.font_dir.as_ref().and_then(|dir| {
@@ -110,7 +110,7 @@ impl From<Value> for Playlist {
                     };
                     meta
                 };
-                let _ = playlist.fonts.add(fontmeta);
+                let _ = playlist.fonts.add_fontmeta(fontmeta);
             }
         }
 
@@ -153,13 +153,13 @@ impl Playlist {
             let Ok(font) = playlist.get_font_mut(i) else {
                 continue;
             };
-            if let Ok(relative_path) = RelativePath::from_path(&font.get_path()) {
-                font.set_path(relative_path.to_logical_path(root));
+            if let Ok(relative_path) = RelativePath::from_path(&font.filepath()) {
+                font.set_filepath(relative_path.to_logical_path(root));
             };
         }
         for song in &mut playlist.midis {
-            if let Ok(relative_path) = RelativePath::from_path(&song.get_path()) {
-                song.set_path(relative_path.to_logical_path(root));
+            if let Ok(relative_path) = RelativePath::from_path(&song.filepath()) {
+                song.set_filepath(relative_path.to_logical_path(root));
             };
         }
         if let Some(dir) = &playlist.font_dir {

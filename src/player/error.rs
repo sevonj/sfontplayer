@@ -24,7 +24,7 @@ pub enum PlayerError {
 
     FontlibPathIndex { index: usize },
     FontlibPathAlreadyExists { path: PathBuf },
-    FontlibNoSuchFont { path: PathBuf },
+    FontlibNoSuchFont { filepath: PathBuf },
 
     ModifyDirList,
     UnknownFileFormat { path: PathBuf },
@@ -71,7 +71,9 @@ impl fmt::Display for PlayerError {
             Self::FontlibPathAlreadyExists { path } => {
                 write!(f, "This path is already in the library: {path:?}")
             }
-            Self::FontlibNoSuchFont { path } => write!(f, "No such font in library: {path:?}"),
+            Self::FontlibNoSuchFont { filepath: path } => {
+                write!(f, "No such font in library: {path:?}")
+            }
 
             Self::ModifyDirList => write!(f, "Cant modify a directory-tracking list manually."),
             Self::UnknownFileFormat { path } => write!(f, "Unknown file format: {path:?}."),

@@ -67,7 +67,7 @@ fn build_midi_presetlist(ui: &mut Ui, player: &mut Player) {
         let mut test_patch = None;
 
         table.body(|mut body| {
-            for patch in inspector.get_presets().clone().iter().sorted() {
+            for patch in inspector.presets().clone().iter().sorted() {
                 body.row(ROW_HEIGHT, |mut row| {
                     row.col(|ui| {
                         ui.label(format!("{patch}"));
@@ -118,7 +118,7 @@ fn build_midi_presetlist(ui: &mut Ui, player: &mut Player) {
                             .on_hover_text("Play demo (mapped)")
                             .clicked()
                         {
-                            let mapped = inspector.preset_mapper.remap_value(*patch);
+                            let mapped = inspector.preset_mapper.mapped_patch(*patch);
                             test_patch = Some(mapped);
                         }
                     });
@@ -154,7 +154,7 @@ fn build_font_presetlist(ui: &mut Ui, player: &mut Player) {
             return;
         };
 
-        let Some(soundfont) = inspector.get_soundfont() else {
+        let Some(soundfont) = inspector.soundfont() else {
             ui.label("Inspector has no soundfont.");
             return;
         };

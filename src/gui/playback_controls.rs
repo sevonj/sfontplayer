@@ -38,10 +38,10 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         || {
             player.get_playing_playlist().get_song_idx().map_or_else(
                 || "Nothing".into(),
-                |index| player.get_playing_playlist().get_songs()[index].get_name(),
+                |index| player.get_playing_playlist().get_songs()[index].filename(),
             )
         },
-        MidiMeta::get_name,
+        MidiMeta::filename,
     );
 
     // Current song info

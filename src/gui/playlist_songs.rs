@@ -121,15 +121,15 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
             |mut row| {
                 let index = row.index();
                 let midiref = &player.get_playlist().get_songs()[index];
-                let filename = midiref.get_name();
-                let filepath = midiref.get_path();
-                let filesize = midiref.get_size();
-                let status = midiref.get_status();
+                let filename = midiref.filename();
+                let filepath = midiref.filepath().to_owned();
+                let filesize = midiref.filesize();
+                let status = midiref.status();
                 let manual_files =
                     player.get_playlist().get_song_list_mode() == FileListMode::Manual;
 
                 let time = player.get_playlist().get_songs()[index]
-                    .get_duration()
+                    .duration()
                     .unwrap_or(Duration::ZERO);
 
                 row.set_selected(Some(index) == player.get_playlist().get_song_idx());
@@ -211,11 +211,13 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
                     );
                     actions::open_file_dir(
                         ui,
-                        &player.get_playlist().get_songs()[index].get_path(),
+                        player.get_playlist().get_songs()[index].filepath(),
                         gui,
                     );
                     ui.menu_button("Add to playlist", |ui| {
-                        let filepath = player.get_playlist().get_songs()[index].get_path();
+                        let filepath = player.get_playlist().get_songs()[index]
+                            .filepath()
+                            .to_owned();
                         if ui.button("➕ New playlist").clicked() {
                             let _ = player.new_playlist();
                             let playlist_index = player.get_playlists().len() - 1;

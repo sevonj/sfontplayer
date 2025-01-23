@@ -99,10 +99,10 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                 }
                 let index = row.index() - 1;
                 let fontref = &player.get_playlist().get_fonts()[index];
-                let filename = fontref.get_name();
-                let filepath = fontref.get_path();
-                let filesize = fontref.get_size();
-                let status = fontref.get_status();
+                let filename = fontref.filename();
+                let filepath = fontref.filepath().to_owned();
+                let filesize = fontref.filesize();
+                let status = fontref.status();
 
                 row.set_selected(Some(index) == player.get_playlist().get_font_idx());
 
@@ -219,7 +219,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         .on_disabled_hover_text("Already in library")
                         .clicked()
                     {
-                        let _ = player.font_lib.add_path(filepath);
+                        let _ = player.font_lib.add_path(filepath.clone());
                         ui.close_menu();
                     }
                 });
@@ -271,8 +271,8 @@ fn default_font_item(row: &mut egui_extras::TableRow<'_, '_>, player: &mut Playe
                 ui.add(Label::new("None - Use library selection").selectable(false));
             if let Some(font) = &player.get_default_soundfont() {
                 filename_response
-                    .on_hover_text(font.get_path().to_string_lossy())
-                    .on_disabled_hover_text(font.get_path().to_string_lossy());
+                    .on_hover_text(font.filepath().to_string_lossy())
+                    .on_disabled_hover_text(font.filepath().to_string_lossy());
             }
         });
     });

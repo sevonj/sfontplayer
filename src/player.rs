@@ -189,12 +189,12 @@ impl Player {
         let midi_index = self.get_playing_playlist().queue[queue_index];
 
         let midi_file = if let Some(inspector) = &self.midi_inspector {
-            inspector.get_midi()?
+            inspector.midifile()?
         } else {
             let midi_meta = &mut self.get_playing_playlist_mut().get_songs_mut()[midi_index];
             midi_meta.refresh();
-            midi_meta.get_status()?;
-            midi_meta.get_midifile()?
+            midi_meta.status()?;
+            midi_meta.fetch_midifile()?
         };
 
         let playlist = self.get_playing_playlist_mut();
@@ -250,8 +250,8 @@ impl Player {
             return Err(PlayerError::PlaybackNoSoundfont);
         };
         font_meta.refresh();
-        font_meta.get_status()?;
-        let soundfont = Arc::new(font_meta.get_soundfont()?);
+        font_meta.status()?;
+        let soundfont = Arc::new(font_meta.fetch_soundfont()?);
 
         if let Some(inspector) = &mut self.midi_inspector {
             inspector.set_soundfont(Some(soundfont.clone()));
@@ -376,7 +376,7 @@ impl Player {
     }
 
     pub fn get_inspected_midi_meta(&self) -> Option<&MidiMeta> {
-        self.midi_inspector.as_ref().map(MidiInspector::get_meta)
+        self.midi_inspector.as_ref().map(MidiInspector::midimeta)
     }
 
     pub const fn get_midi_inspector(&self) -> Option<&MidiInspector> {
@@ -390,7 +390,7 @@ impl Player {
     pub fn open_midi_inspector(&mut self, meta: MidiMeta) -> Result<(), PlayerError> {
         let soundfont = self
             .get_soundfont_meta()
-            .and_then(|f| f.get_soundfont().map(Arc::new).ok());
+            .and_then(|f| f.fetch_soundfont().map(Arc::new).ok());
         let inspector = MidiInspector::new(meta, soundfont)?;
         self.midi_inspector = Some(inspector);
         self.stop();

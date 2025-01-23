@@ -7,7 +7,7 @@ use std::{
 
 use crate::player::PlayerError;
 
-/// Reference to a font file with metadata
+/// Reference to a soundfont file with metadata
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct FontMeta {
     filepath: PathBuf,
@@ -35,26 +35,27 @@ impl FontMeta {
         self.filesize =
             fs::metadata(&self.filepath).map_or(None, |file_meta| Some(file_meta.len()));
 
-        self.error = match self.get_soundfont() {
+        self.error = match self.fetch_soundfont() {
             Err(e) => Some(e.to_string()),
             Ok(_) => None,
         }
     }
 
-    pub fn get_soundfont(&self) -> Result<SoundFont, PlayerError> {
-        let mut fontfile = File::open(self.get_path())?;
+    /// Load the soundfont
+    pub fn fetch_soundfont(&self) -> Result<SoundFont, PlayerError> {
+        let mut fontfile = File::open(self.filepath())?;
         Ok(SoundFont::new(&mut fontfile)?)
     }
 
-    pub fn get_path(&self) -> PathBuf {
-        self.filepath.clone()
+    pub const fn filepath(&self) -> &PathBuf {
+        &self.filepath
     }
 
-    pub fn set_path(&mut self, filepath: PathBuf) {
+    pub fn set_filepath(&mut self, filepath: PathBuf) {
         self.filepath = filepath;
     }
 
-    pub fn get_name(&self) -> String {
+    pub fn filename(&self) -> String {
         self.filepath
             .file_name()
             .expect("No filename")
@@ -63,11 +64,13 @@ impl FontMeta {
             .to_owned()
     }
 
-    pub const fn get_size(&self) -> Option<u64> {
+    /// Size of the soundfont file
+    pub const fn filesize(&self) -> Option<u64> {
         self.filesize
     }
 
-    pub fn get_status(&self) -> Result<(), PlayerError> {
+    /// Is the actual soundfont file accessible and OK?
+    pub fn status(&self) -> Result<(), PlayerError> {
         if let Some(e) = &self.error {
             return Err(PlayerError::FontFileError { msg: e.to_owned() });
         }
@@ -111,10 +114,10 @@ mod tests {
             filepath: "Fakepath".into(),
             ..Default::default()
         };
-        playlist.fonts.add(font).unwrap();
+        playlist.fonts.add_fontmeta(font).unwrap();
         let new_playlist = run_serialize(playlist);
         let font = new_playlist.get_font(0).unwrap();
-        assert_eq!(font.get_path().to_str().unwrap(), "Fakepath");
+        assert_eq!(font.filepath().to_str().unwrap(), "Fakepath");
     }
 
     #[test]
@@ -130,12 +133,12 @@ mod tests {
             filesize: Some(420),
             ..Default::default()
         };
-        playlist.fonts.add(font_none).unwrap();
-        playlist.fonts.add(font_420).unwrap();
+        playlist.fonts.add_fontmeta(font_none).unwrap();
+        playlist.fonts.add_fontmeta(font_420).unwrap();
         let new_playlist = run_serialize(playlist);
         let font_0 = new_playlist.get_font(0).unwrap();
         let font_1 = new_playlist.get_font(1).unwrap();
-        assert_eq!(font_0.get_size(), None);
-        assert_eq!(font_1.get_size().unwrap(), 420);
+        assert_eq!(font_0.filesize(), None);
+        assert_eq!(font_1.filesize().unwrap(), 420);
     }
 }
