@@ -60,7 +60,7 @@ fn playlist_tab(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiSta
             style.visuals.faint_bg_color
         };
         let shadow = Shadow {
-            offset: [0.0, 2.0].into(),
+            offset: [0, 2],
             color: if current_tab {
                 style.visuals.selection.bg_fill
             } else {
@@ -71,7 +71,7 @@ fn playlist_tab(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut GuiSta
         Frame::group(&style)
             .inner_margin(4.)
             .outer_margin(0.)
-            .rounding(0.)
+            .corner_radius(0.)
             .stroke(Stroke::NONE)
             .fill(fill)
             .shadow(shadow)

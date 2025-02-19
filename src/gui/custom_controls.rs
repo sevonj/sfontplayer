@@ -6,7 +6,7 @@ where
 {
     ui.add(
         Button::new(String::from(title))
-            .rounding(32.)
+            .corner_radius(32.)
             .min_size(vec2(20., 20.)),
     )
 }

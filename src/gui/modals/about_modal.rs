@@ -125,7 +125,7 @@ fn desc_button(ui: &mut Ui, title: &str, desc: &str) -> Response {
     Frame::group(ui.style())
         .inner_margin(4.)
         .outer_margin(0.)
-        .rounding(0.)
+        .corner_radius(0.)
         .stroke(Stroke::NONE)
         .show(ui, |ui| {
             ui.style_mut().visuals.hyperlink_color = ui.style().visuals.strong_text_color();
@@ -143,7 +143,7 @@ fn license_collapse(ui: &mut Ui, name: &str, text: &str) {
     Frame::group(ui.style())
         .inner_margin(4.)
         .outer_margin(0.)
-        .rounding(0.)
+        .corner_radius(0.)
         .stroke(Stroke::NONE)
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
