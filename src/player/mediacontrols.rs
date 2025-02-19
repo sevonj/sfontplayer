@@ -29,14 +29,11 @@ pub(super) fn create_mediacontrols(
     };
 
     let mut controls = MediaControls::new(config).expect("Failed to create MediaControls!");
-    // controls
-    //     .attach(|event: MediaControlEvent| println!("Event received: {event:?}"))
-    //     .expect("MediaControls Attach failed.");
-    controls
-        .attach(move |event: MediaControlEvent| {
-            event_queue.lock().push(event);
-        })
-        .expect("MediaControls Attach failed.");
+    if let Err(e) = controls.attach(move |event: MediaControlEvent| {
+        event_queue.lock().push(event);
+    }) {
+        println!("MediaControls attach failed: {e}");
+    }
     controls
 }
 
