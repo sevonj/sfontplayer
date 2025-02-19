@@ -1,7 +1,7 @@
 use eframe::egui::{
     lerp, pos2, vec2, Align, Align2, Button, CollapsingHeader, Context, InputState, Label, Layout,
-    RichText, ScrollArea, Sense, Stroke, TextWrapMode, Ui, Vec2, Widget, WidgetInfo, WidgetType,
-    Window,
+    RichText, ScrollArea, Sense, Stroke, StrokeKind, TextWrapMode, Ui, Vec2, Widget, WidgetInfo,
+    WidgetType, Window,
 };
 use egui_extras::{Column, TableBuilder};
 
@@ -153,8 +153,13 @@ pub fn toggle(on: &mut bool) -> impl Widget + '_ {
             let visuals = ui.style().interact_selectable(&response, *on);
             let rect = rect.expand(visuals.expansion);
             let radius = 0.5 * rect.height();
-            ui.painter()
-                .rect(rect, radius, visuals.bg_fill, visuals.bg_stroke);
+            ui.painter().rect(
+                rect,
+                radius,
+                visuals.bg_fill,
+                visuals.bg_stroke,
+                StrokeKind::Inside,
+            );
             let circle_x = lerp((rect.left() + radius)..=(rect.right() - radius), anim_t);
             ui.painter().circle(
                 pos2(circle_x, rect.center().y),
@@ -272,7 +277,7 @@ fn font_lib_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) {
                 }
                 actions::open_file_dir(ui, &font_lib.get_paths()[index], gui);
                 if ui.button("Copy path").clicked() {
-                    ui.output_mut(|o| o.copied_text = path.to_string_lossy().into());
+                    ui.ctx().copy_text(path.to_string_lossy().into());
                     ui.close_menu();
                     gui.toast_success("Copied");
                 }

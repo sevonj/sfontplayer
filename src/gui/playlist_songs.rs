@@ -255,7 +255,7 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
                         }
                     });
                     if ui.button("Copy path").clicked() {
-                        ui.output_mut(|o| o.copied_text = filepath.to_string_lossy().into());
+                        ui.ctx().copy_text(filepath.to_string_lossy().into());
                         ui.close_menu();
                         gui.toast_success("Copied");
                     }
