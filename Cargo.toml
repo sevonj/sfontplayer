@@ -18,7 +18,7 @@ rfd = "0.15.2" # File dialog
 egui-notify = "0.19.0" # toasts
 
 # -- Persistence
-serde = { version = "1.0.217", features = ["derive"] } # Remember app state
+serde = { version = "1.0.218", features = ["derive"] } # Remember app state
 serde_repr = "0.1.19"
 serde_json = "1.0.139"
 
