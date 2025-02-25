@@ -29,7 +29,7 @@ midi-msg = "0.8.0"   # MIDI format
 wavers = "1.5.1"     # WAV format
 
 # -- Misc
-rand = "0.8.5"
+rand = "0.9.0"
 build-info = "0.0.39"   # For dependency listing
 walkdir = "2.5.0"
 size_format = "1.0.2"   # File sizes into string
