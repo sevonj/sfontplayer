@@ -41,7 +41,7 @@ relative-path = "1.9.3"
 itertools = "0.14.0"
 
 [build-dependencies]
-build-info-build = "0.0.39" # For dependency listing
+build-info-build = "0.0.40" # For dependency listing
 
 [profile.release]
 opt-level = 3
