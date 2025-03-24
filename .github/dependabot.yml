@@ -11,8 +11,11 @@ updates:
       interval: "weekly"
     groups:
       egui:
-        # Egui crates should be updated as one
         patterns:
           - "eframe"
           - "egui_extras"
           - "egui-notify"
+      build-info:
+        patterns:
+          - "build-info"
+          - "build-info-build"
