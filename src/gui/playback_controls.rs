@@ -163,7 +163,7 @@ fn position_control(ui: &mut Ui, player: &mut Player, width: f32) {
 
 fn volume_control(ui: &mut Ui, player: &mut Player) {
     let speaker_icon_str = match player.get_volume() {
-        x if x == 0.0 => "🔇",
+        0.0 => "🔇",
         x if (0.0..33.0).contains(&x) => "🔈",
         x if (33.0..66.0).contains(&x) => "🔉",
         _ => "🔊",
