@@ -30,7 +30,7 @@ wavers = "1.5.1"     # WAV format
 
 # -- Misc
 rand = "0.8.5"
-build-info = "0.0.39"   # For dependency listing
+build-info = "0.0.40"   # For dependency listing
 walkdir = "2.5.0"
 size_format = "1.0.2"   # File sizes into string
 open = "5.3.2"          # Open path in file exprorer
