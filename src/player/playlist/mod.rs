@@ -512,7 +512,7 @@ impl Playlist {
         self.queue_idx = Some(self.midi_idx.unwrap_or(0));
 
         if shuffle {
-            self.queue.shuffle(&mut rand::thread_rng());
+            self.queue.shuffle(&mut rand::rng());
 
             // Make selected song the first in queue
             if let Some(song_idx) = self.midi_idx {
