@@ -50,17 +50,17 @@ pub fn unsaved_close_dialog(ctx: &Context, player: &mut Player) {
 
                 if add_dialog_button(ui, "Discard", &DialogButtonStyle::Destructive).clicked() {
                     let _ = player.force_remove_playlist(index);
-                };
+                }
 
                 ui.add_enabled_ui(!player.debug_block_saving, |ui| {
                     if add_dialog_button(ui, "Save", &DialogButtonStyle::Suggested).clicked() {
                         let _ = player.save_portable_playlist(index);
-                    };
+                    }
                 });
 
                 if add_dialog_button(ui, "Cancel", &DialogButtonStyle::None).clicked() {
                     let _ = player.cancel_remove_playlist(index);
-                };
+                }
             });
             ui.add_space(4.);
         });
@@ -97,18 +97,18 @@ pub fn unsaved_quit_dialog(ctx: &Context, player: &mut Player, gui: &mut GuiStat
                     {
                         gui.force_quit = true;
                         ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-                    };
+                    }
                     ui.add_enabled_ui(!player.debug_block_saving, |ui| {
                         if add_dialog_button(ui, "Save all and quit", &DialogButtonStyle::Suggested)
                             .clicked()
                         {
                             let _ = player.save_all_portable_playlists();
                             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-                        };
+                        }
                     });
                     if add_dialog_button(ui, "Cancel", &DialogButtonStyle::None).clicked() {
                         gui.show_unsaved_quit_modal = false;
-                    };
+                    }
                 });
                 ui.add_space(4.);
             });

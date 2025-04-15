@@ -155,22 +155,22 @@ impl Playlist {
             };
             if let Ok(relative_path) = RelativePath::from_path(&font.filepath()) {
                 font.set_filepath(relative_path.to_logical_path(root));
-            };
+            }
         }
         for song in &mut playlist.midis {
             if let Ok(relative_path) = RelativePath::from_path(&song.filepath()) {
                 song.set_filepath(relative_path.to_logical_path(root));
-            };
+            }
         }
         if let Some(dir) = &playlist.font_dir {
             if let Ok(relative_path) = RelativePath::from_path(dir) {
                 playlist.font_dir = Some(relative_path.to_logical_path(root));
-            };
+            }
         }
         if let Some(dir) = &playlist.midi_dir {
             if let Ok(relative_path) = RelativePath::from_path(dir) {
                 playlist.midi_dir = Some(relative_path.to_logical_path(root));
-            };
+            }
         }
 
         playlist.portable_filepath = Some(filepath);

@@ -43,7 +43,7 @@ impl AudioPlayer {
                 let _ = self.start_playback();
                 let _ = self.seek_to(pos);
             }
-        };
+        }
     }
 
     pub(crate) fn clear_soundfont(&mut self) {

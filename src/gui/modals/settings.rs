@@ -58,7 +58,7 @@ pub fn settings_modal(ctx: &Context, player: &mut Player, gui: &mut GuiState) {
                             .changed()
                         {
                             player.font_lib.refresh();
-                        };
+                        }
 
                         if !gui.show_developer_options {
                             return;

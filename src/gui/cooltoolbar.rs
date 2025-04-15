@@ -103,5 +103,5 @@ fn sidebar_toggle(ui: &mut Ui, gui: &mut GuiState) {
         .clicked()
     {
         gui.show_font_library = !gui.show_font_library;
-    };
+    }
 }

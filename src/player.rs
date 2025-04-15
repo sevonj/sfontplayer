@@ -351,7 +351,7 @@ impl Player {
         self.repeat
     }
 
-    pub fn cycle_repeat(&mut self) {
+    pub const fn cycle_repeat(&mut self) {
         match self.repeat {
             RepeatMode::Disabled => self.repeat = RepeatMode::Queue,
             RepeatMode::Queue => self.repeat = RepeatMode::Song,
@@ -383,7 +383,7 @@ impl Player {
         self.midi_inspector.as_ref()
     }
 
-    pub fn get_midi_inspector_mut(&mut self) -> Option<&mut MidiInspector> {
+    pub const fn get_midi_inspector_mut(&mut self) -> Option<&mut MidiInspector> {
         self.midi_inspector.as_mut()
     }
 
@@ -493,7 +493,7 @@ impl Player {
     }
 
     /// Get a mutable reference to the playlist list
-    pub fn get_playlists_mut(&mut self) -> &mut Vec<Playlist> {
+    pub const fn get_playlists_mut(&mut self) -> &mut Vec<Playlist> {
         &mut self.playlists
     }
 
@@ -539,7 +539,7 @@ impl Player {
         Ok(())
     }
 
-    pub fn switch_playlist_left(&mut self) -> Result<(), PlayerError> {
+    pub const fn switch_playlist_left(&mut self) -> Result<(), PlayerError> {
         if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
@@ -755,7 +755,7 @@ impl Player {
             .is_err()
         {
             return Err(PlayerError::PlaylistSaveFailed);
-        };
+        }
 
         self.playlists.push(new_playlist);
         let _ = self.switch_to_playlist(self.playlists.len() - 1);
@@ -801,7 +801,7 @@ impl Player {
 
     // --- Other
 
-    pub fn get_event_queue(&mut self) -> &mut Vec<PlayerEvent> {
+    pub const fn get_event_queue(&mut self) -> &mut Vec<PlayerEvent> {
         &mut self.player_events
     }
 
@@ -956,7 +956,7 @@ mod tests {
         player.playlist_idx = 2;
         player.remove_playlist(2).unwrap();
         player.update();
-        assert_eq!(player.playlist_idx, 1)
+        assert_eq!(player.playlist_idx, 1);
     }
 
     #[test]
@@ -969,7 +969,7 @@ mod tests {
         player.playing_playlist_idx = 2;
         player.remove_playlist(2).unwrap();
         player.update();
-        assert_eq!(player.playing_playlist_idx, 1)
+        assert_eq!(player.playing_playlist_idx, 1);
     }
 
     #[test]
@@ -982,7 +982,7 @@ mod tests {
         player.playlist_idx = 1;
         player.remove_playlist(1).unwrap();
         player.update();
-        assert_eq!(player.playlist_idx, 1)
+        assert_eq!(player.playlist_idx, 1);
     }
 
     #[test]

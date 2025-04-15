@@ -79,7 +79,7 @@ pub struct UpdateFlags {
 }
 
 impl UpdateFlags {
-    pub fn clear(&mut self) {
+    pub const fn clear(&mut self) {
         self.scroll_to_song = false;
     }
 }
