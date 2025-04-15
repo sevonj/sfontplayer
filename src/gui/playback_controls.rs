@@ -74,7 +74,7 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         .clicked()
     {
         player.toggle_shuffle();
-    };
+    }
     // Repeat
     let repeat_text = if player.get_repeat() == RepeatMode::Song {
         "🔂"
@@ -89,7 +89,7 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         .clicked()
     {
         player.cycle_repeat();
-    };
+    }
 
     // Skip back
     ui.add_enabled_ui(back_enabled, |ui| {
@@ -105,7 +105,7 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
             } else {
                 player.play();
             }
-        };
+        }
     } else if icon_button(ui, include_image!("../assets/icon_pause.svg"), "pause").clicked() {
         player.pause();
     }
@@ -155,7 +155,7 @@ fn position_control(ui: &mut Ui, player: &mut Player, width: f32) {
             .changed()
         {
             player.seek_to(Duration::from_secs_f64(pos_float));
-        };
+        }
     });
 
     ui.label(format!("{}/{}", format_duration(pos), format_duration(len)));

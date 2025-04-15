@@ -53,7 +53,7 @@ impl FontList {
                 self.fonts.sort_by_key(FontMeta::filesize);
                 self.fonts.reverse();
             }
-        };
+        }
         // Find the selected again
         if let Some(selected) = selected {
             for i in 0..self.fonts.len() {

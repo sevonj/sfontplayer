@@ -275,7 +275,7 @@ impl Playlist {
         &self.midis
     }
 
-    pub fn get_songs_mut(&mut self) -> &mut Vec<MidiMeta> {
+    pub const fn get_songs_mut(&mut self) -> &mut Vec<MidiMeta> {
         &mut self.midis
     }
 
@@ -475,7 +475,7 @@ impl Playlist {
                 self.midis.sort_by_key(midi_meta::MidiMeta::filesize);
                 self.midis.reverse();
             }
-        };
+        }
 
         // Find the selected again
         if let Some(selected) = selected_song {
@@ -684,7 +684,7 @@ mod tests {
         assert!(matches!(
             playlist.add_font("fakefont_b".into()).unwrap_err(),
             PlayerError::FontAlreadyExists
-        ))
+        ));
     }
 
     #[test]
@@ -695,7 +695,7 @@ mod tests {
         assert!(matches!(
             playlist.add_song("fakesong_b".into()).unwrap_err(),
             PlayerError::MidiAlreadyExists
-        ))
+        ));
     }
 
     #[test]
