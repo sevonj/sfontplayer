@@ -37,7 +37,7 @@ open = "5.3.2"          # Open path in file exprorer
 anyhow = "1.0.98"       # Errors
 souvlaki = "0.8.2"      # Media control/metadata system integration
 directories = "6.0.0"
-relative-path = "1.9.3"
+relative-path = "2.0.1"
 itertools = "0.14.0"
 
 [build-dependencies]
