@@ -11,7 +11,7 @@ license = "GPL-3.0-or-later"
 
 # -- GUI
 eframe = { version = "0.31.1", features = ["persistence"] } # GUI Framework
-egui_extras = { version = "0.31.1", features = [
+egui_extras = { version = "0.32.0", features = [
     "all_loaders",
 ] } # Extra gui components
 rfd = "0.15.3" # File dialog
