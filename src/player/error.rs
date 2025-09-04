@@ -51,7 +51,9 @@ impl fmt::Display for PlayerError {
             Self::PlaylistCantMove => write!(f, "Can't move this playlist further."),
             Self::PlaylistCantSwitch => write!(f, "Can't switch playlists further."),
             Self::PlaylistAlreadyOpen => write!(f, "Playlist is already open."),
-            Self::PlaylistOpenFailed { path } => write!(f, "Couldn't open playlist from {path:?}."),
+            Self::PlaylistOpenFailed { path } => {
+                write!(f, "Couldn't open playlist from {}.", path.display())
+            }
             Self::PlaylistSaveFailed => write!(f, "Couldn't save playlist."),
 
             Self::PlaybackNoQueueIndex => write!(f, "No queue index!"),
@@ -69,15 +71,17 @@ impl fmt::Display for PlayerError {
                 write!(f, "Soundfont library path index {index} is out of range.")
             }
             Self::FontlibPathAlreadyExists { path } => {
-                write!(f, "This path is already in the library: {path:?}")
+                write!(f, "This path is already in the library: {}", path.display())
             }
             Self::FontlibNoSuchFont { filepath: path } => {
-                write!(f, "No such font in library: {path:?}")
+                write!(f, "No such font in library: {}", path.display())
             }
 
             Self::ModifyDirList => write!(f, "Cant modify a directory-tracking list manually."),
-            Self::UnknownFileFormat { path } => write!(f, "Unknown file format: {path:?}."),
-            Self::PathDoesntExist { path } => write!(f, "Path doesn't exist: {path:?}."),
+            Self::UnknownFileFormat { path } => {
+                write!(f, "Unknown file format: {}.", path.display())
+            }
+            Self::PathDoesntExist { path } => write!(f, "Path doesn't exist: {}.", path.display()),
             Self::IoError { source } => source.fmt(f),
 
             Self::FontAlreadyExists => write!(f, "This soundfont is already in the list."),
