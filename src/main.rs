@@ -2,7 +2,7 @@ mod gui;
 mod player;
 
 use eframe::egui::{mutex::Mutex, Context, ViewportBuilder, ViewportCommand};
-use rodio::{OutputStream, Sink};
+use rodio::{OutputStream, OutputStreamBuilder, Sink};
 use std::time::{Duration, Instant};
 use std::{env, sync::Arc, thread};
 
@@ -37,8 +37,8 @@ struct SfontPlayer {
 }
 impl Default for SfontPlayer {
     fn default() -> Self {
-        let (stream, stream_handle) = OutputStream::try_default().expect("Could not create stream");
-        let sink = Sink::try_new(&stream_handle).expect("Could not create sink");
+        let stream = OutputStreamBuilder::open_default_stream().expect("Could not create stream");
+        let sink = Sink::connect_new(stream.mixer());
 
         let mut player = Player::default();
         if let Err(e) = player.load_state() {
