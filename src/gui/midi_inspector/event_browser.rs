@@ -35,7 +35,7 @@ fn build_header_panel(ui: &mut Ui, header: &midi_msg::Header, filepath: &Path) {
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
 
-            ui.label(format!("{filepath:?}"));
+            ui.label(format!("{}", filepath.display()));
             ui.label(format!("Format:   {:?}", header.format));
             ui.label(format!("Tracks:   {:?}", header.num_tracks));
             ui.label(format!("Division: {:?}", header.num_tracks));
