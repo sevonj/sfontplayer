@@ -29,7 +29,7 @@ pub fn open_file_dir(ui: &mut Ui, filepath: &Path, gui: &mut GuiState) {
         if let Err(e) = open::that(dir) {
             gui.toast_error(e.to_string());
         }
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -71,7 +71,7 @@ pub fn new_playlist(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.new_playlist();
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -82,7 +82,7 @@ pub fn open_playlist(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         .clicked()
     {
         file_dialogs::open_playlist(player, gui);
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -100,7 +100,7 @@ pub fn save_playlist(ui: &mut Ui, player: &mut Player, index: usize, gui: &mut G
                 if let Err(e) = player.save_portable_playlist(index) {
                     gui.toast_error(e.to_string());
                 }
-                ui.close_menu();
+                ui.close();
             }
         },
     );
@@ -120,7 +120,7 @@ pub fn save_current_playlist(ui: &mut Ui, player: &mut Player, gui: &mut GuiStat
                 if let Err(e) = player.save_portable_playlist(player.get_playlist_idx()) {
                     gui.toast_error(e.to_string());
                 }
-                ui.close_menu();
+                ui.close();
             }
         },
     );
@@ -143,7 +143,7 @@ pub fn save_playlist_as(ui: &mut Ui, player: &mut Player, index: usize, gui: &mu
         .clicked()
     {
         file_dialogs::save_playlist_as(player, index, gui);
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -154,7 +154,7 @@ pub fn save_current_playlist_as(ui: &mut Ui, player: &mut Player, gui: &mut GuiS
         .clicked()
     {
         file_dialogs::save_playlist_as(player, player.get_playlist_idx(), gui);
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -165,7 +165,7 @@ pub fn duplicate_playlist(ui: &mut Ui, player: &mut Player, index: usize) {
         .clicked()
     {
         let _ = player.duplicate_playlist(index);
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -176,7 +176,7 @@ pub fn duplicate_current_playlist(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.duplicate_playlist(player.get_playlist_idx());
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -187,7 +187,7 @@ pub fn close_playlist(ui: &mut Ui, player: &mut Player, index: usize) {
         .clicked()
     {
         let _ = player.remove_playlist(index);
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -198,7 +198,7 @@ pub fn close_current_playlist(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.remove_playlist(player.get_playlist_idx());
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -213,7 +213,7 @@ pub fn reopen_playlist(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.reopen_removed_playlist();
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -230,10 +230,10 @@ pub fn rename_current_playlist(ui: &mut Ui, player: &mut Player) {
             .add(TextEdit::singleline(&mut player.get_playlist_mut().name).desired_width(128.))
             .lost_focus()
         {
-            ui.close_menu();
+            ui.close();
         }
         if ui.button("OK").clicked() {
-            ui.close_menu();
+            ui.close();
         }
     });
 }
@@ -251,7 +251,7 @@ pub fn refresh_playlist(player: &mut Player, index: usize, ui: &mut Ui) {
         {
             playlist.recrawl_fonts();
             playlist.refresh_song_list();
-            ui.close_menu();
+            ui.close();
         }
     });
 }
@@ -270,7 +270,7 @@ pub fn refresh_current_playlist(player: &mut Player, ui: &mut Ui) {
     {
         player.get_playlist_mut().recrawl_fonts();
         player.get_playlist_mut().refresh_song_list();
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -286,12 +286,12 @@ pub fn current_playlist_fonts_action(ui: &mut Ui, player: &mut Player) {
                     for path in paths {
                         let _ = player.get_playlist_mut().add_font(path);
                     }
-                    ui.close_menu();
+                    ui.close();
                 }
             }
             if ui.button("Clear soundfonts").clicked() {
                 player.get_playlist_mut().clear_fonts();
-                ui.close_menu();
+                ui.close();
             }
         });
         ui.label("Content mode");
@@ -319,12 +319,12 @@ pub fn current_playlist_songs_action(ui: &mut Ui, player: &mut Player) {
                     for path in paths {
                         let _ = player.get_playlist_mut().add_song(path);
                     }
-                    ui.close_menu();
+                    ui.close();
                 }
             }
             if ui.button("Clear songs").clicked() {
                 player.get_playlist_mut().clear_songs();
-                ui.close_menu();
+                ui.close();
             }
         });
         ui.label("Content mode");
@@ -376,7 +376,7 @@ pub fn switch_playlist_left(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.switch_playlist_left();
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -392,7 +392,7 @@ pub fn switch_playlist_right(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.switch_playlist_right();
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -404,7 +404,7 @@ pub fn move_playlist_left(ui: &mut Ui, player: &mut Player, index: usize) {
         .clicked()
     {
         let _ = player.move_playlist(index, index - 1);
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -419,7 +419,7 @@ pub fn move_current_playlist_left(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.move_playlist_left();
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -434,7 +434,7 @@ pub fn move_playlist_right(ui: &mut Ui, player: &mut Player, index: usize) {
         .clicked()
     {
         let _ = player.move_playlist(index, index + 1);
-        ui.close_menu();
+        ui.close();
     }
 }
 
@@ -449,6 +449,6 @@ pub fn move_current_playlist_right(ui: &mut Ui, player: &mut Player) {
         .clicked()
     {
         let _ = player.move_playlist_right();
-        ui.close_menu();
+        ui.close();
     }
 }

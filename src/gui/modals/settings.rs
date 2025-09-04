@@ -273,12 +273,12 @@ fn font_lib_table(ui: &mut Ui, font_lib: &mut FontLibrary, gui: &mut GuiState) {
             row.response().context_menu(|ui| {
                 if ui.button("Remove").clicked() {
                     let _ = font_lib.remove_path(index);
-                    ui.close_menu();
+                    ui.close();
                 }
                 actions::open_file_dir(ui, &font_lib.get_paths()[index], gui);
                 if ui.button("Copy path").clicked() {
                     ui.ctx().copy_text(path.to_string_lossy().into());
-                    ui.close_menu();
+                    ui.close();
                     gui.toast_success("Copied");
                 }
             });

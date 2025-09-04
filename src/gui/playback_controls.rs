@@ -1,6 +1,5 @@
 use eframe::egui::{
-    include_image, Button, Image, ImageSource, Response, RichText, SelectableLabel, Sense, Slider,
-    Ui, UiBuilder,
+    include_image, Button, Image, ImageSource, Response, RichText, Sense, Slider, Ui, UiBuilder,
 };
 use std::time::Duration;
 
@@ -67,7 +66,7 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
 
     // Shuffle button
     if ui
-        .add(SelectableLabel::new(
+        .add(Button::selectable(
             player.get_shuffle(),
             RichText::new("🔀").size(ICON_SIZE),
         ))
@@ -82,7 +81,7 @@ fn playback_controls(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
         "🔁"
     };
     if ui
-        .add(SelectableLabel::new(
+        .add(Button::selectable(
             player.get_repeat() != RepeatMode::Disabled,
             RichText::new(repeat_text).size(ICON_SIZE),
         ))

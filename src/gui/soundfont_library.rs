@@ -145,7 +145,7 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                     if let Ok(font) = player.font_lib.get_font_mut(index) {
                         font.refresh();
                     }
-                    ui.close_menu();
+                    ui.close();
                 }
                 actions::open_file_dir(ui, player.font_lib.get_fonts()[index].filepath(), gui);
 
@@ -187,14 +187,14 @@ fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                             .clicked()
                         {
                             let _ = player.get_playlists_mut()[i].add_font(filepath.clone());
-                            ui.close_menu();
+                            ui.close();
                         }
                     }
                 });
 
                 if ui.button("Copy path").clicked() {
                     ui.ctx().copy_text(filepath.to_string_lossy().into());
-                    ui.close_menu();
+                    ui.close();
                     gui.toast_success("Copied");
                 }
             });
