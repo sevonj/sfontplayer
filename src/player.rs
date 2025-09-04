@@ -550,7 +550,7 @@ impl Player {
         Ok(())
     }
 
-    pub fn switch_playlist_right(&mut self) -> Result<(), PlayerError> {
+    pub const fn switch_playlist_right(&mut self) -> Result<(), PlayerError> {
         if self.midi_inspector.is_some() {
             return Err(PlayerError::MidiOverride);
         }
@@ -610,7 +610,7 @@ impl Player {
     }
 
     /// Playlist tabs have been closed
-    pub fn has_removed_playlist(&self) -> bool {
+    pub const fn has_removed_playlist(&self) -> bool {
         !self.removed_playlists.is_empty()
     }
 
