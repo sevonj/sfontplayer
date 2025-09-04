@@ -98,7 +98,7 @@ impl Iterator for MidiSource {
 }
 
 impl rodio::Source for MidiSource {
-    fn current_frame_len(&self) -> Option<usize> {
+    fn current_span_len(&self) -> Option<usize> {
         let time_left = self.sequencer.song_length() - self.sequencer.song_position();
         let samples_left = time_left.as_secs_f64() * f64::from(self.synthesizer.get_sample_rate());
         Some(samples_left as usize)
