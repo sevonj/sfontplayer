@@ -193,19 +193,19 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
                     ui.add_enabled_ui(status.is_ok(), |ui| {
                         if ui.button("Open in inspector").clicked() {
                             let _ = player.open_midi_inspector(MidiMeta::new(filepath.clone()));
-                            ui.close_menu();
+                            ui.close();
                         }
                     });
                     if ui.button("Refresh").clicked() {
                         player.get_playlist_mut().get_songs_mut()[index].refresh();
-                        ui.close_menu();
+                        ui.close();
                     }
                     ui.add_enabled_ui(
                         player.get_playlist().get_song_list_mode() == FileListMode::Manual,
                         |ui| {
                             if ui.button("Remove").clicked() {
                                 let _ = player.get_playlist_mut().mark_song_for_removal(index);
-                                ui.close_menu();
+                                ui.close();
                             }
                         },
                     );
@@ -250,13 +250,13 @@ pub fn playlist_song_panel(ui: &mut Ui, player: &mut Player, gui: &mut GuiState)
                                 .clicked()
                             {
                                 let _ = player.get_playlists_mut()[i].add_song(filepath.clone());
-                                ui.close_menu();
+                                ui.close();
                             }
                         }
                     });
                     if ui.button("Copy path").clicked() {
                         ui.ctx().copy_text(filepath.to_string_lossy().into());
-                        ui.close_menu();
+                        ui.close();
                         gui.toast_success("Copied");
                     }
                 });

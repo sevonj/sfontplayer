@@ -1,15 +1,15 @@
 use super::{actions, GuiState};
 use crate::player::Player;
 use eframe::egui::{
-    scroll_area::ScrollBarVisibility, vec2, Button, Color32, Frame, Label, RichText, ScrollArea,
-    Sense, Shadow, Stroke, Ui, UiBuilder,
+    scroll_area::{ScrollBarVisibility, ScrollSource},
+    vec2, Button, Color32, Frame, Label, RichText, ScrollArea, Sense, Shadow, Stroke, Ui,
+    UiBuilder,
 };
 
 pub fn playlist_tabs(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
     ScrollArea::horizontal()
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-        .drag_to_scroll(true)
-        .enable_scrolling(true)
+        .scroll_source(ScrollSource::ALL)
         .show(ui, |ui| {
             ui.vertical(|ui| {
                 ui.style_mut().spacing.item_spacing = vec2(0.0, 0.0);

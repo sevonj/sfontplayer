@@ -63,7 +63,7 @@ fn options_menu(ui: &mut Ui, gui: &mut GuiState) {
             .clicked()
         {
             gui.show_settings_modal = true;
-            ui.close_menu();
+            ui.close();
         }
     });
 }
@@ -72,7 +72,7 @@ fn help_menu(ui: &mut Ui, gui: &mut GuiState) {
     ui.menu_button("Help", |ui| {
         if ui.button("About").clicked() {
             gui.show_about_modal = true;
-            ui.close_menu();
+            ui.close();
         }
         if ui
             .add(
@@ -82,7 +82,7 @@ fn help_menu(ui: &mut Ui, gui: &mut GuiState) {
             .clicked()
         {
             gui.show_shortcut_modal = true;
-            ui.close_menu();
+            ui.close();
         }
     });
 }

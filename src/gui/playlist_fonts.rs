@@ -157,14 +157,14 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         if let Ok(font) = player.get_playlist_mut().get_font_mut(index) {
                             font.refresh();
                         }
-                        ui.close_menu();
+                        ui.close();
                     }
                     ui.add_enabled_ui(
                         player.get_playlist().get_font_list_mode() == FileListMode::Manual,
                         |ui| {
                             if ui.button("Remove").clicked() {
                                 let _ = player.get_playlist_mut().mark_font_for_removal(index);
-                                ui.close_menu();
+                                ui.close();
                             }
                         },
                     );
@@ -202,13 +202,13 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                                 .clicked()
                             {
                                 let _ = player.get_playlists_mut()[i].add_font(filepath.clone());
-                                ui.close_menu();
+                                ui.close();
                             }
                         }
                     });
                     if ui.button("Copy path").clicked() {
                         ui.ctx().copy_text(filepath.to_string_lossy().into());
-                        ui.close_menu();
+                        ui.close();
                         gui.toast_success("Copied");
                     }
                     if ui
@@ -220,7 +220,7 @@ pub fn soundfont_table(ui: &mut Ui, player: &mut Player, gui: &mut GuiState) {
                         .clicked()
                     {
                         let _ = player.font_lib.add_path(filepath.clone());
-                        ui.close_menu();
+                        ui.close();
                     }
                 });
             },
