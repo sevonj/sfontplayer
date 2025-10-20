@@ -2396,9 +2396,9 @@ checksum = "bc4010833aea396656c2f91ee704d51a6f1329ec2ab56ffd00bfd56f7481ea94"
 
 [[package]]
 name = "midi-msg"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "452317a4bbd95c0b48c811a547244106c112fafed46f7dd9374da0edd412d57c"
+checksum = "2fe29685c3cf12aea6d08c8500d9cb76c823ca152fb628f4c1054052495e8341"
 dependencies = [
  "bstr",
  "log",
