@@ -14,7 +14,7 @@ eframe = { version = "0.32.3", features = ["persistence"] } # GUI Framework
 egui_extras = { version = "0.32.3", features = [
     "all_loaders",
 ] } # Extra gui components
-rfd = "0.15.4" # File dialog
+rfd = "0.16.0" # File dialog
 egui-notify = "0.20.0" # toasts
 
 # -- Persistence
